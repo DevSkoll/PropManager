@@ -32,6 +32,7 @@ EVENT_TYPE_CHOICES = [
     ("invoice_overdue", "Invoice Overdue"),
     ("weather_alert", "Weather Alert"),
     ("new_tenant", "New Tenant"),
+    ("reward_earned", "Reward Earned"),
 ]
 
 CATEGORY_CHOICES = [
@@ -40,6 +41,7 @@ CATEGORY_CHOICES = [
     ("past_due_balance", "Past Due Balance"),
     ("messages", "Messages"),
     ("announcements", "Announcements"),
+    ("rewards", "Rewards"),
 ]
 
 

@@ -222,6 +222,83 @@ Campaigns are sent via Django-Q2 async tasks:
 
 ---
 
+## Reward Service
+
+Located at `apps.rewards.services.RewardService`. All mutating methods use `select_for_update()` + `transaction.atomic()`.
+
+### Credits vs Rewards
+
+| | Credits | Rewards |
+|---|---|---|
+| **Source** | Tenant overpayments (real money) | Promotional grants (not real money) |
+| **Model** | `PrepaymentCredit` | `RewardBalance` + `RewardTransaction` |
+| **Payment method** | `Payment(method="credit")` | `Payment(method="reward")` |
+| **Apply order** | First (real money priority) | Second (after credits) |
+
+### Methods
+
+```python
+from apps.rewards.services import RewardService
+
+# Get or create a tenant's reward balance
+balance = RewardService.get_or_create_balance(tenant)
+
+# Grant a reward (creates transaction, dispatches notification)
+txn = RewardService.grant_reward(
+    tenant=tenant,
+    amount=Decimal("50.00"),
+    transaction_type="manual_grant",  # or streak_earned, prepayment_earned
+    description="Welcome bonus",
+    granted_by=admin_user,  # optional
+)
+
+# Apply rewards to an invoice
+payment = RewardService.apply_rewards_to_invoice(
+    invoice=invoice,
+    amount=Decimal("25.00"),  # None = apply full balance up to balance_due
+    applied_by=user,
+)
+
+# Reverse a reward payment
+txn = RewardService.reverse_reward_application(payment)
+
+# Admin balance adjustment (+/-)
+txn = RewardService.admin_adjust_balance(
+    tenant=tenant,
+    amount=Decimal("-10.00"),  # negative to deduct
+    description="Correction",
+    adjusted_by=admin_user,
+)
+
+# Evaluate streak rewards for a tenant at a property
+granted = RewardService.evaluate_streak_rewards(tenant, property_obj)
+
+# Evaluate prepayment rewards after an overpayment
+granted = RewardService.evaluate_prepayment_rewards(
+    tenant, property_obj, overpayment_amount
+)
+```
+
+### Streak Evaluation Algorithm
+
+1. Get `PropertyRewardsConfig` — bail if rewards or streak not enabled
+2. Get/create `StreakEvaluation` for tenant + config
+3. Walk each month from `last_evaluated_month + 1` to last completed month
+4. For each month: find invoices, check if paid on or before `due_date`
+5. On-time → increment `current_streak_months`; late/unpaid → reset to 0
+6. Check all `StreakRewardTier`s — grant if streak >= `months_required`
+7. Non-recurring tiers: skip if already in `awarded_tier_ids`
+8. Recurring tiers: grant `streak // months_required` times total (minus already granted)
+
+### Integration Points
+
+- **Prepayment hook**: `PaymentService.record_manual_payment()` calls `evaluate_prepayment_rewards()` when an overpayment creates a `PrepaymentCredit`
+- **Payment initiation**: `tenant_initiate_payment` view applies rewards (checkbox) before credits and gateway
+- **Billing dashboard**: Displays reward balance alongside account credit
+- **Notifications**: `grant_reward()` dispatches `reward_earned` event via `dispatch_event()`
+
+---
+
 ## Template Tags
 
 Custom template tags available via `{% load core_tags %}`:

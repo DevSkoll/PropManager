@@ -1,0 +1,145 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Rewards - {{ tenant }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'rewards_admin:reward_balances' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Reward Balances
+    </a>
+    <h2 class="mt-2"><i class="bi bi-gift"></i> Rewards: {{ tenant.get_full_name|default:tenant.username }}</h2>
+</div>
+
+<!-- Balance Summary -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">Current Balance</h6>
+                <h2 class="mb-0 text-success">{{ balance.balance|currency }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">Total Earned</h6>
+                <h2 class="mb-0">{{ balance.total_earned|currency }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">Total Redeemed</h6>
+                <h2 class="mb-0">{{ balance.total_redeemed|currency }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <a href="{% url 'rewards_admin:adjust_balance' tenant_pk=tenant.pk %}" class="btn btn-warning w-100 mb-2">
+                    <i class="bi bi-sliders"></i> Adjust Balance
+                </a>
+                <a href="{% url 'rewards_admin:grant_reward' %}" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-gift"></i> Grant Reward
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Streak Info -->
+{% if streak_evals %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-fire"></i> Streak Progress</h5>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Property</th>
+                    <th class="text-center">Current Streak</th>
+                    <th>Last Evaluated</th>
+                    <th>Last Broken</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for se in streak_evals %}
+                <tr>
+                    <td>{{ se.config.property.name }}</td>
+                    <td class="text-center">
+                        <span class="badge bg-success fs-6">{{ se.current_streak_months }} months</span>
+                    </td>
+                    <td>{{ se.last_evaluated_month|date:"M Y"|default:"Never" }}</td>
+                    <td>{{ se.streak_broken_at|date:"M d, Y"|default:"Never" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Transaction History -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Transactions</h5>
+        <a href="{% url 'rewards_admin:reward_history' %}?tenant={{ tenant.pk }}" class="btn btn-sm btn-outline-primary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-end">Balance After</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for txn in transactions %}
+                    <tr>
+                        <td>{{ txn.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            {% if txn.transaction_type == "streak_earned" %}
+                                <span class="badge bg-success">Streak</span>
+                            {% elif txn.transaction_type == "prepayment_earned" %}
+                                <span class="badge bg-info">Prepayment</span>
+                            {% elif txn.transaction_type == "manual_grant" %}
+                                <span class="badge bg-primary">Manual</span>
+                            {% elif txn.transaction_type == "redeemed" %}
+                                <span class="badge bg-warning text-dark">Redeemed</span>
+                            {% elif txn.transaction_type == "reversed" %}
+                                <span class="badge bg-secondary">Reversed</span>
+                            {% elif txn.transaction_type == "admin_adjustment" %}
+                                <span class="badge bg-dark">Adjustment</span>
+                            {% elif txn.transaction_type == "expired" %}
+                                <span class="badge bg-danger">Expired</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end {% if txn.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                            {% if txn.amount > 0 %}+{% endif %}{{ txn.amount|currency }}
+                        </td>
+                        <td class="text-end">{{ txn.balance_after|currency }}</td>
+                        <td><small>{{ txn.description|truncatechars:80 }}</small></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">No transactions yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

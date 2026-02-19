@@ -115,6 +115,7 @@ class InvoiceLineItem(TimeStampedModel):
         ("parking", "Parking"),
         ("pet_fee", "Pet Fee"),
         ("late_fee", "Late Fee"),
+        ("reward_discount", "Reward Discount"),
         ("other", "Other"),
     ]
 
@@ -145,6 +146,7 @@ class Payment(TimeStampedModel):
         ("money_order", "Money Order"),
         ("bank_transfer", "Bank Transfer"),
         ("credit", "Prepayment Credit"),
+        ("reward", "Reward Applied"),
     ]
     STATUS_CHOICES = [
         ("pending", "Pending"),
@@ -166,6 +168,7 @@ class Payment(TimeStampedModel):
     )
     gateway_transaction_id = models.CharField(max_length=255, blank=True, default="")
     credit_applied = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    reward_applied = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     payment_date = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True, default="")
 

@@ -53,6 +53,18 @@
                         <li><a class="dropdown-item" href="{% url 'billing_admin:gateway_settings' %}">Gateway Settings</a></li>
                     </ul>
                 </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-gift"></i> Rewards
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'rewards_admin:property_rewards_list' %}">Property Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'rewards_admin:reward_balances' %}">Balances</a></li>
+                        <li><a class="dropdown-item" href="{% url 'rewards_admin:grant_reward' %}">Grant Reward</a></li>
+                        <li><a class="dropdown-item" href="{% url 'rewards_admin:reward_history' %}">Transaction History</a></li>
+                    </ul>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'workorders_admin:workorder_list' %}">
                         <i class="bi bi-tools"></i> Work Orders

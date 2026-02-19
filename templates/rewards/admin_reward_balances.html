@@ -1,0 +1,80 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Reward Balances - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-gift"></i> Reward Balances</h2>
+    <div>
+        <a href="{% url 'rewards_admin:grant_reward' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Grant Reward
+        </a>
+        <a href="{% url 'rewards_admin:reward_history' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-clock-history"></i> Transaction History
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label for="q" class="form-label">Search Tenant</label>
+                <input type="text" class="form-control" id="q" name="q" value="{{ search }}" placeholder="Name or email...">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tenant</th>
+                        <th>Email</th>
+                        <th class="text-end">Balance</th>
+                        <th class="text-end">Total Earned</th>
+                        <th class="text-end">Total Redeemed</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bal in balances %}
+                    <tr>
+                        <td class="fw-semibold">{{ bal.tenant.get_full_name|default:bal.tenant.username }}</td>
+                        <td>{{ bal.tenant.email }}</td>
+                        <td class="text-end">
+                            <span class="{% if bal.balance > 0 %}text-success fw-bold{% endif %}">
+                                {{ bal.balance|currency }}
+                            </span>
+                        </td>
+                        <td class="text-end">{{ bal.total_earned|currency }}</td>
+                        <td class="text-end">{{ bal.total_redeemed|currency }}</td>
+                        <td>
+                            <a href="{% url 'rewards_admin:tenant_reward_detail' tenant_pk=bal.tenant.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Detail
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">No reward balances yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

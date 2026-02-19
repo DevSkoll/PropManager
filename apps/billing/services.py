@@ -301,6 +301,22 @@ class PaymentService:
                     source_payment=payment,
                 )
                 invoice_locked.status = "paid"
+
+                # Evaluate prepayment rewards
+                try:
+                    from apps.rewards.services import RewardService
+
+                    property_obj = invoice_locked.lease.unit.property
+                    RewardService.evaluate_prepayment_rewards(
+                        tenant=invoice_locked.tenant,
+                        property_obj=property_obj,
+                        prepayment_amount=overpayment,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to evaluate prepayment rewards for tenant %s",
+                        invoice_locked.tenant.pk,
+                    )
             elif invoice_locked.amount_paid >= invoice_locked.total_amount:
                 invoice_locked.status = "paid"
             else:

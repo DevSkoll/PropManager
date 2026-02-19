@@ -1,0 +1,42 @@
+{% extends "admin_portal/base.html" %}
+{% load crispy_forms_tags %}
+{% load core_tags %}
+
+{% block title %}Adjust Balance - {{ tenant }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'rewards_admin:tenant_reward_detail' tenant_pk=tenant.pk %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to {{ tenant }}
+    </a>
+    <h2 class="mt-2"><i class="bi bi-sliders"></i> Adjust Reward Balance: {{ tenant }}</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h6 class="text-muted">Current Balance</h6>
+                <h3 class="mb-0">{{ balance.balance|currency }}</h3>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Adjustment</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-pencil-square"></i> Apply Adjustment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

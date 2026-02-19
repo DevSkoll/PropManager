@@ -90,6 +90,15 @@
                     </div>
                     {% endif %}
 
+                    {% if available_rewards > 0 %}
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="apply_rewards" id="apply_rewards" checked>
+                        <label class="form-check-label" for="apply_rewards">
+                            <i class="bi bi-gift"></i> Apply available rewards ({{ available_rewards|currency }})
+                        </label>
+                    </div>
+                    {% endif %}
+
                     <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">
                         <i class="bi bi-lock"></i> Pay {{ invoice.balance_due|currency }}
                     </button>

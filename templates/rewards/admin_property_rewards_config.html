@@ -1,0 +1,87 @@
+{% extends "admin_portal/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Rewards Config - {{ property.name }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'billing_admin:property_billing_config' property_pk=property.pk %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Billing Config
+    </a>
+    <h2 class="mt-2"><i class="bi bi-gift"></i> Rewards Configuration: {{ property.name }}</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Rewards Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+
+                    <hr>
+                    <h5 class="mb-3">Streak Reward Tiers</h5>
+                    <p class="text-muted small">Define milestones for consecutive on-time payment months.</p>
+
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Months Required</th>
+                                <th>Reward Amount ($)</th>
+                                <th>Recurring</th>
+                                <th>Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{ formset.management_form }}
+                            {% for tier_form in formset %}
+                            <tr>
+                                <td>
+                                    {{ tier_form.id }}
+                                    {{ tier_form.months_required }}
+                                    {{ tier_form.months_required.errors }}
+                                </td>
+                                <td>
+                                    {{ tier_form.reward_amount }}
+                                    {{ tier_form.reward_amount.errors }}
+                                </td>
+                                <td class="text-center">
+                                    {{ tier_form.is_recurring }}
+                                </td>
+                                <td class="text-center">
+                                    {{ tier_form.DELETE }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {{ formset.non_form_errors }}
+
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Help</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Master Toggle:</strong> Enable/disable the entire rewards program for this property.</p>
+                <p class="mb-2"><strong>Streak Rewards:</strong> Grant rewards when tenants achieve consecutive on-time payment milestones.</p>
+                <p class="mb-2"><strong>Prepayment Rewards:</strong> Grant rewards when tenants accumulate prepayments beyond a threshold.</p>
+                <p class="mb-2"><strong>Auto-Apply:</strong> Automatically apply tenant reward balances to new invoices.</p>
+                <p class="mb-0"><strong>Recurring Tiers:</strong> Re-grant every N months (e.g., every 6 months). Non-recurring tiers are one-time only.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

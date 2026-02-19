@@ -37,7 +37,7 @@ No accounts needed. Admins generate unique token URLs when assigning contractors
 
 ## System Design
 
-PropManager is a Django monolith with 10 apps, each owning a specific domain. The application serves three distinct user types through separate portals.
+PropManager is a Django monolith with 11 apps, each owning a specific domain. The application serves three distinct user types through separate portals.
 
 ```
                     ┌─────────────────────────────────────────┐
@@ -77,7 +77,7 @@ PropManager is a Django monolith with 10 apps, each owning a specific domain. Th
 
 ## Data Model Overview
 
-35 models across 10 apps. All models use UUID primary keys via the `TimeStampedModel` abstract base.
+41 models across 11 apps. All models use UUID primary keys via the `TimeStampedModel` abstract base.
 
 ### Core (`apps/core`)
 
@@ -156,6 +156,36 @@ Invoice
 PrepaymentCredit
 ├── tenant, amount, remaining_amount
 └── source_payment: FK → Payment
+```
+
+### Rewards (`apps/rewards`) - 6 models
+
+Tenant rewards program — promotional discounts (NOT real money), tracked separately from prepayment credits with distinct audit trails.
+
+```
+PropertyRewardsConfig (1:1 → Property)
+├── rewards_enabled, streak_reward_enabled, prepayment_reward_enabled
+├── prepayment_threshold_amount, prepayment_reward_amount
+├── auto_apply_rewards
+└──→ StreakRewardTier (1:N)
+     ├── months_required, reward_amount, is_recurring
+     └── unique_together: (config, months_required)
+
+RewardBalance (1:1 → User)
+├── balance, total_earned, total_redeemed
+
+RewardTransaction (immutable audit trail)
+├── tenant, transaction_type, amount, balance_after, description
+├── type: streak_earned | prepayment_earned | manual_grant | redeemed | reversed | admin_adjustment | expired
+├── invoice (nullable), payment (nullable), streak_tier (nullable)
+└── AuditMixin (created_by, updated_by)
+
+StreakEvaluation (unique: tenant + config)
+├── current_streak_months, last_evaluated_month
+├── streak_broken_at, awarded_tier_ids (JSON)
+
+PrepaymentRewardTracker (unique: tenant + config)
+├── cumulative_prepayment, rewards_granted_count
 ```
 
 ### Work Orders (`apps/workorders`) - 4 models
@@ -315,5 +345,9 @@ Django-Q2 is used for async task processing with ORM-backed broker:
 | `cleanup_old_snapshots` | Weekly | Remove weather snapshots older than 90 days |
 | `send_campaign` | On demand | Process and send a marketing campaign |
 | `generate_monthly_invoices` | Monthly | Auto-generate rent invoices for active leases |
+| `evaluate_all_streak_rewards` | Monthly (2nd) | Evaluate on-time payment streaks, grant tier rewards |
+| `auto_apply_rewards_to_invoices` | Daily | Apply reward balances to outstanding invoices (where enabled) |
+
+**Daily task chain order:** `generate_monthly_invoices` → `apply_late_fees` → `auto_apply_prepayment_credits` → `auto_apply_rewards_to_invoices` → `evaluate_all_streak_rewards` (monthly only)
 
 Start the worker: `python manage.py qcluster`

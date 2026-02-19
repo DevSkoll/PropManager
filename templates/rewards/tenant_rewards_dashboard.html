@@ -1,0 +1,176 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}Rewards - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-gift"></i> My Rewards</h2>
+    <a href="{% url 'rewards_tenant:reward_history' %}" class="btn btn-outline-primary">
+        <i class="bi bi-clock-history"></i> Full History
+    </a>
+</div>
+
+<!-- Balance Card -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Reward Balance</h6>
+                        <h2 class="mb-0 text-success">{{ balance.balance|currency }}</h2>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-gift" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Earned</h6>
+                        <h2 class="mb-0">{{ balance.total_earned|currency }}</h2>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-arrow-up-circle" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Redeemed</h6>
+                        <h2 class="mb-0">{{ balance.total_redeemed|currency }}</h2>
+                    </div>
+                    <div class="text-info">
+                        <i class="bi bi-arrow-down-circle" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Streak Progress -->
+{% if streak_evals %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-fire"></i> Payment Streak</h5>
+    </div>
+    <div class="card-body">
+        {% for se in streak_evals %}
+        <div class="d-flex justify-content-between align-items-center {% if not forloop.last %}mb-3 pb-3 border-bottom{% endif %}">
+            <div>
+                <strong>{{ se.config.property.name }}</strong>
+                <br><small class="text-muted">Consecutive on-time payments</small>
+            </div>
+            <span class="badge bg-success fs-6">{{ se.current_streak_months }} months</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Apply to Invoice -->
+{% if outstanding_invoices and balance.balance > 0 %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-receipt"></i> Apply Rewards to Invoice</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Due Date</th>
+                        <th class="text-end">Balance Due</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in outstanding_invoices %}
+                    <tr>
+                        <td class="fw-semibold">{{ inv.invoice_number }}</td>
+                        <td>{{ inv.due_date|date:"M d, Y" }}</td>
+                        <td class="text-end text-danger">{{ inv.balance_due|currency }}</td>
+                        <td>
+                            <a href="{% url 'rewards_tenant:apply_rewards' invoice_pk=inv.pk %}" class="btn btn-sm btn-success">
+                                <i class="bi bi-gift"></i> Apply Rewards
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Transactions -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Transactions</h5>
+        <a href="{% url 'rewards_tenant:reward_history' %}" class="btn btn-sm btn-outline-primary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th class="text-end">Amount</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for txn in transactions %}
+                    <tr>
+                        <td>{{ txn.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            {% if txn.transaction_type == "streak_earned" %}
+                                <span class="badge bg-success">Streak</span>
+                            {% elif txn.transaction_type == "prepayment_earned" %}
+                                <span class="badge bg-info">Prepayment</span>
+                            {% elif txn.transaction_type == "manual_grant" %}
+                                <span class="badge bg-primary">Gift</span>
+                            {% elif txn.transaction_type == "redeemed" %}
+                                <span class="badge bg-warning text-dark">Used</span>
+                            {% elif txn.transaction_type == "reversed" %}
+                                <span class="badge bg-secondary">Reversed</span>
+                            {% elif txn.transaction_type == "admin_adjustment" %}
+                                <span class="badge bg-dark">Adjustment</span>
+                            {% elif txn.transaction_type == "expired" %}
+                                <span class="badge bg-danger">Expired</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end {% if txn.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                            {% if txn.amount > 0 %}+{% endif %}{{ txn.amount|currency }}
+                        </td>
+                        <td><small>{{ txn.description|truncatechars:60 }}</small></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">No reward activity yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

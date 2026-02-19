@@ -25,6 +25,7 @@ EVENT_TO_CATEGORY = {
     "invoice_overdue": "past_due_balance",
     "weather_alert": "weather_updates",
     "new_tenant": None,
+    "reward_earned": "rewards",
 }
 
 

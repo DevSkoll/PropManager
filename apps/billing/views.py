@@ -697,12 +697,19 @@ def tenant_billing_dashboard(request):
             if config.billing_mode not in ("included", "tenant_pays"):
                 estimated_monthly_total += config.rate
 
+    # Reward balance
+    from apps.rewards.services import RewardService
+
+    reward_balance_obj = RewardService.get_or_create_balance(tenant)
+    reward_balance = reward_balance_obj.balance
+
     context = {
         "total_balance": total_balance,
         "outstanding_count": outstanding_invoices.count(),
         "recent_invoices": recent_invoices,
         "recent_payments": recent_payments,
         "available_credit": available_credit,
+        "reward_balance": reward_balance,
         "active_lease": active_lease,
         "utility_breakdown": utility_breakdown,
         "estimated_monthly_total": estimated_monthly_total,
@@ -785,11 +792,32 @@ def tenant_initiate_payment(request, pk):
         or Decimal("0.00")
     )
 
+    # Get available reward balance
+    from apps.rewards.services import RewardService
+
+    reward_balance_obj = RewardService.get_or_create_balance(request.user)
+    available_rewards = reward_balance_obj.balance
+
     if request.method == "POST":
         gateway_pk = request.POST.get("gateway")
         apply_credits = request.POST.get("apply_credits") == "on"
+        apply_rewards = request.POST.get("apply_rewards") == "on"
 
         try:
+            # Apply rewards first (before credits and gateway)
+            if apply_rewards and available_rewards > 0:
+                RewardService.apply_rewards_to_invoice(
+                    invoice=invoice,
+                    applied_by=request.user,
+                )
+                invoice.refresh_from_db()
+                if invoice.balance_due <= 0:
+                    messages.success(request, "Invoice paid using your reward balance.")
+                    return render(request, "billing/tenant_payment_confirmation.html", {
+                        "success": True,
+                        "payment": invoice.payments.order_by("-payment_date").first(),
+                    })
+
             gateway_config = None
             provider = None
             if gateway_pk:
@@ -833,6 +861,7 @@ def tenant_initiate_payment(request, pk):
         "invoice": invoice,
         "gateways": gateways,
         "available_credit": available_credit,
+        "available_rewards": available_rewards,
     }
     return render(request, "billing/tenant_initiate_payment.html", context)
 

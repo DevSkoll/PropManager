@@ -1,0 +1,45 @@
+{% extends "admin_portal/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Grant Reward - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'rewards_admin:reward_balances' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Reward Balances
+    </a>
+    <h2 class="mt-2"><i class="bi bi-gift"></i> Grant Manual Reward</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Reward Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-gift"></i> Grant Reward
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> About Manual Rewards</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">Manual rewards are promotional discounts granted at your discretion. They are <strong>not real money</strong> and are tracked separately from prepayment credits.</p>
+                <p class="mb-0">The tenant will receive a notification and can apply the reward to future invoices.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

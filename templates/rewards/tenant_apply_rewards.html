@@ -1,0 +1,86 @@
+{% extends "tenant/base.html" %}
+{% load crispy_forms_tags %}
+{% load core_tags %}
+
+{% block title %}Apply Rewards - Invoice {{ invoice.invoice_number }} - PropManager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'billing_tenant:invoice_detail' pk=invoice.pk %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Invoice
+    </a>
+    <h2 class="mt-2"><i class="bi bi-gift"></i> Apply Rewards to Invoice {{ invoice.invoice_number }}</h2>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-5">
+        <!-- Invoice Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Invoice Summary</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted">Invoice #</th>
+                        <td>{{ invoice.invoice_number }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Due Date</th>
+                        <td>{{ invoice.due_date|date:"M d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Total Amount</th>
+                        <td>{{ invoice.total_amount|currency }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Amount Paid</th>
+                        <td class="text-success">{{ invoice.amount_paid|currency }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted fw-bold">Balance Due</th>
+                        <td class="fw-bold text-danger fs-5">{{ invoice.balance_due|currency }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reward Balance -->
+        <div class="card border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0"><i class="bi bi-gift"></i> Available Rewards</h6>
+                        <small class="text-muted">Promotional balance (not real money)</small>
+                    </div>
+                    <span class="text-success fw-bold fs-5">{{ balance.balance|currency }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Apply Rewards</h5>
+            </div>
+            <div class="card-body">
+                {% if balance.balance > 0 %}
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <button type="submit" class="btn btn-success btn-lg w-100 mt-3">
+                        <i class="bi bi-gift"></i> Apply Rewards
+                    </button>
+                </form>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-gift" style="font-size: 3rem;"></i>
+                    <p class="mt-2 mb-0">You don't have any reward balance to apply.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

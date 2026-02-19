@@ -15,6 +15,8 @@ urlpatterns = [
     path("admin-portal/", include("apps.leases.urls_admin")),
     path("tenant/", include("apps.billing.urls_tenant")),
     path("admin-portal/", include("apps.billing.urls_admin")),
+    path("tenant/", include("apps.rewards.urls_tenant")),
+    path("admin-portal/", include("apps.rewards.urls_admin")),
     path("tenant/", include("apps.workorders.urls_tenant")),
     path("admin-portal/", include("apps.workorders.urls_admin")),
     path("tenant/", include("apps.communications.urls_tenant")),
