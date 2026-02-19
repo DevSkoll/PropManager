@@ -1,0 +1,15 @@
+Django>=5.1,<6.0
+psycopg[binary]>=3.1
+django-environ>=0.11
+django-htmx>=1.17
+django-crispy-forms>=2.0
+crispy-bootstrap5>=2024.2
+django-q2>=1.6
+whitenoise>=6.5
+Pillow>=10.0
+twilio>=9.0
+stripe>=8.0
+paypalrestsdk>=1.13
+squareup>=37.0
+requests>=2.31
+python-dateutil>=2.8

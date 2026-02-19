@@ -1,0 +1,67 @@
+/* PropManager Custom Styles */
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Card hover effect */
+.card-hover:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+/* Dashboard stat cards */
+.stat-card {
+    border-left: 4px solid;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-card.primary { border-left-color: var(--bs-primary); }
+.stat-card.success { border-left-color: var(--bs-success); }
+.stat-card.warning { border-left-color: var(--bs-warning); }
+.stat-card.danger { border-left-color: var(--bs-danger); }
+.stat-card.info { border-left-color: var(--bs-info); }
+
+/* Status badges */
+.badge-status { font-size: 0.75em; }
+
+/* HTMX loading indicator */
+.htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator {
+    display: inline-block;
+}
+
+/* Login pages */
+.tenant-portal .card,
+.admin-portal .card {
+    border: none;
+}
+
+/* Table improvements */
+.table th {
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+}
+
+/* Weather alert cards */
+.weather-alert {
+    border-left: 4px solid;
+}
+.weather-alert.emergency { border-left-color: var(--bs-danger); }
+.weather-alert.warning { border-left-color: var(--bs-warning); }
+.weather-alert.watch { border-left-color: var(--bs-info); }

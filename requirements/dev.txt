@@ -1,0 +1,7 @@
+-r base.txt
+django-debug-toolbar>=4.2
+django-extensions>=3.2
+ipython>=8.0
+factory-boy>=3.3
+faker>=22.0
+coverage>=7.4

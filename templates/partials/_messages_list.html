@@ -1,0 +1,11 @@
+{% for msg in messages %}
+<div class="card mb-2">
+    <div class="card-body p-2">
+        <strong>{{ msg.sender }}</strong>
+        <small class="text-muted">{{ msg.created_at|timesince }} ago</small>
+        <p class="mb-0">{{ msg.body|truncatewords:30 }}</p>
+    </div>
+</div>
+{% empty %}
+<p class="text-muted">No messages.</p>
+{% endfor %}

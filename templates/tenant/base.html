@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static %}
+{% load core_tags %}
+
+{% block body_class %}tenant-portal{% endblock %}
+
+{% block body %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'accounts_tenant:tenant_login' %}">
+            <i class="bi bi-house-door-fill"></i> PropManager
+        </a>
+        {% if user.is_authenticated %}
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#tenantNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="tenantNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-receipt"></i> Billing
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-tools"></i> Work Orders
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-chat-dots"></i> Messages
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-file-earmark"></i> Documents
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Profile</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-bell"></i> Notifications</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</nav>
+
+<main class="container py-4">
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="bg-light py-3 mt-auto">
+    <div class="container text-center text-muted">
+        <small>&copy; {% now "Y" %} PropManager. All rights reserved.</small>
+    </div>
+</footer>
+{% endblock %}
