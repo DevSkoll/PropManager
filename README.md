@@ -204,4 +204,21 @@ Tasks include:
 
 ## License
 
-Proprietary. All rights reserved.
+PropManager is dual-licensed:
+
+### Open Source — AGPL-3.0
+
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE). Under AGPL-3.0:
+
+- You may use, modify, and distribute this software freely
+- Any modifications or derivative works **must** be released under the same AGPL-3.0 license
+- If you run a modified version as a network service (SaaS), you **must** make the complete source code available to users of that service
+- All changes must be contributed back under the same terms
+
+### Commercial / Proprietary License
+
+If you wish to use PropManager in a proprietary or closed-source product — including SaaS offerings where you do not wish to release your source code — you must obtain a **commercial license** from the copyright holder. Commercial licenses include royalty terms.
+
+For licensing inquiries, contact the project maintainer.
+
+**Copyright (c) 2026 DevSkoll. All rights reserved.**
