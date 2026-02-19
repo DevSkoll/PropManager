@@ -53,5 +53,32 @@ class StripeGateway(PaymentGateway):
             logger.exception("Stripe refund failed")
             return RefundResult(success=False, error_message=str(e))
 
+    def verify_webhook(self, request):
+        try:
+            webhook_secret = self.config.config.get("webhook_secret", "")
+            if not webhook_secret:
+                raise ValueError("Webhook secret not configured")
+            sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+            event = self.stripe.Webhook.construct_event(
+                request.body, sig_header, webhook_secret
+            )
+            return {
+                "valid": True,
+                "event_type": event["type"],
+                "transaction_id": event["data"]["object"].get("id", ""),
+                "raw_event": dict(event),
+            }
+        except self.stripe.error.SignatureVerificationError as e:
+            raise ValueError(f"Invalid signature: {e}")
+        except Exception as e:
+            raise ValueError(f"Webhook verification failed: {e}")
+
+    def test_connection(self):
+        try:
+            self.stripe.Account.retrieve()
+            return True, "Connection successful"
+        except Exception as e:
+            return False, str(e)
+
     def get_client_config(self) -> dict:
         return {"publishable_key": self.config.config.get("publishable_key", "")}

@@ -79,6 +79,51 @@ class SquareGateway(PaymentGateway):
             logger.exception("Square refund failed")
             return RefundResult(success=False, error_message=str(e))
 
+    def verify_webhook(self, request):
+        try:
+            import hashlib
+            import hmac
+            signature_key = self.config.config.get("webhook_signature_key", "")
+            if not signature_key:
+                raise ValueError("Webhook signature key not configured")
+            notification_url = self.config.config.get("webhook_url", "")
+            signature = request.META.get("HTTP_X_SQUARE_HMACSHA256_SIGNATURE", "")
+            body = request.body.decode("utf-8")
+            # Square webhook verification: HMAC-SHA256(notification_url + body)
+            string_to_sign = notification_url + body
+            expected = hmac.new(
+                signature_key.encode("utf-8"),
+                string_to_sign.encode("utf-8"),
+                hashlib.sha256,
+            ).digest()
+            import base64
+            expected_b64 = base64.b64encode(expected).decode("utf-8")
+            if not hmac.compare_digest(expected_b64, signature):
+                raise ValueError("Invalid Square webhook signature")
+            import json
+            payload = json.loads(body)
+            event_type = payload.get("type", "")
+            data = payload.get("data", {}).get("object", {})
+            return {
+                "valid": True,
+                "event_type": event_type,
+                "transaction_id": data.get("payment", {}).get("id", ""),
+                "raw_event": payload,
+            }
+        except ValueError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Webhook verification failed: {e}")
+
+    def test_connection(self):
+        try:
+            result = self.client.locations.list_locations()
+            if result.is_success():
+                return True, "Connection successful"
+            return False, str(result.errors)
+        except Exception as e:
+            return False, str(e)
+
     def get_client_config(self) -> dict:
         return {
             "application_id": self.config.config.get("application_id", ""),

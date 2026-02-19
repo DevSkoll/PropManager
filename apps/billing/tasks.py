@@ -6,6 +6,7 @@ Schedule these via Django-Q2 admin or programmatically:
     async_task('apps.billing.tasks.generate_monthly_invoices')
     async_task('apps.billing.tasks.apply_late_fees')
     async_task('apps.billing.tasks.process_payment', payment_id)
+    async_task('apps.billing.tasks.check_pending_btc_payments')
 """
 
 import logging
@@ -261,3 +262,159 @@ def auto_apply_prepayment_credits():
 
     logger.info("auto_apply_prepayment_credits: %d credits applied.", applied_count)
     return {"credits_applied": applied_count}
+
+
+def check_pending_btc_payments():
+    """Check pending Bitcoin payments against mempool.space. Run every 2 minutes."""
+    import requests
+
+    from .models import BitcoinPayment, Payment, PaymentGatewayConfig
+
+    now = timezone.now()
+
+    gateway_config = PaymentGatewayConfig.objects.filter(
+        provider="bitcoin", is_active=True
+    ).first()
+    required_confirmations = (
+        gateway_config.config.get("required_confirmations", 1)
+        if gateway_config
+        else 1
+    )
+
+    pending_payments = BitcoinPayment.objects.filter(
+        status__in=("pending", "mempool"),
+    ).select_related("invoice", "invoice__tenant")
+
+    confirmed_count = 0
+    expired_count = 0
+    errors = []
+
+    for btc_payment in pending_payments:
+        try:
+            # --- Expiry check ---
+            if btc_payment.status == "pending" and now > btc_payment.expires_at:
+                btc_payment.status = "expired"
+                btc_payment.save(update_fields=["status"])
+                expired_count += 1
+                continue
+
+            # --- Query mempool.space for address info ---
+            address_url = (
+                f"https://mempool.space/api/address/{btc_payment.btc_address}"
+            )
+            resp = requests.get(address_url, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+
+            chain_stats = data.get("chain_stats", {})
+            mempool_stats = data.get("mempool_stats", {})
+
+            funded_sum = chain_stats.get("funded_txo_sum", 0) + mempool_stats.get(
+                "funded_txo_sum", 0
+            )
+
+            # --- Pending → Mempool transition ---
+            if funded_sum > 0 and btc_payment.status == "pending":
+                btc_payment.status = "mempool"
+                btc_payment.received_satoshis = funded_sum
+                btc_payment.save(
+                    update_fields=["status", "received_satoshis"]
+                )
+
+            # --- Check confirmations via /txs endpoint ---
+            if chain_stats.get("tx_count", 0) > 0:
+                txs_url = f"https://mempool.space/api/address/{btc_payment.btc_address}/txs"
+                txs_resp = requests.get(txs_url, timeout=15)
+                txs_resp.raise_for_status()
+                txs_data = txs_resp.json()
+
+                for tx in txs_data:
+                    tx_status = tx.get("status", {})
+                    if not tx_status.get("confirmed", False):
+                        continue
+
+                    # Store txid from the first confirmed transaction
+                    if not btc_payment.txid:
+                        btc_payment.txid = tx.get("txid", "")
+
+                    block_height = tx_status.get("block_height", 0)
+
+                    # Fetch current tip height once to calculate confirmations
+                    tip_url = "https://mempool.space/api/blocks/tip/height"
+                    tip_resp = requests.get(tip_url, timeout=10)
+                    tip_resp.raise_for_status()
+                    tip_height = int(tip_resp.text.strip())
+
+                    confirmations = tip_height - block_height + 1 if block_height else 0
+                    btc_payment.confirmations = confirmations
+
+                    if confirmations >= required_confirmations:
+                        # --- Confirmed: create Payment + update Invoice ---
+                        with transaction.atomic():
+                            btc_payment.status = "confirmed"
+                            btc_payment.confirmed_at = now
+                            btc_payment.received_satoshis = chain_stats.get(
+                                "funded_txo_sum", 0
+                            )
+                            btc_payment.save(
+                                update_fields=[
+                                    "status",
+                                    "confirmed_at",
+                                    "confirmations",
+                                    "received_satoshis",
+                                    "txid",
+                                ]
+                            )
+
+                            invoice = btc_payment.invoice
+                            payment = Payment.objects.create(
+                                tenant=invoice.tenant,
+                                invoice=invoice,
+                                amount=btc_payment.usd_amount,
+                                method="crypto",
+                                status="completed",
+                                reference_number=btc_payment.txid,
+                                notes=f"Bitcoin payment confirmed ({confirmations} confirmations)",
+                            )
+                            btc_payment.payment = payment
+                            btc_payment.save(update_fields=["payment"])
+
+                            invoice.amount_paid += btc_payment.usd_amount
+                            if invoice.amount_paid >= invoice.total_amount:
+                                invoice.status = "paid"
+                            else:
+                                invoice.status = "partial"
+                            invoice.save(
+                                update_fields=["amount_paid", "status"]
+                            )
+
+                        confirmed_count += 1
+
+                    else:
+                        # Not enough confirmations yet — save progress
+                        btc_payment.save(
+                            update_fields=["confirmations", "txid"]
+                        )
+
+                    # Only process the first relevant confirmed tx
+                    break
+
+        except Exception as e:
+            logger.exception(
+                "Error checking BTC payment %s (address=%s)",
+                btc_payment.pk,
+                btc_payment.btc_address,
+            )
+            errors.append(str(e))
+
+    logger.info(
+        "check_pending_btc_payments: %d confirmed, %d expired, %d errors.",
+        confirmed_count,
+        expired_count,
+        len(errors),
+    )
+    return {
+        "confirmed": confirmed_count,
+        "expired": expired_count,
+        "errors": errors,
+    }

@@ -3,6 +3,9 @@ from django.contrib import admin
 from .models import (
     ApiToken,
     BillingCycle,
+    BitcoinPayment,
+    BitcoinPriceSnapshot,
+    BitcoinWalletConfig,
     Invoice,
     InvoiceLineItem,
     LateFeeLog,
@@ -13,6 +16,7 @@ from .models import (
     RecurringCharge,
     UtilityConfig,
     UtilityRateLog,
+    WebhookEvent,
 )
 
 
@@ -93,3 +97,32 @@ class LateFeeLogAdmin(admin.ModelAdmin):
     list_display = ("invoice", "fee_type", "amount", "applied_date")
     list_filter = ("fee_type",)
     readonly_fields = ("invoice", "line_item", "fee_type", "amount", "applied_date", "notes")
+
+
+@admin.register(WebhookEvent)
+class WebhookEventAdmin(admin.ModelAdmin):
+    list_display = ("provider", "event_type", "status", "payment", "ip_address", "created_at")
+    list_filter = ("provider", "status")
+    search_fields = ("event_type", "event_id")
+    readonly_fields = ("provider", "event_type", "event_id", "payload", "status", "payment", "error_message", "ip_address")
+
+
+@admin.register(BitcoinWalletConfig)
+class BitcoinWalletConfigAdmin(admin.ModelAdmin):
+    list_display = ("payment_gateway_config", "network", "next_index", "created_at")
+    list_filter = ("network",)
+
+
+@admin.register(BitcoinPayment)
+class BitcoinPaymentAdmin(admin.ModelAdmin):
+    list_display = ("btc_address", "invoice", "status", "usd_amount", "expected_satoshis", "received_satoshis", "confirmations", "created_at")
+    list_filter = ("status",)
+    search_fields = ("btc_address", "txid")
+    readonly_fields = ("btc_address", "derivation_index", "btc_usd_rate", "expected_satoshis", "received_satoshis", "confirmations", "txid", "confirmed_at")
+
+
+@admin.register(BitcoinPriceSnapshot)
+class BitcoinPriceSnapshotAdmin(admin.ModelAdmin):
+    list_display = ("btc_usd_rate", "source", "created_at")
+    list_filter = ("source",)
+    readonly_fields = ("btc_usd_rate", "source")

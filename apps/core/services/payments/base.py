@@ -47,3 +47,17 @@ class PaymentGateway(ABC):
     @abstractmethod
     def get_client_config(self) -> dict:
         ...
+
+    @abstractmethod
+    def verify_webhook(self, request) -> dict:
+        """Verify webhook signature and extract event data.
+
+        Returns dict with keys: valid (bool), event_type (str),
+        transaction_id (str), raw_event (dict).
+        Raises ValueError if signature is invalid.
+        """
+        ...
+
+    def test_connection(self) -> tuple:
+        """Test if gateway credentials are valid. Returns (success, message)."""
+        return False, "Not implemented"

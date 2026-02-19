@@ -8,8 +8,8 @@ PropManager uses a pluggable adapter pattern for payment processing. Gateways ar
 
 ```
 Tenant Payment → get_active_gateway() → StripeGateway / PayPalGateway / SquareGateway
-                        ↑
-                PaymentGatewayConfig
+                        ↑                 AuthorizeNetGateway / BraintreeGateway
+                PaymentGatewayConfig       PlaidAchGateway / BitcoinGateway
                 (DB: API keys, settings)
 ```
 
@@ -23,6 +23,8 @@ class PaymentGateway(ABC):
     def verify_payment(self, transaction_id) -> PaymentStatus
     def refund_payment(self, transaction_id, amount) -> RefundResult
     def get_client_config(self) -> dict  # Frontend SDK initialization
+    def verify_webhook(self, request) -> dict  # Webhook signature verification
+    def test_connection(self) -> tuple[bool, str]  # Credential validation
 ```
 
 ### Available Gateways
@@ -30,17 +32,26 @@ class PaymentGateway(ABC):
 | Provider | Module | Config Keys |
 |---|---|---|
 | Stripe | `apps.core.services.payments.stripe` | `secret_key`, `publishable_key`, `webhook_secret` |
-| PayPal | `apps.core.services.payments.paypal` | `client_id`, `client_secret`, `mode` (sandbox/live) |
-| Square | `apps.core.services.payments.square` | `access_token`, `environment`, `location_id` |
+| PayPal | `apps.core.services.payments.paypal` | `client_id`, `client_secret`, `mode`, `webhook_id` |
+| Square | `apps.core.services.payments.square` | `access_token`, `application_id`, `location_id`, `environment`, `webhook_signature_key`, `webhook_url` |
+| Authorize.Net | `apps.core.services.payments.authorizenet` | `api_login_id`, `transaction_key`, `signature_key`, `client_key`, `environment` |
+| Braintree | `apps.core.services.payments.braintree_gw` | `merchant_id`, `public_key`, `private_key`, `environment` |
+| Plaid + ACH | `apps.core.services.payments.plaid_ach` | `plaid_client_id`, `plaid_secret`, `plaid_environment`, `stripe_secret_key`, `stripe_publishable_key` |
+| Bitcoin | `apps.core.services.payments.bitcoin` | `xpub`, `network`, `payment_window_minutes`, `required_confirmations` |
 
 ### Configuration
 
 Gateways are configured via the admin portal at `/admin-portal/billing/settings/`:
 
-1. Select a provider (Stripe, PayPal, or Square)
-2. Enter API credentials in the config JSON field
+1. Click "Add Gateway" and select a provider
+2. Fill in the guided, provider-specific config form (labeled fields with help text)
 3. Set as active and/or default
 4. Only one gateway can be the default at a time
+5. Use "Test Connection" to verify credentials
+
+### Webhook Security
+
+All gateways (except Bitcoin) support webhook signature verification via `verify_webhook()`. Inbound webhooks are logged in the `WebhookEvent` model for audit. Events are deduplicated by `event_id`. View the webhook log at `/admin-portal/billing/settings/webhooks/`.
 
 ### Factory Pattern
 
@@ -54,6 +65,25 @@ result = gateway.create_payment(
     metadata={"invoice_id": str(invoice.pk)}
 )
 ```
+
+### Bitcoin Gateway
+
+The Bitcoin gateway uses a locally managed HD wallet with xpub-only keys on the server (private key stays offline).
+
+**Architecture:**
+- Address derivation: `bitcoinlib` HDKey from xpub at incrementing BIP32 indexes
+- Payment monitoring: Django-Q2 task polls `mempool.space` API every 2 minutes
+- Price tracking: CoinGecko API with 5-minute Django cache TTL
+- Models: `BitcoinWalletConfig`, `BitcoinPayment`, `BitcoinPriceSnapshot`
+
+**Payment Flow:**
+1. Tenant selects Bitcoin payment → system derives unique address, snapshots BTC-USD rate
+2. Tenant sees QR code + address + expected BTC amount + countdown timer
+3. Background task monitors `mempool.space` for incoming transactions
+4. On confirmation (>= `required_confirmations`): creates `Payment` record, updates `Invoice`
+5. Admin can transfer BTC out at `/admin-portal/billing/bitcoin/transfer/`
+
+**Admin Dashboard:** `/admin-portal/billing/bitcoin/` — wallet balance, pending payments, transfer controls.
 
 ---
 

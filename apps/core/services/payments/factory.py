@@ -6,6 +6,10 @@ GATEWAY_MAP = {
     "stripe": "apps.core.services.payments.stripe.StripeGateway",
     "paypal": "apps.core.services.payments.paypal.PayPalGateway",
     "square": "apps.core.services.payments.square.SquareGateway",
+    "authorize_net": "apps.core.services.payments.authorizenet.AuthorizeNetGateway",
+    "braintree": "apps.core.services.payments.braintree_gw.BraintreeGateway",
+    "plaid_ach": "apps.core.services.payments.plaid_ach.PlaidAchGateway",
+    "bitcoin": "apps.core.services.payments.bitcoin.BitcoinGateway",
 }
 
 

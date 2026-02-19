@@ -14,6 +14,10 @@ class PaymentGatewayConfig(TimeStampedModel):
         ("stripe", "Stripe"),
         ("paypal", "PayPal"),
         ("square", "Square"),
+        ("authorize_net", "Authorize.Net"),
+        ("braintree", "Braintree"),
+        ("plaid_ach", "Plaid + ACH"),
+        ("bitcoin", "Bitcoin"),
     ]
 
     provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
@@ -145,6 +149,8 @@ class Payment(TimeStampedModel):
         ("cash", "Cash"),
         ("money_order", "Money Order"),
         ("bank_transfer", "Bank Transfer"),
+        ("ach", "ACH Bank Transfer"),
+        ("crypto", "Cryptocurrency"),
         ("credit", "Prepayment Credit"),
         ("reward", "Reward Applied"),
     ]
@@ -419,3 +425,129 @@ class ApiToken(TimeStampedModel):
         if not self.token:
             self.token = secrets.token_urlsafe(48)
         super().save(*args, **kwargs)
+
+
+class WebhookEvent(TimeStampedModel):
+    """Audit log for all inbound webhook events from payment providers."""
+
+    WEBHOOK_STATUS_CHOICES = [
+        ("received", "Received"),
+        ("processed", "Processed"),
+        ("failed", "Failed"),
+        ("ignored", "Ignored"),
+    ]
+
+    provider = models.CharField(max_length=20)
+    event_type = models.CharField(max_length=100)
+    event_id = models.CharField(max_length=255, blank=True, default="", db_index=True)
+    payload = models.JSONField(default=dict)
+    status = models.CharField(
+        max_length=10, choices=WEBHOOK_STATUS_CHOICES, default="received"
+    )
+    payment = models.ForeignKey(
+        Payment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="webhook_events",
+    )
+    error_message = models.TextField(blank=True, default="")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Webhook {self.provider}:{self.event_type} ({self.status})"
+
+
+class BitcoinWalletConfig(TimeStampedModel):
+    """Watch-only HD wallet config. xpub only — private key stays offline."""
+
+    NETWORK_CHOICES = [
+        ("bitcoin", "Mainnet"),
+        ("testnet", "Testnet"),
+    ]
+
+    payment_gateway_config = models.OneToOneField(
+        PaymentGatewayConfig,
+        on_delete=models.CASCADE,
+        related_name="btc_wallet_config",
+    )
+    xpub = models.CharField(
+        max_length=200,
+        help_text="Extended public key for watch-only address derivation",
+    )
+    derivation_path = models.CharField(max_length=50, default="m/84'/0'/0'")
+    next_index = models.PositiveIntegerField(default=0)
+    network = models.CharField(
+        max_length=10, default="bitcoin", choices=NETWORK_CHOICES
+    )
+
+    def __str__(self):
+        return f"BTC Wallet Config ({self.get_network_display()})"
+
+
+class BitcoinPayment(TimeStampedModel):
+    """Tracks a single Bitcoin payment request tied to an Invoice."""
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("mempool", "In Mempool"),
+        ("confirmed", "Confirmed"),
+        ("expired", "Expired"),
+        ("overpaid", "Overpaid"),
+        ("underpaid", "Underpaid"),
+    ]
+
+    invoice = models.ForeignKey(
+        Invoice, on_delete=models.PROTECT, related_name="btc_payments"
+    )
+    btc_address = models.CharField(max_length=100, unique=True, db_index=True)
+    derivation_index = models.PositiveIntegerField()
+    status = models.CharField(
+        max_length=15, choices=STATUS_CHOICES, default="pending", db_index=True
+    )
+    usd_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    btc_usd_rate = models.DecimalField(
+        max_digits=15, decimal_places=2, help_text="BTC-USD rate at time of creation"
+    )
+    expected_satoshis = models.PositiveBigIntegerField()
+    received_satoshis = models.PositiveBigIntegerField(default=0)
+    confirmations = models.PositiveIntegerField(default=0)
+    txid = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    expires_at = models.DateTimeField()
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    payment = models.OneToOneField(
+        Payment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="btc_detail",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"BTC Payment {self.btc_address[:16]}... ({self.status})"
+
+    def is_expired(self):
+        from django.utils import timezone
+        return self.status == "pending" and timezone.now() > self.expires_at
+
+    def satoshis_to_btc(self):
+        return Decimal(self.expected_satoshis) / Decimal("100000000")
+
+
+class BitcoinPriceSnapshot(TimeStampedModel):
+    """Periodic BTC-USD rate log for historical tracking."""
+
+    btc_usd_rate = models.DecimalField(max_digits=15, decimal_places=2)
+    source = models.CharField(max_length=20, default="coingecko")
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"BTC ${self.btc_usd_rate} ({self.source}, {self.created_at})"

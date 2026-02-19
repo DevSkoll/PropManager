@@ -77,7 +77,7 @@ PropManager is a Django monolith with 11 apps, each owning a specific domain. Th
 
 ## Data Model Overview
 
-41 models across 11 apps. All models use UUID primary keys via the `TimeStampedModel` abstract base.
+45 models across 11 apps. All models use UUID primary keys via the `TimeStampedModel` abstract base.
 
 ### Core (`apps/core`)
 
@@ -137,13 +137,13 @@ Lease
 └──→ LeaseTermination (1:1) - early termination details
 ```
 
-### Billing (`apps/billing`) - 6 models
+### Billing (`apps/billing`) - 10 models
 
 ```
 PaymentGatewayConfig
-├── provider: stripe | paypal | square
+├── provider: stripe | paypal | square | authorize_net | braintree | plaid_ach | bitcoin
 ├── is_active, is_default
-├── config: JSON (API keys)
+├── config: JSON (API keys, provider-specific settings)
 └── supported_methods: JSON
 
 Invoice
@@ -156,6 +156,24 @@ Invoice
 PrepaymentCredit
 ├── tenant, amount, remaining_amount
 └── source_payment: FK → Payment
+
+WebhookEvent
+├── provider, event_type, event_id, payload (JSON)
+├── status: received | processed | failed | ignored
+├── payment (nullable FK), error_message, ip_address
+
+BitcoinWalletConfig (1:1 → PaymentGatewayConfig)
+├── xpub, derivation_path, next_index, network
+
+BitcoinPayment
+├── invoice, btc_address (unique), derivation_index
+├── status: pending | mempool | confirmed | expired | overpaid | underpaid
+├── usd_amount, btc_usd_rate, expected_satoshis, received_satoshis
+├── confirmations, txid, expires_at, confirmed_at
+└── payment (1:1 → Payment, nullable)
+
+BitcoinPriceSnapshot
+├── btc_usd_rate, source
 ```
 
 ### Rewards (`apps/rewards`) - 6 models
@@ -347,6 +365,7 @@ Django-Q2 is used for async task processing with ORM-backed broker:
 | `generate_monthly_invoices` | Monthly | Auto-generate rent invoices for active leases |
 | `evaluate_all_streak_rewards` | Monthly (2nd) | Evaluate on-time payment streaks, grant tier rewards |
 | `auto_apply_rewards_to_invoices` | Daily | Apply reward balances to outstanding invoices (where enabled) |
+| `check_pending_btc_payments` | Every 2 minutes | Monitor pending Bitcoin payments via mempool.space |
 
 **Daily task chain order:** `generate_monthly_invoices` → `apply_late_fees` → `auto_apply_prepayment_credits` → `auto_apply_rewards_to_invoices` → `evaluate_all_streak_rewards` (monthly only)
 

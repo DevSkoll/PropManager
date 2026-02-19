@@ -14,6 +14,12 @@ urlpatterns = [
     path("billing/payments/", views.admin_payment_list, name="payment_list"),
     path("billing/payments/record/", views.admin_record_payment, name="record_payment"),
     path("billing/settings/", views.admin_gateway_settings, name="gateway_settings"),
+    path("billing/settings/gateway/<uuid:pk>/test/", views.admin_gateway_test, name="gateway_test"),
+    path("billing/settings/webhooks/", views.admin_webhook_log, name="webhook_log"),
+    # Bitcoin
+    path("billing/bitcoin/", views.admin_bitcoin_dashboard, name="bitcoin_dashboard"),
+    path("billing/bitcoin/transfer/", views.admin_bitcoin_transfer, name="bitcoin_transfer"),
+    path("billing/bitcoin/payments/", views.admin_bitcoin_payments, name="bitcoin_payments"),
     # Property billing config
     path("billing/properties/<uuid:property_pk>/config/", views.admin_property_billing_config, name="property_billing_config"),
     # Recurring charges

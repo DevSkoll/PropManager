@@ -5,16 +5,24 @@
 {% block title %}Payment Gateway Settings - PropManager Admin{% endblock %}
 
 {% block content %}
+<form style="display:none">{% csrf_token %}</form>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-gear"></i> Payment Gateway Settings</h2>
-    {% if not form %}
-    <a href="{% url 'billing_admin:gateway_settings' %}?add=1" class="btn btn-primary">
-        <i class="bi bi-plus-lg"></i> Add Gateway
-    </a>
+    {% if not base_form and not show_add %}
+    <div class="d-flex gap-2">
+        <a href="{% url 'billing_admin:webhook_log' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-journal-text"></i> Webhook Log
+        </a>
+        <a href="{% url 'billing_admin:gateway_settings' %}?add=1" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Gateway
+        </a>
+    </div>
     {% endif %}
 </div>
 
-<!-- Gateway list -->
+{# ── Gateway List Table ── #}
+{% if not base_form and not show_add %}
 <div class="card mb-4">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -25,7 +33,7 @@
                         <th>Display Name</th>
                         <th>Active</th>
                         <th>Default</th>
-                        <th></th>
+                        <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -47,7 +55,10 @@
                                 <i class="bi bi-dash text-muted"></i>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-success btn-test" data-url="{% url 'billing_admin:gateway_test' pk=gw.pk %}">
+                                <i class="bi bi-plug"></i> Test
+                            </button>
                             <a href="{% url 'billing_admin:gateway_settings' %}?edit={{ gw.pk }}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
@@ -66,9 +77,161 @@
         </div>
     </div>
 </div>
+{% endif %}
 
-<!-- Edit / Add Form -->
-{% if form %}
+{# ── Provider Selection Cards ── #}
+{% if show_add and not provider %}
+<div class="mb-3">
+    <a href="{% url 'billing_admin:gateway_settings' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+<h4 class="mb-3">Select a Payment Provider</h4>
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+    {% for slug, display_name in provider_choices %}
+    <div class="col">
+        <div class="card h-100 border-hover shadow-sm">
+            <div class="card-body text-center">
+                {% with info=provider_info|default:"" %}
+                <i class="bi bi-credit-card fs-1 text-{{ provider_info|default_if_none:"" }}{% if provider_info %}{% with pi=provider_info %}{% for k,v in pi.items %}{% if k == slug %}{{ v.color }}{% endif %}{% endfor %}{% endwith %}{% else %}primary{% endif %} mb-3 d-block"></i>
+                {% endwith %}
+                <h5 class="card-title">{{ display_name }}</h5>
+                <p class="card-text text-muted small">
+                    {% for k, v in provider_info.items %}
+                        {% if k == slug %}{{ v.desc }}{% endif %}
+                    {% endfor %}
+                </p>
+                <a href="{% url 'billing_admin:gateway_settings' %}?add=1&provider={{ slug }}" class="btn btn-outline-primary btn-sm stretched-link">
+                    Configure
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# ── Configuration Form (base_form + config_form) ── #}
+{% if base_form and config_form %}
+<div class="mb-3">
+    <a href="{% url 'billing_admin:gateway_settings' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+<div class="row">
+    {# Left column: Forms #}
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    {% if editing_gateway %}
+                        <i class="bi bi-pencil"></i> Edit Gateway: {{ editing_gateway.display_name }}
+                    {% else %}
+                        <i class="bi bi-plus-circle"></i> Add New Gateway
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <h6 class="text-muted mb-3">General Settings</h6>
+                    {{ base_form|crispy }}
+
+                    <hr class="my-4">
+
+                    <h6 class="text-muted mb-3">Provider Configuration</h6>
+                    {{ config_form|crispy }}
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'billing_admin:gateway_settings' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# Right column: Setup Instructions #}
+    <div class="col-lg-4">
+        <div class="card border-info">
+            <div class="card-header bg-info bg-opacity-10">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Setup Instructions</h6>
+            </div>
+            <div class="card-body small">
+                {% if provider == "stripe" %}
+                    <p><strong>Stripe Setup:</strong></p>
+                    <ol>
+                        <li>Log in to your <a href="https://dashboard.stripe.com" target="_blank">Stripe Dashboard</a>.</li>
+                        <li>Navigate to <strong>Developers &gt; API Keys</strong>.</li>
+                        <li>Copy your <em>Publishable key</em> and <em>Secret key</em>.</li>
+                        <li>For webhooks, set the endpoint to your webhook URL and copy the <em>Webhook signing secret</em>.</li>
+                    </ol>
+                {% elif provider == "paypal" %}
+                    <p><strong>PayPal Setup:</strong></p>
+                    <ol>
+                        <li>Log in to the <a href="https://developer.paypal.com" target="_blank">PayPal Developer Dashboard</a>.</li>
+                        <li>Create a REST API app under <strong>Apps &amp; Credentials</strong>.</li>
+                        <li>Copy the <em>Client ID</em> and <em>Secret</em>.</li>
+                        <li>Set the webhook URL in your app settings.</li>
+                    </ol>
+                {% elif provider == "square" %}
+                    <p><strong>Square Setup:</strong></p>
+                    <ol>
+                        <li>Go to the <a href="https://developer.squareup.com" target="_blank">Square Developer Dashboard</a>.</li>
+                        <li>Create an application and get your <em>Access Token</em>.</li>
+                        <li>Copy your <em>Location ID</em> from the Locations page.</li>
+                        <li>Configure webhook subscriptions for payment events.</li>
+                    </ol>
+                {% elif provider == "authorize_net" %}
+                    <p><strong>Authorize.Net Setup:</strong></p>
+                    <ol>
+                        <li>Log in to your <a href="https://account.authorize.net" target="_blank">Authorize.Net</a> merchant account.</li>
+                        <li>Navigate to <strong>Account &gt; Settings &gt; API Credentials &amp; Keys</strong>.</li>
+                        <li>Copy your <em>API Login ID</em> and generate a <em>Transaction Key</em>.</li>
+                        <li>Set the <em>Signature Key</em> for webhook verification.</li>
+                    </ol>
+                {% elif provider == "braintree" %}
+                    <p><strong>Braintree Setup:</strong></p>
+                    <ol>
+                        <li>Log in to the <a href="https://www.braintreegateway.com/login" target="_blank">Braintree Control Panel</a>.</li>
+                        <li>Navigate to <strong>Settings &gt; API</strong>.</li>
+                        <li>Copy the <em>Merchant ID</em>, <em>Public Key</em>, and <em>Private Key</em>.</li>
+                        <li>Configure webhooks under <strong>Settings &gt; Webhooks</strong>.</li>
+                    </ol>
+                {% elif provider == "plaid_ach" %}
+                    <p><strong>Plaid + ACH Setup:</strong></p>
+                    <ol>
+                        <li>Sign up at <a href="https://dashboard.plaid.com" target="_blank">Plaid Dashboard</a>.</li>
+                        <li>Get your <em>Client ID</em> and <em>Secret</em> from the Keys page.</li>
+                        <li>Set the environment (sandbox, development, or production).</li>
+                        <li>ACH transfers are processed via Plaid's transfer API.</li>
+                    </ol>
+                {% elif provider == "bitcoin" %}
+                    <p><strong>Bitcoin Setup:</strong></p>
+                    <ol>
+                        <li>Generate an <em>xpub</em> key from your HD wallet (e.g., Electrum, Coldcard).</li>
+                        <li>Enter the xpub below. <strong>Never enter a private key.</strong></li>
+                        <li>Choose mainnet or testnet network.</li>
+                        <li>Addresses are derived automatically using BIP84 (native SegWit).</li>
+                    </ol>
+                {% else %}
+                    <p>Select a provider to see setup instructions.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Base form only (no config_form) fallback ── #}
+{% if base_form and not config_form %}
+<div class="mb-3">
+    <a href="{% url 'billing_admin:gateway_settings' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
 <div class="card">
     <div class="card-header">
         <h5 class="mb-0">
@@ -82,7 +245,7 @@
     <div class="card-body">
         <form method="post" novalidate>
             {% csrf_token %}
-            {{ form|crispy }}
+            {{ base_form|crispy }}
             <div class="d-flex justify-content-end gap-2 mt-3">
                 <a href="{% url 'billing_admin:gateway_settings' %}" class="btn btn-outline-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">
@@ -93,4 +256,46 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+document.querySelectorAll('.btn-test').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const url = this.dataset.url;
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                btn.innerHTML = '<i class="bi bi-check-circle text-success"></i> OK';
+                btn.classList.remove('btn-outline-success');
+                btn.classList.add('btn-success');
+            } else {
+                btn.innerHTML = '<i class="bi bi-x-circle"></i> Failed';
+                btn.classList.remove('btn-outline-success');
+                btn.classList.add('btn-outline-danger');
+                btn.title = data.message;
+            }
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.className = 'btn btn-sm btn-outline-success btn-test';
+                btn.disabled = false;
+            }, 3000);
+        })
+        .catch(() => {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        });
+    });
+});
+</script>
 {% endblock %}

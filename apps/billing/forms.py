@@ -233,3 +233,200 @@ class TenantPaymentForm(forms.Form):
         initial=True,
         label="Apply available prepayment credits",
     )
+
+
+# ---------------------------------------------------------------------------
+# Provider-specific gateway configuration forms
+# ---------------------------------------------------------------------------
+
+
+class GatewayBaseForm(forms.ModelForm):
+    class Meta:
+        model = PaymentGatewayConfig
+        fields = ["display_name", "is_active", "is_default"]
+
+
+class ProviderConfigForm(forms.Form):
+    """Base class for provider-specific config forms.
+
+    Serializes fields to/from the config JSONField.
+    """
+
+    def __init__(self, *args, config_data=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if config_data:
+            for field_name, field in self.fields.items():
+                if field_name in config_data:
+                    self.fields[field_name].initial = config_data[field_name]
+
+    def get_config_data(self):
+        """Return cleaned data as a dict for the config JSONField."""
+        return {k: v for k, v in self.cleaned_data.items() if v not in (None, "")}
+
+
+class StripeConfigForm(ProviderConfigForm):
+    secret_key = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        help_text="From Stripe Dashboard \u2192 Developers \u2192 API Keys",
+    )
+    publishable_key = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="Starts with pk_test_ or pk_live_",
+    )
+    webhook_secret = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        help_text="From Stripe Dashboard \u2192 Developers \u2192 Webhooks",
+    )
+
+
+class PayPalConfigForm(ProviderConfigForm):
+    client_id = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="From PayPal Developer Dashboard \u2192 My Apps & Credentials",
+    )
+    client_secret = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+    )
+    mode = forms.ChoiceField(
+        choices=[("sandbox", "Sandbox"), ("live", "Live")],
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    webhook_id = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="From PayPal Developer Dashboard \u2192 Webhooks",
+    )
+
+
+class SquareConfigForm(ProviderConfigForm):
+    access_token = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        help_text="From Square Developer Dashboard \u2192 Credentials",
+    )
+    application_id = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="From Square Developer Dashboard \u2192 Credentials",
+    )
+    location_id = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="From Square Dashboard \u2192 Locations",
+    )
+    environment = forms.ChoiceField(
+        choices=[("sandbox", "Sandbox"), ("production", "Production")],
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    webhook_signature_key = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+    )
+    webhook_url = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="Your webhook endpoint URL",
+    )
+
+
+class AuthorizeNetConfigForm(ProviderConfigForm):
+    api_login_id = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="From Merchant Interface \u2192 Account \u2192 Security Settings",
+    )
+    transaction_key = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+    )
+    signature_key = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        help_text="For webhook verification",
+    )
+    client_key = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="Public key for Accept.js",
+    )
+    environment = forms.ChoiceField(
+        choices=[("sandbox", "Sandbox"), ("production", "Production")],
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+
+
+class BraintreeConfigForm(ProviderConfigForm):
+    merchant_id = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="From Braintree Control Panel \u2192 Settings \u2192 API",
+    )
+    public_key = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    private_key = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+    )
+    environment = forms.ChoiceField(
+        choices=[("sandbox", "Sandbox"), ("production", "Production")],
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+
+
+class PlaidAchConfigForm(ProviderConfigForm):
+    plaid_client_id = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="From Plaid Dashboard \u2192 Team Settings \u2192 Keys",
+    )
+    plaid_secret = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+    )
+    plaid_environment = forms.ChoiceField(
+        choices=[
+            ("sandbox", "Sandbox"),
+            ("development", "Development"),
+            ("production", "Production"),
+        ],
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    stripe_secret_key = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        help_text="Stripe key for ACH processing",
+    )
+    stripe_publishable_key = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+
+
+class BitcoinConfigForm(ProviderConfigForm):
+    xpub = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+        help_text="Extended public key (xpub/zpub) for address derivation",
+    )
+    network = forms.ChoiceField(
+        choices=[("bitcoin", "Mainnet"), ("testnet", "Testnet")],
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    payment_window_minutes = forms.IntegerField(
+        initial=60,
+        min_value=15,
+        max_value=1440,
+        widget=forms.NumberInput(attrs={"class": "form-control"}),
+        help_text="Minutes before a BTC payment expires",
+    )
+    required_confirmations = forms.IntegerField(
+        initial=1,
+        min_value=0,
+        max_value=6,
+        widget=forms.NumberInput(attrs={"class": "form-control"}),
+    )
+    hot_wallet_encrypted_key = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        help_text="Optional: Encrypted private key for automated sweeps",
+    )
+
+
+PROVIDER_FORM_MAP = {
+    "stripe": StripeConfigForm,
+    "paypal": PayPalConfigForm,
+    "square": SquareConfigForm,
+    "authorize_net": AuthorizeNetConfigForm,
+    "braintree": BraintreeConfigForm,
+    "plaid_ach": PlaidAchConfigForm,
+    "bitcoin": BitcoinConfigForm,
+}

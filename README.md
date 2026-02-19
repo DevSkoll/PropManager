@@ -1,21 +1,39 @@
 # PropManager
 
-A full-featured property management application built with Django for small-scale landlords managing residential properties and tenants.
+**Property management software built by a landlord, for landlords — tenant-first, no compromises.**
+
+I built PropManager because I needed it. Every tool on the market is either bloated enterprise software priced at $500/month or some half-baked spreadsheet replacement that falls apart the second you have more than three tenants. I knew there had to be something better — so I made it.
+
+This is a full-stack Django application designed from the ground up for independent landlords and small property managers who want real, powerful software without the enterprise price tag or the enterprise headaches.
+
+## About Me
+
+I'm Skoll — an active duty service member running 8+ units on my own. My goal has always been to build the best tenant-landlord relationship possible, and that starts with building the best tools that put tenants first.
+
+PropManager is one of those tools. I decided to release it under AGPL to share with the ADPI community and fellow service members who are also running their own units and building wealth through real estate. Within the demands of military life — deployments, TDYs, training rotations — PropManager makes it easy and fast to manage tenants, coordinate contractors, and handle every aspect of running properties from anywhere in the world.
+
+I'm proud of what this platform has become. It's not a toy project — it's a powerful, production-ready system that I use myself every day. I genuinely believe PropManager holds the key to pleased tenants, proactive management, easier operations, and an open platform that the whole community can contribute to and make even better.
+
+Every feature here reflects something I actually needed: passwordless login because my tenants shouldn't have to remember another password, seven pluggable payment gateways because nobody should be locked into one provider, Bitcoin payments because the future doesn't wait, weather alerts because my tenants deserve a heads-up before the storm hits, and a rewards program because great tenants deserve to be recognized.
+
+If you have any questions, want to contribute, or just want to talk shop about real estate and tech, reach out to me at **x@skoll.dev**.
 
 ## Features
 
-- **Multi-Portal Architecture** - Separate portals for admins, tenants, and contractors
-- **Passwordless Tenant Login** - Email/SMS OTP authentication (no passwords for tenants)
-- **Admin 2FA** - Optional two-factor authentication for admin accounts
-- **Billing & Invoicing** - Automated invoice generation, payment tracking, aging receivables
-- **Pluggable Payment Gateways** - Stripe, PayPal, and Square support (admin-configurable)
-- **Work Order Management** - Full lifecycle from tenant submission to contractor completion
-- **Contractor Token Access** - Secure, expiring links for contractors (no account required)
-- **Communications** - In-app messaging, notifications, and announcements
-- **Document Management** - Upload, categorize, and share documents with tenants
-- **Weather Monitoring** - OpenWeatherMap integration with automatic tenant alerts
-- **Marketing Campaigns** - Email campaigns with segmentation, scheduling, and open/click tracking
-- **Reports & CSV Export** - Rent roll, aging receivables, payment history, work order summary
+- **Multi-Portal Architecture** — Dedicated portals for admins, tenants, and contractors, each with purpose-built UIs
+- **Passwordless Tenant Login** — Email/SMS OTP authentication so tenants never deal with passwords
+- **Admin 2FA** — Optional two-factor authentication to keep admin accounts locked down
+- **Billing & Invoicing** — Automated invoice generation with late fees, interest, utility billing, recurring charges, and prepayment credits
+- **7 Payment Gateways** — Stripe, PayPal, Square, Authorize.Net, Braintree, Plaid ACH, and Bitcoin — all configurable from the admin UI with guided setup forms, webhook signature verification, and connection testing
+- **Bitcoin Payments** — Accept BTC with a locally managed HD wallet, real-time USD conversion via CoinGecko, mempool.space monitoring, and admin transfer controls
+- **Tenant Rewards Program** — On-time payment streaks and prepayment bonuses to incentivize great tenants (legally distinct from credits — these are promotional, not real money)
+- **Work Order Management** — Full lifecycle from tenant submission through contractor completion with photo uploads, internal notes, and status tracking
+- **Contractor Token Access** — Secure, expiring links for contractors with zero account setup required
+- **Communications** — Threaded messaging, push notifications, SMS, and property-wide announcements
+- **Document Management** — Upload, categorize, and selectively share documents with tenants
+- **Weather Monitoring** — OpenWeatherMap integration with configurable thresholds and automatic tenant alerts for snow, wind, and extreme temperatures
+- **Marketing Campaigns** — Email campaigns with tenant segmentation, scheduling, open/click tracking, and analytics
+- **Reports & CSV Export** — Rent roll, aging receivables, payment history, and work order summaries
 
 ## Tech Stack
 
@@ -27,7 +45,8 @@ A full-featured property management application built with Django for small-scal
 | Frontend | Django Templates + HTMX + Bootstrap 5 |
 | Forms | django-crispy-forms + crispy-bootstrap5 |
 | SMS | Twilio |
-| Payments | Stripe / PayPal / Square (pluggable) |
+| Payments | Stripe, PayPal, Square, Authorize.Net, Braintree, Plaid ACH, Bitcoin |
+| Bitcoin | bitcoinlib (HD wallet) + CoinGecko (pricing) + mempool.space (monitoring) |
 | Weather | OpenWeatherMap API |
 | Static Files | WhiteNoise |
 
@@ -37,6 +56,7 @@ A full-featured property management application built with Django for small-scal
 
 - Python 3.10+
 - pip
+- libgmp-dev (for Bitcoin wallet support: `sudo apt install libgmp-dev`)
 - (Optional) PostgreSQL for production
 
 ### 1. Clone and set up the virtual environment
@@ -108,7 +128,7 @@ Tenants use passwordless OTP login. In development, the OTP code is always **`12
 
 ### Contractor Access
 
-Contractor links are generated by admins when assigning work orders. No accounts needed - contractors access their assigned work orders via unique token URLs (e.g., `/contractor/<token>/`).
+Contractor links are generated by admins when assigning work orders. No accounts needed — contractors access their assigned work orders via unique token URLs (e.g., `/contractor/<token>/`).
 
 ## Sample Data
 
@@ -131,16 +151,18 @@ propmanager/
         accounts/        # Users, auth, OTP, profiles, contractor tokens
         properties/      # Properties, units, amenities
         leases/          # Leases, terms, terminations
-        billing/         # Invoices, payments, payment gateways
+        billing/         # Invoices, payments, 7 payment gateways, Bitcoin wallet
         workorders/      # Work orders, contractor assignments, notes, images
         communications/  # Messages, notifications, announcements
         documents/       # File uploads, categories
         weather/         # Weather monitoring, alerts
         marketing/       # Email campaigns, segmentation, tracking
+        rewards/         # Tenant rewards, streak tracking, prepayment bonuses
     templates/           # All HTML templates organized by app
     static/              # CSS, JS, images
     media/               # User uploads (gitignored)
     requirements/        # Dependency files (base/dev/prod)
+    docs/                # Architecture, services, deployment guides
 ```
 
 ## URL Structure
@@ -156,9 +178,9 @@ propmanager/
 
 See the [`docs/`](docs/) directory for detailed documentation:
 
-- [Architecture Overview](docs/architecture.md) - System design, data models, authentication flows
-- [API & Services](docs/services.md) - Payment gateways, SMS, email, weather services
-- [Deployment Guide](docs/deployment.md) - Production setup, environment variables, PostgreSQL, Django-Q2
+- [Architecture Overview](docs/architecture.md) — System design, 45 models across 11 apps, authentication flows
+- [API & Services](docs/services.md) — Payment gateways, Bitcoin wallet, SMS, email, weather, rewards
+- [Deployment Guide](docs/deployment.md) — Production setup, environment variables, PostgreSQL, Django-Q2
 
 ## Configuration
 
@@ -176,8 +198,9 @@ All configuration is via environment variables (`.env` file). Key settings:
 | `STRIPE_SECRET_KEY` | Stripe API key | For Stripe payments |
 | `PAYPAL_CLIENT_ID` | PayPal client ID | For PayPal payments |
 | `SQUARE_ACCESS_TOKEN` | Square access token | For Square payments |
+| `BITCOIN_ENCRYPTION_KEY` | AES-256 key for hot wallet | For Bitcoin payments |
 
-See [`.env.example`](.env.example) for the complete list.
+See [`.env.example`](.env.example) for the complete list, including Authorize.Net, Braintree, and Plaid credentials.
 
 ## Management Commands
 
@@ -196,9 +219,12 @@ python manage.py qcluster
 ```
 
 Tasks include:
-- Invoice generation and overdue detection
+- Invoice generation, late fee application, and overdue detection
+- Prepayment credit and reward auto-application
+- Streak reward evaluation (monthly)
 - OTP delivery (email/SMS)
 - Weather polling and alert generation
+- Bitcoin payment monitoring (every 2 minutes via mempool.space)
 - Marketing campaign sending
 - Notification dispatch
 

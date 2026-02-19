@@ -17,9 +17,11 @@ from apps.properties.models import Property, Unit
 from .forms import (
     BatchInvoiceGenerateForm,
     BulkUtilityConfigForm,
+    GatewayBaseForm,
     InvoiceEditLineItemFormSet,
     InvoiceForm,
     InvoiceLineItemFormSet,
+    PROVIDER_FORM_MAP,
     PaymentGatewayConfigForm,
     PropertyBillingConfigForm,
     RecordPaymentForm,
@@ -30,6 +32,9 @@ from .forms import (
 from .models import (
     ApiToken,
     BillingCycle,
+    BitcoinPayment,
+    BitcoinPriceSnapshot,
+    BitcoinWalletConfig,
     Invoice,
     InvoiceLineItem,
     Payment,
@@ -39,6 +44,7 @@ from .models import (
     RecurringCharge,
     UtilityConfig,
     UtilityRateLog,
+    WebhookEvent,
 )
 from .services import InvoiceService, LateFeeService, PaymentService
 
@@ -295,33 +301,184 @@ def admin_gateway_settings(request):
     gateways = PaymentGatewayConfig.objects.all()
 
     editing_pk = request.GET.get("edit")
+    provider = request.GET.get("provider")
+    show_add = request.GET.get("add")
+
+    base_form = None
+    config_form = None
     editing_gateway = None
-    form = None
 
     if editing_pk:
         editing_gateway = get_object_or_404(PaymentGatewayConfig, pk=editing_pk)
-        form = PaymentGatewayConfigForm(instance=editing_gateway)
-    elif request.GET.get("add"):
-        form = PaymentGatewayConfigForm()
+        provider = editing_gateway.provider
+        base_form = GatewayBaseForm(instance=editing_gateway)
+        FormClass = PROVIDER_FORM_MAP.get(provider)
+        if FormClass:
+            config_form = FormClass(config_data=editing_gateway.config)
+    elif provider and provider in PROVIDER_FORM_MAP:
+        base_form = GatewayBaseForm()
+        FormClass = PROVIDER_FORM_MAP[provider]
+        config_form = FormClass()
 
-    if request.method == "POST":
+    if request.method == "POST" and (editing_pk or provider):
         if editing_pk:
             editing_gateway = get_object_or_404(PaymentGatewayConfig, pk=editing_pk)
-            form = PaymentGatewayConfigForm(request.POST, instance=editing_gateway)
+            provider = editing_gateway.provider
+            base_form = GatewayBaseForm(request.POST, instance=editing_gateway)
         else:
-            form = PaymentGatewayConfigForm(request.POST)
+            base_form = GatewayBaseForm(request.POST)
 
-        if form.is_valid():
-            form.save()
+        FormClass = PROVIDER_FORM_MAP.get(provider)
+        config_form = FormClass(request.POST) if FormClass else None
+
+        if base_form.is_valid() and (config_form is None or config_form.is_valid()):
+            gateway = base_form.save(commit=False)
+            if not editing_pk:
+                gateway.provider = provider
+            if config_form:
+                gateway.config = config_form.get_config_data()
+            gateway.save()
             messages.success(request, "Gateway configuration saved.")
             return redirect("billing_admin:gateway_settings")
 
+    # Provider display info for the selection cards
+    provider_info = {
+        "stripe": {"icon": "bi-stripe", "color": "primary", "desc": "Credit/debit cards, Apple Pay, Google Pay"},
+        "paypal": {"icon": "bi-paypal", "color": "info", "desc": "PayPal checkout and payments"},
+        "square": {"icon": "bi-grid-3x3", "color": "dark", "desc": "In-person and online payments"},
+        "authorize_net": {"icon": "bi-credit-card-2-front", "color": "danger", "desc": "Credit/debit card processing"},
+        "braintree": {"icon": "bi-tree", "color": "success", "desc": "PayPal-owned payment platform"},
+        "plaid_ach": {"icon": "bi-bank", "color": "secondary", "desc": "ACH direct bank transfers via Plaid"},
+        "bitcoin": {"icon": "bi-currency-bitcoin", "color": "warning", "desc": "Bitcoin cryptocurrency payments"},
+    }
+
     context = {
         "gateways": gateways,
-        "form": form,
+        "base_form": base_form,
+        "config_form": config_form,
         "editing_gateway": editing_gateway,
+        "show_add": show_add,
+        "provider": provider,
+        "provider_info": provider_info,
+        "provider_choices": PaymentGatewayConfig.PROVIDER_CHOICES,
     }
     return render(request, "billing/admin_gateway_settings.html", context)
+
+
+@admin_required
+@require_POST
+def admin_gateway_test(request, pk):
+    """Test gateway connection."""
+    from apps.core.services.payments.factory import get_gateway_class
+    config = get_object_or_404(PaymentGatewayConfig, pk=pk)
+    try:
+        cls = get_gateway_class(config.provider)
+        gateway = cls(config)
+        success, message = gateway.test_connection()
+        return JsonResponse({"success": success, "message": message})
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)})
+
+
+@admin_required
+def admin_webhook_log(request):
+    """List webhook events with filters."""
+    events = WebhookEvent.objects.select_related("payment").all()
+
+    provider = request.GET.get("provider")
+    status = request.GET.get("status")
+
+    if provider:
+        events = events.filter(provider=provider)
+    if status:
+        events = events.filter(status=status)
+
+    context = {
+        "events": events[:200],
+        "provider_filter": provider,
+        "status_filter": status,
+        "provider_choices": PaymentGatewayConfig.PROVIDER_CHOICES,
+        "status_choices": WebhookEvent.WEBHOOK_STATUS_CHOICES,
+    }
+    return render(request, "billing/admin_webhook_log.html", context)
+
+
+@admin_required
+def admin_bitcoin_dashboard(request):
+    """Bitcoin wallet overview."""
+    from apps.core.services.payments.bitcoin_utils import get_btc_usd_rate
+
+    btc_config = PaymentGatewayConfig.objects.filter(provider="bitcoin", is_active=True).first()
+    wallet_config = None
+    if btc_config:
+        wallet_config = getattr(btc_config, 'btc_wallet_config', None)
+
+    recent_payments = BitcoinPayment.objects.select_related("invoice", "invoice__tenant")[:20]
+    pending_count = BitcoinPayment.objects.filter(status__in=["pending", "mempool"]).count()
+
+    try:
+        btc_usd_rate = get_btc_usd_rate()
+    except Exception:
+        btc_usd_rate = None
+
+    context = {
+        "btc_config": btc_config,
+        "wallet_config": wallet_config,
+        "recent_payments": recent_payments,
+        "pending_count": pending_count,
+        "btc_usd_rate": btc_usd_rate,
+    }
+    return render(request, "billing/admin_bitcoin_dashboard.html", context)
+
+
+@admin_required
+def admin_bitcoin_transfer(request):
+    """Transfer BTC out of the wallet."""
+    from apps.core.services.payments.bitcoin_utils import get_btc_usd_rate
+
+    btc_config = PaymentGatewayConfig.objects.filter(provider="bitcoin", is_active=True).first()
+
+    try:
+        btc_usd_rate = get_btc_usd_rate()
+    except Exception:
+        btc_usd_rate = None
+
+    if request.method == "POST":
+        destination = request.POST.get("destination_address", "").strip()
+        amount_btc = request.POST.get("amount_btc", "").strip()
+
+        if not destination or not amount_btc:
+            messages.error(request, "Destination address and amount are required.")
+        else:
+            # For now, manual transfer - just log it
+            messages.info(request, f"Transfer request recorded: {amount_btc} BTC to {destination}. This requires manual processing with your offline signing key.")
+
+        return redirect("billing_admin:bitcoin_transfer")
+
+    context = {
+        "btc_config": btc_config,
+        "btc_usd_rate": btc_usd_rate,
+    }
+    return render(request, "billing/admin_bitcoin_transfer.html", context)
+
+
+@admin_required
+def admin_bitcoin_payments(request):
+    """List all Bitcoin payments."""
+    payments = BitcoinPayment.objects.select_related(
+        "invoice", "invoice__tenant", "payment"
+    ).all()
+
+    status = request.GET.get("status")
+    if status:
+        payments = payments.filter(status=status)
+
+    context = {
+        "btc_payments": payments[:200],
+        "status_filter": status,
+        "status_choices": BitcoinPayment.STATUS_CHOICES,
+    }
+    return render(request, "billing/admin_bitcoin_payments.html", context)
 
 
 # ---------------------------------------------------------------------------
@@ -908,22 +1065,67 @@ def tenant_payment_webhook(request, provider):
     if not gateway:
         return JsonResponse({"error": "Unknown provider."}, status=400)
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON."}, status=400)
+    ip_address = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", ""))
+    if "," in ip_address:
+        ip_address = ip_address.split(",")[0].strip()
 
-    transaction_id = data.get("transaction_id") or data.get("id") or data.get("payment_intent")
+    # Verify webhook signature
+    try:
+        event_data = gateway.verify_webhook(request)
+    except ValueError as e:
+        WebhookEvent.objects.create(
+            provider=provider,
+            event_type="verification_failed",
+            payload={"error": str(e)},
+            status="failed",
+            error_message=str(e),
+            ip_address=ip_address,
+        )
+        return JsonResponse({"error": "Signature verification failed."}, status=403)
+
+    event_type = event_data.get("event_type", "")
+    transaction_id = event_data.get("transaction_id", "")
+    event_id = event_data.get("raw_event", {}).get("id", "")
+
+    # Deduplicate
+    if event_id:
+        existing = WebhookEvent.objects.filter(event_id=event_id, status="processed").first()
+        if existing:
+            return JsonResponse({"status": "already_processed"})
+
+    # Log the event
+    webhook_event = WebhookEvent.objects.create(
+        provider=provider,
+        event_type=event_type,
+        event_id=event_id,
+        payload=event_data.get("raw_event", {}),
+        status="received",
+        ip_address=ip_address,
+    )
+
     if not transaction_id:
-        return JsonResponse({"error": "No transaction ID."}, status=400)
+        webhook_event.status = "ignored"
+        webhook_event.error_message = "No transaction ID in event"
+        webhook_event.save(update_fields=["status", "error_message"])
+        return JsonResponse({"status": "ignored"})
 
     try:
         payment = Payment.objects.get(
             gateway_transaction_id=transaction_id,
             status="pending",
         )
+        result = PaymentService.confirm_gateway_payment(payment.pk)
+        webhook_event.payment = payment
+        webhook_event.status = "processed"
+        webhook_event.save(update_fields=["payment", "status"])
+        return JsonResponse(result)
     except Payment.DoesNotExist:
-        return JsonResponse({"error": "Payment not found."}, status=404)
-
-    result = PaymentService.confirm_gateway_payment(payment.pk)
-    return JsonResponse(result)
+        webhook_event.status = "ignored"
+        webhook_event.error_message = f"No pending payment for transaction {transaction_id}"
+        webhook_event.save(update_fields=["status", "error_message"])
+        return JsonResponse({"status": "no_matching_payment"})
+    except Exception as e:
+        webhook_event.status = "failed"
+        webhook_event.error_message = str(e)
+        webhook_event.save(update_fields=["status", "error_message"])
+        return JsonResponse({"error": str(e)}, status=500)

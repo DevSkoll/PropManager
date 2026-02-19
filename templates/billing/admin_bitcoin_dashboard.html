@@ -1,0 +1,156 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Bitcoin Wallet Dashboard - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-currency-bitcoin"></i> Bitcoin Wallet Dashboard</h2>
+    <div class="d-flex gap-2">
+        <a href="{% url 'billing_admin:bitcoin_transfer' %}" class="btn btn-outline-warning">
+            <i class="bi bi-send"></i> Transfer BTC
+        </a>
+        <a href="{% url 'billing_admin:bitcoin_payments' %}" class="btn btn-outline-primary">
+            <i class="bi bi-list-ul"></i> All BTC Payments
+        </a>
+    </div>
+</div>
+
+{% if not btc_config %}
+{# ── No Bitcoin Gateway Configured ── #}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i>
+    <strong>Bitcoin gateway not configured.</strong>
+    Set up a Bitcoin payment gateway to start accepting BTC payments.
+    <a href="{% url 'billing_admin:gateway_settings' %}" class="alert-link">Go to Gateway Settings</a>
+</div>
+{% else %}
+
+{# ── Stat Cards ── #}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <div class="text-muted small">Current BTC-USD Rate</div>
+                <div class="fs-4 fw-bold text-warning">
+                    {% if btc_usd_rate %}
+                        ${{ btc_usd_rate|floatformat:2 }}
+                    {% else %}
+                        <span class="text-muted">Unavailable</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <div class="text-muted small">Pending Payments</div>
+                <div class="fs-4 fw-bold text-info">{{ pending_count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <div class="text-muted small">Total Confirmed</div>
+                <div class="fs-4 fw-bold text-success">
+                    {{ recent_payments|length }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-secondary">
+            <div class="card-body">
+                <div class="text-muted small">Network</div>
+                <div class="fs-4 fw-bold">
+                    {% if wallet_config %}
+                        {{ wallet_config.get_network_display }}
+                    {% else %}
+                        <span class="text-muted">N/A</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Recent Payments Table ── #}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Payments</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Address</th>
+                        <th>Invoice</th>
+                        <th>USD Amount</th>
+                        <th>BTC Amount</th>
+                        <th>Status</th>
+                        <th>Confirmations</th>
+                        <th>Txid</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bp in recent_payments %}
+                    <tr>
+                        <td><code title="{{ bp.btc_address }}">{{ bp.btc_address|truncatechars:16 }}</code></td>
+                        <td>
+                            {% if bp.invoice %}
+                                <a href="{% url 'billing_admin:invoice_detail' pk=bp.invoice.pk %}">
+                                    {{ bp.invoice.invoice_number }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">&mdash;</span>
+                            {% endif %}
+                        </td>
+                        <td>${{ bp.usd_amount|floatformat:2 }}</td>
+                        <td>{{ bp.satoshis_to_btc }} BTC</td>
+                        <td>
+                            {% if bp.status == "pending" %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif bp.status == "mempool" %}
+                                <span class="badge bg-info text-dark">In Mempool</span>
+                            {% elif bp.status == "confirmed" %}
+                                <span class="badge bg-success">Confirmed</span>
+                            {% elif bp.status == "expired" %}
+                                <span class="badge bg-secondary">Expired</span>
+                            {% elif bp.status == "overpaid" %}
+                                <span class="badge bg-danger">Overpaid</span>
+                            {% elif bp.status == "underpaid" %}
+                                <span class="badge bg-danger">Underpaid</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark">{{ bp.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ bp.confirmations }}</td>
+                        <td>
+                            {% if bp.txid %}
+                                <a href="https://mempool.space/tx/{{ bp.txid }}" target="_blank" title="{{ bp.txid }}">
+                                    {{ bp.txid|truncatechars:16 }}
+                                    <i class="bi bi-box-arrow-up-right small"></i>
+                                </a>
+                            {% else %}
+                                <span class="text-muted">&mdash;</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">No Bitcoin payments yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
