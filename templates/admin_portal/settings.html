@@ -1,0 +1,82 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Settings - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2><i class="bi bi-gear"></i> Settings</h2>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-credit-card"></i> Payment Gateways</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Configure payment processing providers for online rent collection.</p>
+                <p>
+                    <strong>{{ active_gateways }}</strong> active of <strong>{{ gateway_count }}</strong> total gateway{{ gateway_count|pluralize }}
+                </p>
+                <a href="{% url 'billing_admin:gateway_settings' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-gear"></i> Manage Gateways
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-key"></i> API Tokens</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Manage API tokens for external system integrations (e.g., utility meter feeds).</p>
+                <p>
+                    <strong>{{ api_token_count }}</strong> active token{{ api_token_count|pluralize }}
+                </p>
+                <a href="{% url 'admin:billing_apitoken_changelist' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-key"></i> Manage Tokens
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Utility Billing</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Configure utility billing modes and rates across properties.</p>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'billing_admin:utility_bulk_set' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-sliders"></i> Bulk Config
+                    </a>
+                    <a href="{% url 'billing_admin:utility_rate_history' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-clock-history"></i> Rate History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-people-fill"></i> Staff</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Manage admin and staff user accounts.</p>
+                <p>
+                    <strong>{{ staff_count }}</strong> active staff member{{ staff_count|pluralize }}
+                </p>
+                <a href="{% url 'admin:accounts_user_changelist' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-person-gear"></i> Manage Users
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

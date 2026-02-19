@@ -1,0 +1,109 @@
+{% extends "admin_portal/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if editing %}Edit Contact{% else %}Add Contact{% endif %} - {{ group.name }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'notifications_admin:group_detail' pk=group.pk %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to {{ group.name }}
+    </a>
+    <h2 class="mt-2">
+        <i class="bi bi-person-plus"></i> {% if editing %}Edit Contact{% else %}Add Contact to "{{ group.name }}"{% endif %}
+    </h2>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> {% if editing %}Update Contact{% else %}Add Contact{% endif %}
+                        </button>
+                        <a href="{% url 'notifications_admin:group_detail' pk=group.pk %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Help</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Staff User:</strong> Select a staff user to link this contact to their account. Email and phone will be pulled from their profile.</p>
+                <p class="mb-2"><strong>External Contact:</strong> Leave the user field blank and fill in the external name, email, and/or phone number.</p>
+                <p class="mb-0"><strong>Webhook/Service:</strong> Set channel to "Webhook" to send event data as a JSON POST to a URL. Works with n8n, Zapier, or any webhook endpoint.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const userField = document.getElementById("id_user");
+    const channelField = document.getElementById("id_channel");
+    const externalFieldIds = ["id_external_name", "id_external_email", "id_external_phone"];
+    const webhookFieldIds = ["id_service_name", "id_webhook_url"];
+
+    function setFieldGroupState(fieldIds, enabled) {
+        fieldIds.forEach(function(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                const wrapper = field.closest(".mb-3") || field.parentElement;
+                if (wrapper) {
+                    wrapper.style.display = enabled ? "" : "none";
+                }
+                field.disabled = !enabled;
+            }
+        });
+    }
+
+    function toggleFields() {
+        const channel = channelField ? channelField.value : "";
+        const isWebhook = channel === "webhook";
+        const hasUser = userField && userField.value;
+
+        // User field: hidden when webhook
+        if (userField) {
+            const userWrapper = userField.closest(".mb-3") || userField.parentElement;
+            if (userWrapper) {
+                userWrapper.style.display = isWebhook ? "none" : "";
+            }
+            if (isWebhook) userField.disabled = true;
+            else userField.disabled = false;
+        }
+
+        // Webhook fields: shown only when channel is webhook
+        setFieldGroupState(webhookFieldIds, isWebhook);
+
+        // External fields: shown when not webhook and no user selected
+        if (isWebhook) {
+            setFieldGroupState(externalFieldIds, false);
+        } else {
+            const showExternal = !hasUser;
+            externalFieldIds.forEach(function(fieldId) {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    const wrapper = field.closest(".mb-3") || field.parentElement;
+                    if (wrapper) {
+                        wrapper.style.display = "";
+                        wrapper.style.opacity = showExternal ? "1" : "0.5";
+                    }
+                    field.disabled = !showExternal;
+                }
+            });
+        }
+    }
+
+    if (channelField) channelField.addEventListener("change", toggleFields);
+    if (userField) userField.addEventListener("change", toggleFields);
+    toggleFields();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Tenants - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people"></i> Tenants</h2>
+    <span class="badge bg-primary fs-6">{{ total_count }} tenant{{ total_count|pluralize }}</span>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="Name, email, or phone...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                <a href="{% url 'accounts_admin:admin_tenant_list' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Unit</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in tenant_data %}
+                <tr>
+                    <td class="fw-semibold">{{ item.user.get_full_name|default:item.user.username }}</td>
+                    <td>{{ item.user.email }}</td>
+                    <td>{{ item.user.phone_number|default:"-" }}</td>
+                    <td>
+                        {% if item.active_lease %}
+                            <a href="{% url 'properties_admin:unit_detail' property_pk=item.active_lease.unit.property.pk pk=item.active_lease.unit.pk %}">
+                                {{ item.active_lease.unit.property.name }} - {{ item.active_lease.unit.unit_number }}
+                            </a>
+                        {% else %}
+                            <span class="text-muted">No active lease</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <i class="bi bi-people" style="font-size: 2rem;"></i>
+                        <p class="mb-0 mt-2">No tenants found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Utility Rate History - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clock-history"></i> Utility Rate History</h2>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Property</label>
+                <select name="property" class="form-select">
+                    <option value="">All Properties</option>
+                    {% for prop in properties %}
+                    <option value="{{ prop.pk }}" {% if current_property == prop.pk|slugify %}selected{% endif %}>{{ prop.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Utility Type</label>
+                <select name="utility_type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for value, label in utility_type_choices %}
+                    <option value="{{ value }}" {% if current_utility_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-filter"></i> Filter</button>
+                <a href="{% url 'billing_admin:utility_rate_history' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Property</th>
+                    <th>Unit</th>
+                    <th>Utility</th>
+                    <th class="text-end">Old Rate</th>
+                    <th class="text-end">New Rate</th>
+                    <th>Mode Change</th>
+                    <th>Changed By</th>
+                    <th>Source</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.created_at|date:"M d, Y g:i A" }}</td>
+                    <td>{{ log.utility_config.unit.property.name }}</td>
+                    <td>{{ log.utility_config.unit.unit_number }}</td>
+                    <td>{{ log.utility_config.get_utility_type_display }}</td>
+                    <td class="text-end">{{ log.previous_rate|currency }}</td>
+                    <td class="text-end fw-semibold">{{ log.new_rate|currency }}</td>
+                    <td>
+                        {% if log.previous_billing_mode != log.new_billing_mode and log.previous_billing_mode %}
+                        <span class="badge bg-secondary">{{ log.previous_billing_mode }}</span>
+                        <i class="bi bi-arrow-right"></i>
+                        <span class="badge bg-primary">{{ log.new_billing_mode }}</span>
+                        {% elif log.new_billing_mode %}
+                        <span class="badge bg-light text-dark">{{ log.new_billing_mode }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>{{ log.changed_by.get_full_name|default:log.changed_by.username|default:"System" }}</td>
+                    <td>
+                        <span class="badge bg-{% if log.source == 'api' %}info{% elif log.source == 'bulk_set' %}warning text-dark{% else %}secondary{% endif %}">
+                            {{ log.source }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">
+                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                        <p class="mb-0 mt-2">No rate changes recorded.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

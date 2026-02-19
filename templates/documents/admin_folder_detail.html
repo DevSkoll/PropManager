@@ -1,0 +1,111 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ folder.name }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-folder-fill text-warning"></i> {{ folder.name }}</h2>
+    <a href="{% url 'documents_admin:folder_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Folders
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Folder Info</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <th class="text-muted">Unit</th>
+                            <td>{{ folder.unit }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Property</th>
+                            <td>{{ folder.unit.property }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Lease</th>
+                            <td>{{ folder.lease|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Tenant Visible</th>
+                            <td>
+                                {% if folder.is_tenant_visible %}
+                                <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Description</th>
+                            <td>{{ folder.description|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Created</th>
+                            <td>{{ folder.created_at|date:"M d, Y" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Documents in Folder</h5>
+                <span class="badge bg-primary">{{ documents|length }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Uploaded By</th>
+                            <th>Size</th>
+                            <th>Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'documents_admin:document_detail' pk=doc.pk %}">{{ doc.title }}</a>
+                                {% if doc.is_locked %}<i class="bi bi-lock-fill text-warning" title="Locked"></i>{% endif %}
+                            </td>
+                            <td>{{ doc.get_document_type_display }}</td>
+                            <td>
+                                {% if doc.uploaded_by_role == "tenant" %}
+                                <span class="badge bg-info text-dark">Tenant</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Admin</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ doc.file_size|human_filesize }}</td>
+                            <td>{{ doc.created_at|date:"M d, Y" }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'documents_admin:document_download' pk=doc.pk %}" class="btn btn-sm btn-outline-primary" title="Download">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No documents in this folder.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

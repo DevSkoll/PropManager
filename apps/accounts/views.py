@@ -274,6 +274,72 @@ def admin_dashboard(request):
     })
 
 
+# --- Admin: Tenant Management ---
+
+
+@admin_required
+def admin_tenant_list(request):
+    """List all tenant accounts with search and filter."""
+    tenants = User.objects.filter(role="tenant").order_by("last_name", "first_name")
+
+    search = request.GET.get("search", "").strip()
+    if search:
+        tenants = tenants.filter(
+            Q(first_name__icontains=search)
+            | Q(last_name__icontains=search)
+            | Q(email__icontains=search)
+            | Q(phone_number__icontains=search)
+        )
+
+    status_filter = request.GET.get("status", "")
+    if status_filter == "active":
+        tenants = tenants.filter(is_active=True)
+    elif status_filter == "inactive":
+        tenants = tenants.filter(is_active=False)
+
+    # Annotate with active lease info
+    from apps.leases.models import Lease
+
+    active_lease_map = {}
+    active_leases = Lease.objects.filter(
+        status="active", tenant__in=tenants
+    ).select_related("unit", "unit__property")
+    for lease in active_leases:
+        active_lease_map[lease.tenant_id] = lease
+
+    tenant_data = []
+    for tenant in tenants:
+        tenant_data.append({
+            "user": tenant,
+            "active_lease": active_lease_map.get(tenant.pk),
+        })
+
+    return render(request, "admin_portal/tenant_list.html", {
+        "tenant_data": tenant_data,
+        "search": search,
+        "status_filter": status_filter,
+        "total_count": len(tenant_data),
+    })
+
+
+@admin_required
+def admin_settings(request):
+    """Admin settings overview page."""
+    from apps.billing.models import ApiToken, PaymentGatewayConfig
+
+    gateway_count = PaymentGatewayConfig.objects.count()
+    active_gateways = PaymentGatewayConfig.objects.filter(is_active=True).count()
+    api_token_count = ApiToken.objects.filter(is_active=True).count()
+    staff_count = User.objects.filter(role__in=("admin", "staff"), is_active=True).count()
+
+    return render(request, "admin_portal/settings.html", {
+        "gateway_count": gateway_count,
+        "active_gateways": active_gateways,
+        "api_token_count": api_token_count,
+        "staff_count": staff_count,
+    })
+
+
 # --- Shared ---
 
 def user_logout(request):

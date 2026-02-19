@@ -3,13 +3,13 @@ Django-Q2 async tasks for the billing app.
 
 Schedule these via Django-Q2 admin or programmatically:
     from django_q.tasks import async_task, schedule
-    async_task('apps.billing.tasks.generate_monthly_invoices', billing_cycle_id)
-    async_task('apps.billing.tasks.check_overdue_invoices')
+    async_task('apps.billing.tasks.generate_monthly_invoices')
+    async_task('apps.billing.tasks.apply_late_fees')
     async_task('apps.billing.tasks.process_payment', payment_id)
 """
 
 import logging
-from decimal import Decimal
+from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
@@ -17,96 +17,138 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-def _generate_invoice_number():
-    """Generate a unique invoice number in the format INV-YYYYMM-XXXX."""
-    from .models import Invoice
-
-    now = timezone.now()
-    prefix = f"INV-{now.strftime('%Y%m')}-"
-    last_invoice = (
-        Invoice.objects.filter(invoice_number__startswith=prefix)
-        .order_by("-invoice_number")
-        .first()
-    )
-    if last_invoice:
-        last_seq = int(last_invoice.invoice_number.split("-")[-1])
-        seq = last_seq + 1
-    else:
-        seq = 1
-    return f"{prefix}{seq:04d}"
-
-
-def generate_monthly_invoices(billing_cycle_id):
+def generate_monthly_invoices(target_month=None):
     """
-    Create invoices for all active leases within the given billing cycle.
+    Auto-generate invoices for all eligible properties/leases.
+
+    Called by Django-Q2 schedule on the 1st of each month.
+    Iterates properties with auto_generate_invoices=True, auto-creates
+    BillingCycle per property, delegates to InvoiceService.
 
     Args:
-        billing_cycle_id: UUID of the BillingCycle to generate invoices for.
+        target_month: Optional date in the target month. Defaults to current month.
 
     Returns:
-        dict with created and skipped counts.
+        dict with created, skipped, and error counts.
     """
     from apps.leases.models import Lease
 
-    from .models import BillingCycle, Invoice, InvoiceLineItem
+    from .models import BillingCycle, Invoice, PropertyBillingConfig
+    from .services import InvoiceService
 
-    try:
-        billing_cycle = BillingCycle.objects.get(pk=billing_cycle_id)
-    except BillingCycle.DoesNotExist:
-        logger.error("BillingCycle %s not found.", billing_cycle_id)
-        return {"error": f"BillingCycle {billing_cycle_id} not found."}
+    if target_month is None:
+        target_month = timezone.now().date()
 
-    if billing_cycle.is_closed:
-        logger.warning("BillingCycle %s is already closed.", billing_cycle_id)
-        return {"error": "Billing cycle is closed."}
+    cycle_start = target_month.replace(day=1)
+    cycle_end = (cycle_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
-    active_leases = Lease.objects.filter(status="active").select_related("tenant", "unit")
-    created_count = 0
-    skipped_count = 0
+    configs = PropertyBillingConfig.objects.filter(
+        auto_generate_invoices=True,
+        property__is_active=True,
+    ).select_related("property")
 
-    with transaction.atomic():
+    results = {"created": 0, "skipped": 0, "errors": []}
+
+    for config in configs:
+        prop = config.property
+
+        billing_cycle, _ = BillingCycle.objects.get_or_create(
+            property=prop,
+            start_date=cycle_start,
+            end_date=cycle_end,
+            defaults={"name": f"{prop.name} - {cycle_start.strftime('%B %Y')}"},
+        )
+
+        if billing_cycle.is_closed:
+            results["skipped"] += 1
+            continue
+
+        active_leases = Lease.objects.filter(
+            unit__property=prop, status="active",
+        ).select_related("tenant", "unit")
+
         for lease in active_leases:
-            # Skip if an invoice already exists for this lease + cycle
             if Invoice.objects.filter(lease=lease, billing_cycle=billing_cycle).exists():
-                skipped_count += 1
+                results["skipped"] += 1
                 continue
 
-            invoice = Invoice.objects.create(
-                invoice_number=_generate_invoice_number(),
-                lease=lease,
-                tenant=lease.tenant,
-                billing_cycle=billing_cycle,
-                status="issued",
-                issue_date=timezone.now().date(),
-                due_date=billing_cycle.end_date,
-                notes=f"Auto-generated for {billing_cycle.name}",
-            )
+            try:
+                due_day = min(config.default_due_day, 28)
+                due_date = target_month.replace(day=due_day)
+                notes = config.default_invoice_notes
 
-            InvoiceLineItem.objects.create(
-                invoice=invoice,
-                charge_type="rent",
-                description=f"Monthly Rent - {lease.unit}",
-                quantity=1,
-                unit_price=lease.monthly_rent,
-                amount=lease.monthly_rent,
-            )
-
-            invoice.total_amount = lease.monthly_rent
-            invoice.save(update_fields=["total_amount"])
-            created_count += 1
+                InvoiceService.create_invoice_for_lease(
+                    lease=lease,
+                    billing_cycle=billing_cycle,
+                    issue_date=cycle_start,
+                    due_date=due_date,
+                    notes=notes,
+                )
+                results["created"] += 1
+            except Exception as e:
+                logger.exception("Error generating invoice for lease %s", lease.pk)
+                results["errors"].append(str(e))
 
     logger.info(
-        "generate_monthly_invoices complete for cycle %s: %d created, %d skipped.",
-        billing_cycle.name,
-        created_count,
-        skipped_count,
+        "generate_monthly_invoices: %d created, %d skipped, %d errors.",
+        results["created"],
+        results["skipped"],
+        len(results["errors"]),
     )
-    return {"created": created_count, "skipped": skipped_count}
+    return results
+
+
+def apply_late_fees():
+    """
+    Daily task: mark overdue invoices and apply late fees/interest per property config.
+
+    Returns:
+        dict with overdue_marked and fees_applied counts.
+    """
+    from .models import Invoice
+    from .services import LateFeeService
+
+    today = timezone.now().date()
+
+    # Mark newly overdue invoices
+    overdue_count = Invoice.objects.filter(
+        status__in=["issued", "partial"],
+        due_date__lt=today,
+    ).update(status="overdue")
+
+    # Apply late fees + interest to all overdue/partial invoices
+    overdue_invoices = Invoice.objects.filter(
+        status__in=["overdue", "partial"],
+    ).select_related("lease__unit__property")
+
+    fees_applied = 0
+    for invoice in overdue_invoices:
+        try:
+            result = LateFeeService.apply_late_fees_for_invoice(invoice)
+            if result:
+                fees_applied += 1
+        except Exception:
+            logger.exception("Failed to apply late fee to invoice %s", invoice.pk)
+
+        try:
+            result = LateFeeService.apply_interest_for_invoice(invoice)
+            if result:
+                fees_applied += 1
+        except Exception:
+            logger.exception("Failed to apply interest to invoice %s", invoice.pk)
+
+    logger.info(
+        "apply_late_fees: %d invoices marked overdue, %d fees/interest applied.",
+        overdue_count,
+        fees_applied,
+    )
+    return {"overdue_marked": overdue_count, "fees_applied": fees_applied}
 
 
 def check_overdue_invoices():
     """
     Mark invoices as overdue if past the due date and not yet fully paid.
+    Kept for backward compatibility — logic now lives in apply_late_fees().
 
     Returns:
         dict with the count of newly overdue invoices.
@@ -114,12 +156,10 @@ def check_overdue_invoices():
     from .models import Invoice
 
     today = timezone.now().date()
-    overdue_qs = Invoice.objects.filter(
+    count = Invoice.objects.filter(
         status__in=["issued", "partial"],
         due_date__lt=today,
-    )
-
-    count = overdue_qs.update(status="overdue")
+    ).update(status="overdue")
 
     logger.info("check_overdue_invoices: %d invoices marked as overdue.", count)
     return {"overdue_count": count}
@@ -127,11 +167,7 @@ def check_overdue_invoices():
 
 def process_payment(payment_id):
     """
-    Process a payment through the configured gateway.
-
-    For online payments with a gateway configuration, this task would
-    call the gateway API. For manual payments (cash, check, etc.) it
-    simply marks the payment as completed and updates the invoice.
+    Process a payment through the configured gateway or mark manual payment complete.
 
     Args:
         payment_id: UUID of the Payment to process.
@@ -140,9 +176,12 @@ def process_payment(payment_id):
         dict with processing result.
     """
     from .models import Payment
+    from .services import PaymentService
 
     try:
-        payment = Payment.objects.select_related("invoice", "gateway_config").get(pk=payment_id)
+        payment = Payment.objects.select_related(
+            "invoice", "gateway_config"
+        ).get(pk=payment_id)
     except Payment.DoesNotExist:
         logger.error("Payment %s not found.", payment_id)
         return {"error": f"Payment {payment_id} not found."}
@@ -151,25 +190,16 @@ def process_payment(payment_id):
         logger.warning("Payment %s is not pending (status=%s).", payment_id, payment.status)
         return {"error": f"Payment is already {payment.status}."}
 
-    invoice = payment.invoice
+    if payment.gateway_config and payment.method == "online":
+        return PaymentService.confirm_gateway_payment(payment.pk)
 
+    # Manual payment — mark as completed and update invoice
     try:
         with transaction.atomic():
-            if payment.gateway_config and payment.method == "online":
-                # In a real implementation, this would call the gateway API:
-                #   gateway = get_gateway_client(payment.gateway_config)
-                #   result = gateway.charge(amount=payment.amount, ...)
-                #   payment.gateway_transaction_id = result.transaction_id
-                logger.info(
-                    "Processing online payment %s via %s (stub).",
-                    payment_id,
-                    payment.gateway_config.provider,
-                )
-                payment.gateway_transaction_id = f"sim_{payment_id}"
-
             payment.status = "completed"
-            payment.save(update_fields=["status", "gateway_transaction_id"])
+            payment.save(update_fields=["status"])
 
+            invoice = payment.invoice
             invoice.amount_paid += payment.amount
             if invoice.amount_paid >= invoice.total_amount:
                 invoice.status = "paid"
@@ -185,3 +215,49 @@ def process_payment(payment_id):
         payment.status = "failed"
         payment.save(update_fields=["status"])
         return {"status": "failed", "payment_id": str(payment_id)}
+
+
+def auto_apply_prepayment_credits():
+    """
+    For newly issued invoices, automatically apply any available prepayment credits.
+    Run daily after generate_monthly_invoices.
+
+    Returns:
+        dict with credits_applied count.
+    """
+    from .models import Invoice, Payment, PrepaymentCredit
+    from .services import PaymentService
+
+    # Find tenants with both outstanding invoices and available credits
+    tenants_with_credits = PrepaymentCredit.objects.filter(
+        remaining_amount__gt=0,
+    ).values_list("tenant_id", flat=True).distinct()
+
+    invoices = Invoice.objects.filter(
+        status="issued",
+        tenant_id__in=tenants_with_credits,
+    ).select_related("tenant")
+
+    applied_count = 0
+    for invoice in invoices:
+        credit_amount = PaymentService._apply_prepayment_credits(invoice)
+        if credit_amount > 0:
+            Payment.objects.create(
+                tenant=invoice.tenant,
+                invoice=invoice,
+                amount=credit_amount,
+                method="credit",
+                status="completed",
+                credit_applied=credit_amount,
+                notes="Auto-applied prepayment credit",
+            )
+            invoice.amount_paid += credit_amount
+            if invoice.amount_paid >= invoice.total_amount:
+                invoice.status = "paid"
+            else:
+                invoice.status = "partial"
+            invoice.save(update_fields=["amount_paid", "status"])
+            applied_count += 1
+
+    logger.info("auto_apply_prepayment_credits: %d credits applied.", applied_count)
+    return {"credits_applied": applied_count}

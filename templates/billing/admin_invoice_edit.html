@@ -1,0 +1,72 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Edit Invoice {{ invoice.invoice_number }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'billing_admin:invoice_detail' pk=invoice.pk %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Invoice {{ invoice.invoice_number }}
+    </a>
+    <h2 class="mt-2"><i class="bi bi-pencil"></i> Edit Line Items — {{ invoice.invoice_number }}</h2>
+    <p class="text-muted">{{ invoice.tenant.get_full_name|default:invoice.tenant.username }} @ {{ invoice.lease.unit }}</p>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-list-ul"></i> Line Items</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="line-items-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th class="text-end" style="width: 100px;">Qty</th>
+                            <th class="text-end" style="width: 120px;">Unit Price</th>
+                            <th class="text-center" style="width: 80px;">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                        <tr>
+                            {% for hidden in form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                            <td>{{ form.charge_type }}</td>
+                            <td>{{ form.description }}</td>
+                            <td>{{ form.quantity }}</td>
+                            <td>{{ form.unit_price }}</td>
+                            <td class="text-center">
+                                {% if form.instance.pk %}
+                                    {{ form.DELETE }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if formset.non_form_errors %}
+    <div class="alert alert-danger">
+        {% for error in formset.non_form_errors %}
+            <p class="mb-0">{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'billing_admin:invoice_detail' pk=invoice.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Changes
+        </button>
+    </div>
+</form>
+{% endblock %}

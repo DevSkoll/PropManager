@@ -15,6 +15,11 @@
 
         <div class="card">
             <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Allowed file types:</strong> PDF, Word, Excel, PowerPoint, text, CSV, RTF, and images (JPG, PNG, GIF, BMP, WebP, TIFF).
+                    Maximum file size: 25 MB.
+                </div>
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     {{ form|crispy }}

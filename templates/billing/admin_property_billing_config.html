@@ -1,0 +1,48 @@
+{% extends "admin_portal/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Billing Config - {{ property.name }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'billing_admin:invoice_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Billing
+    </a>
+    <h2 class="mt-2"><i class="bi bi-gear"></i> Billing Configuration: {{ property.name }}</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Billing Defaults</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Help</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Auto-Generate:</strong> When enabled, invoices are automatically created on the 1st of each month for all active leases in this property.</p>
+                <p class="mb-2"><strong>Due Day:</strong> The day of the month rent is due (1-28). Invoices will have this as their due date.</p>
+                <p class="mb-2"><strong>Late Fees:</strong> Applied automatically after the grace period. Can be a flat amount or percentage of balance due.</p>
+                <p class="mb-2"><strong>Fee Cap:</strong> Maximum total late fees per invoice. Set to 0 for no cap.</p>
+                <p class="mb-0"><strong>Interest:</strong> Daily-accrued interest on overdue balances based on the annual rate.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

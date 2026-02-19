@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "apps.documents",
     "apps.weather",
     "apps.marketing",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [
@@ -97,6 +98,9 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
@@ -148,3 +152,6 @@ OTP_MAX_REQUESTS_PER_HOUR = 5
 LOGIN_URL = "/tenant/login/"
 LOGIN_REDIRECT_URL = "/tenant/dashboard/"
 LOGOUT_REDIRECT_URL = "/"
+
+# Document uploads
+DOCUMENT_MAX_FILE_SIZE = 25 * 1024 * 1024  # 25 MB

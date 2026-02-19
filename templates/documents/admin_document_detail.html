@@ -11,8 +11,55 @@
     </a>
 </div>
 
+{% if document.deleted_at %}
+<div class="alert alert-danger d-flex justify-content-between align-items-center">
+    <div>
+        <i class="bi bi-trash"></i>
+        <strong>This document was deleted</strong> on {{ document.deleted_at|date:"M d, Y H:i" }}
+        {% if document.deleted_by %}by {{ document.deleted_by.get_full_name|default:document.deleted_by.username }}{% endif %}.
+    </div>
+    <form method="post" action="{% url 'documents_admin:document_restore' pk=document.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-arrow-counterclockwise"></i> Restore
+        </button>
+    </form>
+</div>
+{% endif %}
+
+{% if document.is_locked %}
+<div class="alert alert-warning">
+    <i class="bi bi-lock-fill"></i>
+    <strong>This document is locked</strong>
+    {% if document.locked_by %}by {{ document.locked_by.get_full_name|default:document.locked_by.username }}{% endif %}
+    {% if document.locked_at %}on {{ document.locked_at|date:"M d, Y H:i" }}{% endif %}.
+    It cannot be modified or deleted until unlocked.
+</div>
+{% endif %}
+
 <div class="row">
     <div class="col-lg-8">
+        {% if document.is_previewable %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-eye"></i> Preview</h5>
+            </div>
+            <div class="card-body">
+                {% if document.preview_type == "image" %}
+                <img src="{% url 'documents_admin:document_preview' pk=document.pk %}" class="img-fluid" alt="{{ document.title }}">
+                {% elif document.preview_type == "pdf" %}
+                <iframe src="{% url 'documents_admin:document_preview' pk=document.pk %}" style="height: 600px; width: 100%; border: none;"></iframe>
+                {% elif document.preview_type == "text" %}
+                {% if text_preview %}
+                <pre style="max-height: 400px; overflow: auto; white-space: pre-wrap; word-wrap: break-word;">{{ text_preview }}</pre>
+                {% else %}
+                <p class="text-muted mb-0">Unable to load text preview.</p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">Document Details</h5>
@@ -31,6 +78,28 @@
                         <tr>
                             <th class="text-muted">Category</th>
                             <td>{{ document.category.name|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Folder</th>
+                            <td>
+                                {% if document.folder %}
+                                <a href="{% url 'documents_admin:folder_detail' pk=document.folder.pk %}">
+                                    <i class="bi bi-folder-fill text-warning"></i> {{ document.folder.name }}
+                                </a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Uploaded By Role</th>
+                            <td>
+                                {% if document.uploaded_by_role == "tenant" %}
+                                <span class="badge bg-info text-dark">Tenant Upload</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Admin</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         <tr>
                             <th class="text-muted">File Name</th>
@@ -111,9 +180,39 @@
                 <a href="{% url 'documents_admin:document_download' pk=document.pk %}" class="btn btn-primary">
                     <i class="bi bi-download"></i> Download File
                 </a>
-                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                    <i class="bi bi-trash"></i> Delete Document
-                </button>
+                {% if not document.deleted_at %}
+                    {% if document.is_locked %}
+                    <form method="post" action="{% url 'documents_admin:document_unlock' pk=document.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-unlock"></i> Unlock Document
+                        </button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'documents_admin:document_lock' pk=document.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-lock"></i> Lock Document
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash"></i> Delete Document
+                    </button>
+                    {% endif %}
+                {% else %}
+                <form method="post" action="{% url 'documents_admin:document_restore' pk=document.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-arrow-counterclockwise"></i> Restore Document
+                    </button>
+                </form>
+                <form method="post" action="{% url 'documents_admin:document_permanent_delete' pk=document.pk %}" onsubmit="return confirm('Permanently delete this document? This cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-x-circle"></i> Permanently Delete
+                    </button>
+                </form>
+                {% endif %}
             </div>
         </div>
 
@@ -159,6 +258,7 @@
     </div>
 </div>
 
+{% if not document.deleted_at and not document.is_locked %}
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -168,7 +268,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Are you sure you want to delete <strong>{{ document.title }}</strong>? This action cannot be undone.
+                Are you sure you want to delete <strong>{{ document.title }}</strong>?
+                The document will be moved to trash and can be restored within 7 days.
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -182,4 +283,5 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}

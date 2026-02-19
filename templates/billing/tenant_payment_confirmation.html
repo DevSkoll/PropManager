@@ -1,0 +1,49 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}Payment {% if success %}Successful{% else %}Failed{% endif %} - PropManager{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body py-5">
+                {% if success %}
+                <div class="text-success mb-3">
+                    <i class="bi bi-check-circle" style="font-size: 4rem;"></i>
+                </div>
+                <h2 class="mb-3">Payment Successful</h2>
+                <p class="text-muted mb-1">Your payment of <strong>{{ payment.amount|currency }}</strong> has been recorded.</p>
+                <p class="text-muted mb-4">Invoice: {{ payment.invoice.invoice_number }}</p>
+                {% if payment.credit_applied > 0 %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> {{ payment.credit_applied|currency }} was applied from your account credit.
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-danger mb-3">
+                    <i class="bi bi-x-circle" style="font-size: 4rem;"></i>
+                </div>
+                <h2 class="mb-3">Payment Failed</h2>
+                <p class="text-muted mb-4">{{ error_message|default:"Your payment could not be processed. Please try again or contact your property manager." }}</p>
+                {% endif %}
+
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'billing_tenant:billing_dashboard' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-receipt"></i> Billing Dashboard
+                    </a>
+                    {% if success %}
+                    <a href="{% url 'billing_tenant:invoice_detail' pk=payment.invoice.pk %}" class="btn btn-primary">
+                        <i class="bi bi-eye"></i> View Invoice
+                    </a>
+                    {% else %}
+                    <a href="{% url 'billing_tenant:initiate_payment' pk=invoice.pk %}" class="btn btn-primary">
+                        <i class="bi bi-arrow-clockwise"></i> Try Again
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

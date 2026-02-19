@@ -1,0 +1,48 @@
+{% extends "tenant/base.html" %}
+
+{% block title %}Notification Preferences - PropManager{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-sliders"></i> Notification Preferences</h2>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Choose how you receive notifications</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-center">Email</th>
+                            <th class="text-center">SMS</th>
+                            <th class="text-center">Both</th>
+                            <th class="text-center">None</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for field in form %}
+                        <tr>
+                            <td class="fw-semibold">{{ field.label }}</td>
+                            {% for radio in field %}
+                            <td class="text-center">
+                                {{ radio.tag }}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Save Preferences
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "admin_portal/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if editing %}Edit{% else %}Create{% endif %} Notification Group - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'notifications_admin:group_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Groups
+    </a>
+    <h2 class="mt-2">
+        <i class="bi bi-bell"></i> {% if editing %}Edit "{{ group.name }}"{% else %}Create Notification Group{% endif %}
+    </h2>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Group Details</h5>
+                </div>
+                <div class="card-body">
+                    {{ form|crispy }}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Event Subscriptions</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Select the event types this group should receive notifications for:</p>
+                    {{ event_form|crispy }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> {% if editing %}Update Group{% else %}Create Group{% endif %}
+        </button>
+        <a href="{% url 'notifications_admin:group_list' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+    </div>
+</form>
+{% endblock %}

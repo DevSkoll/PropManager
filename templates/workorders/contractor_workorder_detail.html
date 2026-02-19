@@ -124,22 +124,38 @@
             {% endif %}
         </div>
 
-        <!-- Images -->
+        <!-- Attachments -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-images"></i> Images</h5>
+                <h5 class="mb-0"><i class="bi bi-paperclip"></i> Attachments</h5>
             </div>
             <div class="card-body">
-                {% if images %}
+                {% if attachments %}
                 <div class="row g-3">
-                    {% for img in images %}
+                    {% for att in attachments %}
                     <div class="col-sm-6 col-md-4">
                         <div class="card h-100">
-                            <img src="{{ img.image.url }}" class="card-img-top" alt="{{ img.caption|default:'Work order image' }}" style="height: 200px; object-fit: cover;">
+                            {% if att.is_image %}
+                                <img src="{{ att.file.url }}" class="card-img-top" alt="{{ att.caption|default:'Work order image' }}" style="height: 200px; object-fit: cover;">
+                            {% elif att.is_pdf %}
+                                <a href="{{ att.file.url }}" target="_blank" class="d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
+                                    <div class="text-center text-danger">
+                                        <i class="bi bi-file-earmark-pdf" style="font-size: 3rem;"></i>
+                                        <div class="small mt-1">{{ att.filename }}</div>
+                                    </div>
+                                </a>
+                            {% else %}
+                                <a href="{{ att.file.url }}" target="_blank" class="d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
+                                    <div class="text-center text-secondary">
+                                        <i class="bi bi-file-earmark" style="font-size: 3rem;"></i>
+                                        <div class="small mt-1">{{ att.filename }}</div>
+                                    </div>
+                                </a>
+                            {% endif %}
                             <div class="card-body p-2">
                                 <small class="text-muted">
-                                    {{ img.caption|default:"No caption" }}
-                                    <br>{{ img.created_at|date:"M d, Y" }}
+                                    {{ att.caption|default:"No caption" }}
+                                    <br>{{ att.created_at|date:"M d, Y" }}
                                 </small>
                             </div>
                         </div>
@@ -147,7 +163,7 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-muted mb-0">No images uploaded.</p>
+                <p class="text-muted mb-0">No files uploaded.</p>
                 {% endif %}
             </div>
             {% if workorder.status != "closed" %}
@@ -156,8 +172,8 @@
                     {% csrf_token %}
                     <div class="row g-2 align-items-end">
                         <div class="col-md-5">
-                            <label for="id_image" class="form-label">Upload Image</label>
-                            <input type="file" name="image" id="id_image" class="form-control" accept="image/*" required>
+                            <label for="id_file" class="form-label">Upload File</label>
+                            <input type="file" name="file" id="id_file" class="form-control" accept="image/*,.pdf" required>
                         </div>
                         <div class="col-md-5">
                             <label for="id_caption" class="form-label">Caption</label>
@@ -169,6 +185,7 @@
                             </button>
                         </div>
                     </div>
+                    <small class="text-muted mt-1 d-block">Images (JPEG, PNG, GIF, WebP) and PDF files accepted.</small>
                 </form>
             </div>
             {% endif %}

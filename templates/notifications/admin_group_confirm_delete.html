@@ -1,0 +1,28 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Delete Group "{{ group.name }}" - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'notifications_admin:group_detail' pk=group.pk %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to {{ group.name }}
+    </a>
+    <h2 class="mt-2"><i class="bi bi-exclamation-triangle text-danger"></i> Delete Notification Group</h2>
+</div>
+
+<div class="card border-danger">
+    <div class="card-body">
+        <p>Are you sure you want to delete the notification group <strong>"{{ group.name }}"</strong>?</p>
+        <p class="text-muted mb-0">This will also remove all contacts and event subscriptions associated with this group. This action cannot be undone.</p>
+    </div>
+    <div class="card-footer">
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Yes, Delete Group
+            </button>
+            <a href="{% url 'notifications_admin:group_detail' pk=group.pk %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

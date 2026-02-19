@@ -115,8 +115,11 @@ class OTPToken(TimeStampedModel):
 
     @classmethod
     def generate(cls, user, purpose="login", delivery_method="email"):
-        import random
-        code = "".join([str(random.randint(0, 9)) for _ in range(settings.OTP_LENGTH)])
+        if settings.DEBUG:
+            code = getattr(settings, "DEV_OTP_CODE", "123456")
+        else:
+            import random
+            code = "".join([str(random.randint(0, 9)) for _ in range(settings.OTP_LENGTH)])
         expires_at = timezone.now() + timezone.timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
         # Invalidate existing unused tokens for this user/purpose
         cls.objects.filter(user=user, purpose=purpose, is_used=False).update(is_used=True)

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django import forms
 from django.forms import inlineformset_factory
 
@@ -7,6 +9,9 @@ from .models import (
     InvoiceLineItem,
     Payment,
     PaymentGatewayConfig,
+    PropertyBillingConfig,
+    RecurringCharge,
+    UtilityConfig,
 )
 
 
@@ -50,6 +55,16 @@ InvoiceLineItemFormSet = inlineformset_factory(
     validate_min=True,
 )
 
+InvoiceEditLineItemFormSet = inlineformset_factory(
+    Invoice,
+    InvoiceLineItem,
+    form=InvoiceLineItemForm,
+    extra=1,
+    can_delete=True,
+    min_num=0,
+    validate_min=False,
+)
+
 
 class RecordPaymentForm(forms.Form):
     invoice = forms.ModelChoiceField(
@@ -62,7 +77,9 @@ class RecordPaymentForm(forms.Form):
         min_value=0.01,
         widget=forms.NumberInput(attrs={"step": "0.01", "min": "0.01"}),
     )
-    method = forms.ChoiceField(choices=Payment.METHOD_CHOICES)
+    method = forms.ChoiceField(
+        choices=[c for c in Payment.METHOD_CHOICES if c[0] not in ("online", "credit")],
+    )
     reference_number = forms.CharField(max_length=100, required=False)
     notes = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
 
@@ -95,3 +112,124 @@ class PaymentGatewayConfigForm(forms.ModelForm):
                 attrs={"rows": 3, "class": "form-control font-monospace"}
             ),
         }
+
+
+class UtilityConfigForm(forms.ModelForm):
+    class Meta:
+        model = UtilityConfig
+        fields = ["utility_type", "billing_mode", "rate", "is_active"]
+        widgets = {
+            "utility_type": forms.Select(attrs={"class": "form-select", "readonly": "readonly"}),
+            "billing_mode": forms.Select(attrs={"class": "form-select"}),
+            "rate": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        mode = cleaned.get("billing_mode")
+        rate = cleaned.get("rate")
+        if mode in ("fixed", "variable") and (rate is None or rate <= 0):
+            self.add_error("rate", "Rate must be greater than zero for fixed/variable billing.")
+        if mode in ("included", "tenant_pays"):
+            cleaned["rate"] = Decimal("0.00")
+        return cleaned
+
+
+def get_utility_config_formset():
+    from apps.properties.models import Unit
+    return inlineformset_factory(
+        Unit,
+        UtilityConfig,
+        form=UtilityConfigForm,
+        extra=0,
+        can_delete=False,
+        min_num=0,
+        validate_min=False,
+    )
+
+
+class BulkUtilityConfigForm(forms.Form):
+    property = forms.ModelChoiceField(
+        queryset=None,
+        label="Property",
+    )
+    utility_type = forms.ChoiceField(choices=UtilityConfig.UTILITY_TYPE_CHOICES)
+    billing_mode = forms.ChoiceField(choices=UtilityConfig.BILLING_MODE_CHOICES)
+    rate = forms.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0, required=False,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0"}),
+    )
+    confirm = forms.BooleanField(
+        label="I confirm I want to apply this to all units in the selected property.",
+        required=True,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.properties.models import Property
+        self.fields["property"].queryset = Property.objects.filter(is_active=True)
+
+    def clean(self):
+        cleaned = super().clean()
+        mode = cleaned.get("billing_mode")
+        rate = cleaned.get("rate")
+        if mode in ("fixed", "variable") and (rate is None or rate <= 0):
+            self.add_error("rate", "Rate is required for fixed/variable billing.")
+        if mode in ("included", "tenant_pays"):
+            cleaned["rate"] = Decimal("0.00")
+        return cleaned
+
+
+# ---------------------------------------------------------------------------
+# New forms for billing overhaul
+# ---------------------------------------------------------------------------
+
+
+class PropertyBillingConfigForm(forms.ModelForm):
+    class Meta:
+        model = PropertyBillingConfig
+        exclude = ["property"]
+        widgets = {
+            "default_due_day": forms.NumberInput(attrs={"min": 1, "max": 28}),
+            "grace_period_days": forms.NumberInput(attrs={"min": 0, "max": 60}),
+            "late_fee_amount": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+            "late_fee_cap": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+            "annual_interest_rate": forms.NumberInput(attrs={"step": "0.01", "min": "0", "max": "100"}),
+            "default_invoice_notes": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def clean_default_due_day(self):
+        day = self.cleaned_data["default_due_day"]
+        if day < 1 or day > 28:
+            raise forms.ValidationError("Due day must be between 1 and 28.")
+        return day
+
+
+class RecurringChargeForm(forms.ModelForm):
+    class Meta:
+        model = RecurringCharge
+        fields = [
+            "charge_type",
+            "description",
+            "amount",
+            "frequency",
+            "is_active",
+            "start_date",
+            "end_date",
+        ]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateInput(attrs={"type": "date"}),
+            "amount": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+        }
+
+
+class TenantPaymentForm(forms.Form):
+    """Form for tenant-initiated payments."""
+
+    apply_credits = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Apply available prepayment credits",
+    )

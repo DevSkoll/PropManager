@@ -1,0 +1,69 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Send Payment Reminder - Invoice {{ invoice.invoice_number }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'billing_admin:invoice_detail' pk=invoice.pk %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Invoice {{ invoice.invoice_number }}
+    </a>
+    <h2 class="mt-2"><i class="bi bi-send"></i> Send Payment Reminder</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Reminder Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-4">
+                    <tr>
+                        <th class="text-muted" style="width: 35%;">Invoice</th>
+                        <td>{{ invoice.invoice_number }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Tenant</th>
+                        <td>{{ tenant.get_full_name|default:tenant.username }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Balance Due</th>
+                        <td class="text-danger fw-semibold">{{ invoice.balance_due|currency }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Due Date</th>
+                        <td>{{ invoice.due_date|date:"M d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Channel</th>
+                        <td>
+                            {% if channel == "email" %}
+                                <span class="badge bg-primary"><i class="bi bi-envelope"></i> Email</span>
+                                <span class="text-muted ms-1">{{ tenant.email }}</span>
+                            {% elif channel == "sms" %}
+                                <span class="badge bg-success"><i class="bi bi-phone"></i> SMS</span>
+                                <span class="text-muted ms-1">{{ tenant.phone_number }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="id_confirm" name="confirm" required>
+                        <label class="form-check-label" for="id_confirm">
+                            I confirm I want to send this payment reminder
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Send Reminder
+                    </button>
+                    <a href="{% url 'billing_admin:invoice_detail' pk=invoice.pk %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

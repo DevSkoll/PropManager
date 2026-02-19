@@ -100,9 +100,9 @@ class WorkOrderNote(TimeStampedModel):
         return f"Note on {self.work_order} by {author}"
 
 
-class WorkOrderImage(TimeStampedModel):
-    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField(upload_to="workorder_images/%Y/%m/")
+class WorkOrderAttachment(TimeStampedModel):
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name="attachments")
+    file = models.FileField(upload_to="workorder_attachments/%Y/%m/")
     caption = models.CharField(max_length=255, blank=True, default="")
     uploaded_by_user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
@@ -115,4 +115,21 @@ class WorkOrderImage(TimeStampedModel):
     )
 
     def __str__(self):
-        return f"Image for {self.work_order}"
+        return f"Attachment for {self.work_order}"
+
+    def is_image(self):
+        if self.file and self.file.name:
+            return self.file.name.lower().endswith(
+                (".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp")
+            )
+        return False
+
+    def is_pdf(self):
+        if self.file and self.file.name:
+            return self.file.name.lower().endswith(".pdf")
+        return False
+
+    def filename(self):
+        if self.file and self.file.name:
+            return self.file.name.split("/")[-1]
+        return ""

@@ -22,22 +22,22 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="{% url 'billing_tenant:billing_dashboard' %}">
                         <i class="bi bi-receipt"></i> Billing
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="{% url 'workorders_tenant:workorder_list' %}">
                         <i class="bi bi-tools"></i> Work Orders
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="{% url 'communications_tenant:thread_list' %}">
                         <i class="bi bi-chat-dots"></i> Messages
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="{% url 'documents_tenant:document_list' %}">
                         <i class="bi bi-file-earmark"></i> Documents
                     </a>
                 </li>
@@ -49,7 +49,8 @@
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{% url 'accounts_tenant:tenant_profile' %}"><i class="bi bi-person"></i> Profile</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-bell"></i> Notifications</a></li>
+                        <li><a class="dropdown-item" href="{% url 'communications_tenant:notification_list' %}"><i class="bi bi-bell"></i> Notifications</a></li>
+                        <li><a class="dropdown-item" href="{% url 'notifications_tenant:preferences' %}"><i class="bi bi-sliders"></i> Notification Preferences</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{% url 'accounts_tenant:tenant_logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
                     </ul>

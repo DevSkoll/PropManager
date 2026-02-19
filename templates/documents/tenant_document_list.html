@@ -6,8 +6,67 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-file-earmark"></i> My Documents</h2>
+    <div class="d-flex gap-2">
+        {% if lease %}
+        <a href="{% url 'documents_tenant:folder_create' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-folder-plus"></i> New Folder
+        </a>
+        <a href="{% url 'documents_tenant:document_upload' %}" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Upload Document
+        </a>
+        {% endif %}
+    </div>
 </div>
 
+<!-- Search and Folder Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label for="searchQuery" class="form-label">Search</label>
+                <input type="text" name="q" id="searchQuery" class="form-control" placeholder="Search documents..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-4">
+                <label for="filterFolder" class="form-label">Folder</label>
+                <select name="folder" id="filterFolder" class="form-select">
+                    <option value="">All Folders</option>
+                    {% for folder in folders %}
+                    <option value="{{ folder.pk }}" {% if selected_folder == folder.pk|slugify %}selected{% endif %}>{{ folder.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-secondary">
+                    <i class="bi bi-search"></i> Search
+                </button>
+                <a href="{% url 'documents_tenant:document_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Folders -->
+{% if folders and not selected_folder and not search_query %}
+<div class="row mb-4">
+    {% for folder in folders %}
+    <div class="col-md-4 col-lg-3 mb-3">
+        <a href="{% url 'documents_tenant:document_list' %}?folder={{ folder.pk }}" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-folder-fill text-warning fs-1"></i>
+                    <h6 class="mt-2 text-dark">{{ folder.name }}</h6>
+                    <small class="text-muted">{{ folder.documents.count }} document{{ folder.documents.count|pluralize }}</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Documents Table -->
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
@@ -15,9 +74,9 @@
                 <tr>
                     <th>Title</th>
                     <th>Type</th>
-                    <th>Category</th>
+                    <th>Folder</th>
                     <th>Date</th>
-                    <th class="text-end">Download</th>
+                    <th class="text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -37,15 +96,33 @@
                         {% else %}
                         <i class="bi bi-file-earmark text-muted"></i>
                         {% endif %}
-                        {{ doc.title }}
+                        <a href="{% url 'documents_tenant:document_detail' pk=doc.pk %}">{{ doc.title }}</a>
+                        {% if doc.is_locked %}<i class="bi bi-lock-fill text-warning" title="Locked"></i>{% endif %}
+                        {% if doc.uploaded_by_role == "tenant" and doc.created_by == request.user %}
+                        <span class="badge bg-light text-dark">My Upload</span>
+                        {% endif %}
                     </td>
                     <td>{{ doc.get_document_type_display }}</td>
-                    <td>{{ doc.category.name|default:"-" }}</td>
+                    <td>
+                        {% if doc.folder %}
+                        <i class="bi bi-folder-fill text-warning"></i> {{ doc.folder.name }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
                     <td>{{ doc.created_at|date:"M d, Y" }}</td>
                     <td class="text-end">
                         <a href="{% url 'documents_tenant:document_download' pk=doc.pk %}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-download"></i> Download
+                            <i class="bi bi-download"></i>
                         </a>
+                        {% if doc.uploaded_by_role == "tenant" and doc.created_by == request.user and not doc.is_locked %}
+                        <form method="post" action="{% url 'documents_tenant:document_delete' pk=doc.pk %}" class="d-inline" onsubmit="return confirm('Delete this document?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}
@@ -53,6 +130,9 @@
                     <td colspan="5" class="text-center text-muted py-4">
                         <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
                         No documents available.
+                        {% if lease %}
+                        <br><a href="{% url 'documents_tenant:document_upload' %}">Upload your first document</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

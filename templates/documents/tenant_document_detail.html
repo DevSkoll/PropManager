@@ -1,0 +1,128 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ document.title }} - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> {{ document.title }}</h2>
+    <a href="{% url 'documents_tenant:document_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Documents
+    </a>
+</div>
+
+{% if document.is_locked %}
+<div class="alert alert-warning">
+    <i class="bi bi-lock-fill"></i> This document is locked by staff and cannot be modified or deleted.
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        {% if document.is_previewable %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-eye"></i> Preview</h5>
+            </div>
+            <div class="card-body">
+                {% if document.preview_type == "image" %}
+                <img src="{% url 'documents_tenant:document_preview' pk=document.pk %}" class="img-fluid" alt="{{ document.title }}">
+                {% elif document.preview_type == "pdf" %}
+                <iframe src="{% url 'documents_tenant:document_preview' pk=document.pk %}" style="height: 600px; width: 100%; border: none;"></iframe>
+                {% elif document.preview_type == "text" %}
+                {% if text_preview %}
+                <pre style="max-height: 400px; overflow: auto; white-space: pre-wrap; word-wrap: break-word;">{{ text_preview }}</pre>
+                {% else %}
+                <p class="text-muted mb-0">Unable to load text preview.</p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Document Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <th class="text-muted" style="width: 200px;">Title</th>
+                            <td>{{ document.title }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Type</th>
+                            <td>{{ document.get_document_type_display }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Category</th>
+                            <td>{{ document.category.name|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Folder</th>
+                            <td>{{ document.folder.name|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">File Size</th>
+                            <td>{{ document.file_size|human_filesize }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Uploaded</th>
+                            <td>{{ document.created_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Description</th>
+                            <td>{{ document.description|default:"-"|linebreaksbr }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Actions</h5>
+            </div>
+            <div class="card-body d-grid gap-2">
+                <a href="{% url 'documents_tenant:document_download' pk=document.pk %}" class="btn btn-primary">
+                    <i class="bi bi-download"></i> Download File
+                </a>
+                {% if is_own_upload and not document.is_locked %}
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                    <i class="bi bi-trash"></i> Delete Document
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if is_own_upload and not document.is_locked %}
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete <strong>{{ document.title }}</strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'documents_tenant:document_delete' pk=document.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}Pay Invoice {{ invoice.invoice_number }} - PropManager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'billing_tenant:invoice_detail' pk=invoice.pk %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Invoice
+    </a>
+    <h2 class="mt-2"><i class="bi bi-credit-card"></i> Pay Invoice {{ invoice.invoice_number }}</h2>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-5">
+        <!-- Invoice Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Invoice Summary</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted">Invoice #</th>
+                        <td>{{ invoice.invoice_number }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Due Date</th>
+                        <td>{{ invoice.due_date|date:"M d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Total Amount</th>
+                        <td>{{ invoice.total_amount|currency }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Amount Paid</th>
+                        <td class="text-success">{{ invoice.amount_paid|currency }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted fw-bold">Balance Due</th>
+                        <td class="fw-bold text-danger fs-5">{{ invoice.balance_due|currency }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        {% if available_credit > 0 %}
+        <div class="card border-info mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0"><i class="bi bi-wallet2"></i> Available Credit</h6>
+                        <small class="text-muted">Will be applied automatically</small>
+                    </div>
+                    <span class="text-info fw-bold fs-5">{{ available_credit|currency }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Payment Method</h5>
+            </div>
+            <div class="card-body">
+                {% if gateways %}
+                <form method="post">
+                    {% csrf_token %}
+                    {% for gateway in gateways %}
+                    <div class="form-check mb-3 p-3 border rounded">
+                        <input class="form-check-input" type="radio" name="gateway" id="gw_{{ gateway.pk }}"
+                               value="{{ gateway.pk }}" {% if gateway.is_default %}checked{% endif %}>
+                        <label class="form-check-label w-100" for="gw_{{ gateway.pk }}">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ gateway.display_name }}</strong>
+                                <span class="badge bg-light text-dark">{{ gateway.get_provider_display }}</span>
+                            </div>
+                        </label>
+                    </div>
+                    {% endfor %}
+
+                    {% if available_credit > 0 %}
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="apply_credits" id="apply_credits" checked>
+                        <label class="form-check-label" for="apply_credits">
+                            Apply available credit ({{ available_credit|currency }})
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">
+                        <i class="bi bi-lock"></i> Pay {{ invoice.balance_due|currency }}
+                    </button>
+                </form>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-credit-card-2-front" style="font-size: 3rem;"></i>
+                    <p class="mt-2 mb-0">Online payment is not currently available. Please contact your property manager for payment options.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

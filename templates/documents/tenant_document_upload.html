@@ -1,0 +1,38 @@
+{% extends "tenant/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Upload Document - PropManager{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-upload"></i> Upload Document</h2>
+            <a href="{% url 'documents_tenant:document_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Documents
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Allowed file types:</strong> PDF, Word, Excel, PowerPoint, text, CSV, RTF, and images (JPG, PNG, GIF, BMP, WebP, TIFF).
+                    Maximum file size: 25 MB.
+                </div>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <hr>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Upload
+                        </button>
+                        <a href="{% url 'documents_tenant:document_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

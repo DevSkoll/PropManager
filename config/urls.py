@@ -23,6 +23,8 @@ urlpatterns = [
     path("admin-portal/", include("apps.documents.urls_admin")),
     path("admin-portal/", include("apps.weather.urls_admin")),
     path("admin-portal/", include("apps.marketing.urls_admin")),
+    path("admin-portal/", include("apps.notifications.urls_admin")),
+    path("tenant/", include("apps.notifications.urls_tenant")),
     path("admin-portal/", include("apps.core.reports.urls")),
     path("", RedirectView.as_view(url="/tenant/login/", permanent=False)),
 ]

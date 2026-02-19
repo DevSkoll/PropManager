@@ -1,0 +1,66 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Notification Groups - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-bell"></i> Notification Groups</h2>
+    <a href="{% url 'notifications_admin:group_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Create Group
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Active</th>
+                        <th>Contacts</th>
+                        <th>Events</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for group in groups %}
+                    <tr>
+                        <td class="fw-semibold">{{ group.name }}</td>
+                        <td>{{ group.description|truncatewords:10|default:"-" }}</td>
+                        <td>
+                            {% if group.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ group.contacts.count }}</td>
+                        <td>
+                            {% for sub in group.subscriptions.all %}
+                                <span class="badge bg-info text-dark">{{ sub.get_event_type_display }}</span>
+                            {% empty %}
+                                <span class="text-muted">None</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <a href="{% url 'notifications_admin:group_detail' pk=group.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                            <a href="{% url 'notifications_admin:group_edit' pk=group.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-3">No notification groups yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

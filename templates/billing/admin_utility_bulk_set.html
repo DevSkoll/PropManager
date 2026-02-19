@@ -1,0 +1,111 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Bulk Utility Configuration - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-lightning-charge"></i> Bulk Utility Configuration</h2>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Apply Utility Settings to All Units</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    This will set the same utility configuration for <strong>every unit</strong> in the selected property.
+                    Existing per-unit configurations for the selected utility type will be overwritten.
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="id_property" class="form-label">Property</label>
+                        {{ form.property }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_utility_type" class="form-label">Utility Type</label>
+                        <select name="utility_type" id="id_utility_type" class="form-select">
+                            {% for value, label in form.fields.utility_type.choices %}
+                            <option value="{{ value }}" {% if form.utility_type.value == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_billing_mode" class="form-label">Billing Mode</label>
+                        <select name="billing_mode" id="id_billing_mode" class="form-select">
+                            {% for value, label in form.fields.billing_mode.choices %}
+                            <option value="{{ value }}" {% if form.billing_mode.value == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            <strong>Fixed</strong> = same rate every month.
+                            <strong>Variable</strong> = rate updated as needed.
+                            <strong>Included</strong> = bundled into rent.
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="rate-field">
+                        <label for="id_rate" class="form-label">Monthly Rate ($)</label>
+                        {{ form.rate }}
+                        {% if form.rate.errors %}
+                        <div class="text-danger small">{{ form.rate.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        {{ form.confirm }}
+                        <label class="form-check-label" for="id_confirm">{{ form.confirm.label }}</label>
+                        {% if form.confirm.errors %}
+                        <div class="text-danger small">{{ form.confirm.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                        <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Apply to All Units</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Info</h5></div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Use this page to quickly set a utility billing mode and rate across all units in a property.
+                </p>
+                <p class="small text-muted">
+                    For per-unit adjustments, navigate to the individual unit's utility configuration page.
+                </p>
+                <p class="small text-muted mb-0">
+                    All changes are logged in the <a href="{% url 'billing_admin:utility_rate_history' %}">Rate History</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('id_billing_mode').addEventListener('change', function() {
+    document.getElementById('rate-field').style.display = this.value === 'included' ? 'none' : 'block';
+});
+// Initial state
+if (document.getElementById('id_billing_mode').value === 'included') {
+    document.getElementById('rate-field').style.display = 'none';
+}
+</script>
+{% endblock %}

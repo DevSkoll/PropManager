@@ -13,12 +13,12 @@ from .forms import (
     ContractorAssignForm,
     ContractorStatusForm,
     TenantWorkOrderForm,
+    WorkOrderAttachmentForm,
     WorkOrderForm,
-    WorkOrderImageForm,
     WorkOrderNoteForm,
     WorkOrderStatusForm,
 )
-from .models import ContractorAssignment, WorkOrder, WorkOrderImage, WorkOrderNote
+from .models import ContractorAssignment, WorkOrder, WorkOrderAttachment, WorkOrderNote
 
 
 # ---------------------------------------------------------------------------
@@ -55,11 +55,11 @@ def admin_workorder_detail(request, pk):
         pk=pk,
     )
     notes = workorder.notes.select_related("author_user", "author_contractor_token").all()
-    images = workorder.images.all()
+    attachments = workorder.attachments.all()
     assignment = workorder.assignments.select_related("access_token").first()
 
     note_form = WorkOrderNoteForm()
-    image_form = WorkOrderImageForm()
+    attachment_form = WorkOrderAttachmentForm()
     status_form = WorkOrderStatusForm(initial={"new_status": workorder.status})
 
     if request.method == "POST":
@@ -75,23 +75,23 @@ def admin_workorder_detail(request, pk):
                 messages.success(request, "Note added successfully.")
                 return redirect("workorders_admin:workorder_detail", pk=workorder.pk)
 
-        elif action == "upload_image":
-            image_form = WorkOrderImageForm(request.POST, request.FILES)
-            if image_form.is_valid():
-                img = image_form.save(commit=False)
-                img.work_order = workorder
-                img.uploaded_by_user = request.user
-                img.save()
-                messages.success(request, "Image uploaded successfully.")
+        elif action == "upload_file":
+            attachment_form = WorkOrderAttachmentForm(request.POST, request.FILES)
+            if attachment_form.is_valid():
+                attachment = attachment_form.save(commit=False)
+                attachment.work_order = workorder
+                attachment.uploaded_by_user = request.user
+                attachment.save()
+                messages.success(request, "File uploaded successfully.")
                 return redirect("workorders_admin:workorder_detail", pk=workorder.pk)
 
     context = {
         "workorder": workorder,
         "notes": notes,
-        "images": images,
+        "attachments": attachments,
         "assignment": assignment,
         "note_form": note_form,
-        "image_form": image_form,
+        "attachment_form": attachment_form,
         "status_form": status_form,
     }
     return render(request, "workorders/admin_workorder_detail.html", context)
@@ -266,13 +266,13 @@ def tenant_workorder_detail(request, pk):
         "author_user", "author_contractor_token"
     ).filter(is_internal=False)
 
-    images = workorder.images.all()
+    attachments = workorder.attachments.all()
     note_form = WorkOrderNoteForm(initial={"is_internal": False})
 
     context = {
         "workorder": workorder,
         "notes": notes,
-        "images": images,
+        "attachments": attachments,
         "note_form": note_form,
     }
     return render(request, "workorders/tenant_workorder_detail.html", context)
@@ -323,18 +323,18 @@ def contractor_workorder_detail(request, token):
     notes = workorder.notes.select_related(
         "author_user", "author_contractor_token"
     ).filter(is_internal=False)
-    images = workorder.images.all()
+    attachments = workorder.attachments.all()
     status_form = ContractorStatusForm(initial={"new_status": workorder.status})
     note_form = WorkOrderNoteForm(initial={"is_internal": False})
-    image_form = WorkOrderImageForm()
+    attachment_form = WorkOrderAttachmentForm()
 
     context = {
         "workorder": workorder,
         "notes": notes,
-        "images": images,
+        "attachments": attachments,
         "status_form": status_form,
         "note_form": note_form,
-        "image_form": image_form,
+        "attachment_form": attachment_form,
         "access_token": access_token,
         "token": token,
     }
@@ -394,14 +394,14 @@ def contractor_upload_image(request, token):
     workorder = access_token.work_order
 
     if request.method == "POST":
-        form = WorkOrderImageForm(request.POST, request.FILES)
+        form = WorkOrderAttachmentForm(request.POST, request.FILES)
         if form.is_valid():
-            img = form.save(commit=False)
-            img.work_order = workorder
-            img.uploaded_by_contractor_token = access_token
-            img.save()
-            messages.success(request, "Image uploaded successfully.")
+            attachment = form.save(commit=False)
+            attachment.work_order = workorder
+            attachment.uploaded_by_contractor_token = access_token
+            attachment.save()
+            messages.success(request, "File uploaded successfully.")
         else:
-            messages.error(request, "Failed to upload image. Please try again.")
+            messages.error(request, "Failed to upload file. Only images and PDFs are allowed.")
 
     return redirect("workorders_contractor:workorder_detail", token=token)

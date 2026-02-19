@@ -30,7 +30,7 @@
                     </ul>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="{% url 'accounts_admin:admin_tenant_list' %}">
                         <i class="bi bi-people"></i> Tenants
                     </a>
                 </li>
@@ -45,6 +45,12 @@
                     </a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{% url 'billing_admin:invoice_list' %}">Invoices</a></li>
+                        <li><a class="dropdown-item" href="{% url 'billing_admin:payment_list' %}">Payments</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'billing_admin:utility_bulk_set' %}">Utility Config</a></li>
+                        <li><a class="dropdown-item" href="{% url 'billing_admin:utility_rate_history' %}">Rate History</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'billing_admin:gateway_settings' %}">Gateway Settings</a></li>
                     </ul>
                 </li>
                 <li class="nav-item">
@@ -61,6 +67,7 @@
                         <li><a class="dropdown-item" href="{% url 'documents_admin:document_list' %}">Documents</a></li>
                         <li><a class="dropdown-item" href="{% url 'weather_admin:weather_dashboard' %}">Weather</a></li>
                         <li><a class="dropdown-item" href="{% url 'marketing_admin:campaign_list' %}">Marketing</a></li>
+                        <li><a class="dropdown-item" href="{% url 'notifications_admin:group_list' %}"><i class="bi bi-bell"></i> Notification Groups</a></li>
                     </ul>
                 </li>
             </ul>
@@ -70,7 +77,7 @@
                         <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts_admin:admin_settings' %}"><i class="bi bi-gear"></i> Settings</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{% url 'accounts_admin:admin_logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
                     </ul>
