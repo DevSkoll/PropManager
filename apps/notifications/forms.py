@@ -6,8 +6,10 @@ from .models import (
     CATEGORY_CHOICES,
     CHANNEL_WITH_NONE_CHOICES,
     EVENT_TYPE_CHOICES,
+    EmailConfig,
     GroupContact,
     NotificationGroup,
+    SMSConfig,
     TenantNotificationPreference,
 )
 
@@ -144,3 +146,115 @@ class SendReminderForm(forms.Form):
         required=True,
         label="I confirm I want to send this payment reminder",
     )
+
+
+# ---------------------------------------------------------------------------
+# Communication Provider Config Forms
+# ---------------------------------------------------------------------------
+
+
+class EmailConfigForm(forms.ModelForm):
+    email_host_password = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Leave blank to keep existing",
+                "autocomplete": "new-password",
+            }
+        ),
+        help_text="SMTP password or app-specific password.",
+    )
+
+    class Meta:
+        model = EmailConfig
+        fields = [
+            "display_name",
+            "email_host",
+            "email_port",
+            "email_use_tls",
+            "email_use_ssl",
+            "email_host_user",
+            "email_host_password",
+            "default_from_email",
+            "is_active",
+        ]
+        widgets = {
+            "email_host": forms.TextInput(attrs={"placeholder": "smtp.gmail.com"}),
+            "email_port": forms.NumberInput(attrs={"min": 1, "max": 65535}),
+            "email_host_user": forms.TextInput(
+                attrs={"placeholder": "user@example.com"}
+            ),
+            "default_from_email": forms.EmailInput(
+                attrs={"placeholder": "noreply@yourdomain.com"}
+            ),
+        }
+        help_texts = {
+            "email_host": "SMTP server hostname (e.g., smtp.gmail.com, smtp.office365.com)",
+            "email_port": "587 for TLS, 465 for SSL",
+            "email_use_tls": "Enable STARTTLS (port 587). Do not enable both TLS and SSL.",
+            "email_use_ssl": "Enable SSL (port 465). Do not enable both TLS and SSL.",
+            "email_host_user": "SMTP username (often your full email address).",
+            "default_from_email": "The 'From' address on outgoing emails.",
+            "is_active": "Only one email configuration can be active at a time.",
+        }
+
+    def clean_email_host_password(self):
+        pw = self.cleaned_data.get("email_host_password")
+        if not pw and self.instance and self.instance.pk:
+            return self.instance.email_host_password
+        return pw
+
+    def clean(self):
+        cleaned_data = super().clean()
+        use_tls = cleaned_data.get("email_use_tls")
+        use_ssl = cleaned_data.get("email_use_ssl")
+        if use_tls and use_ssl:
+            raise forms.ValidationError(
+                "TLS and SSL cannot both be enabled. Use TLS (port 587) or SSL (port 465), not both."
+            )
+        return cleaned_data
+
+
+class SMSConfigForm(forms.ModelForm):
+    auth_token = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Leave blank to keep existing",
+                "autocomplete": "new-password",
+            }
+        ),
+        help_text="Twilio Auth Token from your Twilio Console dashboard.",
+    )
+
+    class Meta:
+        model = SMSConfig
+        fields = [
+            "display_name",
+            "provider",
+            "account_sid",
+            "auth_token",
+            "phone_number",
+            "is_active",
+        ]
+        widgets = {
+            "account_sid": forms.TextInput(
+                attrs={"placeholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+            ),
+            "phone_number": forms.TextInput(
+                attrs={"placeholder": "+15551234567"}
+            ),
+        }
+        help_texts = {
+            "account_sid": "Account SID from your Twilio Console dashboard.",
+            "phone_number": "Twilio phone number in E.164 format (e.g., +15551234567).",
+            "is_active": "Only one SMS configuration can be active at a time.",
+        }
+
+    def clean_auth_token(self):
+        token = self.cleaned_data.get("auth_token")
+        if not token and self.instance and self.instance.pk:
+            return self.instance.auth_token
+        return token

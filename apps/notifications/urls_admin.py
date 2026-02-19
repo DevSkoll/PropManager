@@ -17,4 +17,13 @@ urlpatterns = [
     path("notifications/contacts/<uuid:pk>/delete/", views.admin_contact_delete, name="contact_delete"),
     # Reminders
     path("notifications/invoices/<uuid:invoice_pk>/remind/", views.admin_send_reminder, name="send_reminder"),
+    # Communications Settings
+    path("communications/settings/", views.admin_communications_settings, name="communications_settings"),
+    path("communications/email/create/", views.admin_email_config, name="email_config_create"),
+    path("communications/email/<uuid:pk>/edit/", views.admin_email_config, name="email_config_edit"),
+    path("communications/email/<uuid:pk>/test/", views.admin_email_test, name="email_config_test"),
+    path("communications/sms/create/", views.admin_sms_config, name="sms_config_create"),
+    path("communications/sms/<uuid:pk>/edit/", views.admin_sms_config, name="sms_config_edit"),
+    path("communications/sms/<uuid:pk>/test/", views.admin_sms_test, name="sms_config_test"),
+    path("communications/log/", views.admin_notification_log, name="notification_log"),
 ]

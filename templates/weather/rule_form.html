@@ -1,0 +1,146 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Create{% endif %} Notification Rule - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-bell"></i>
+        {% if is_edit %}Edit Notification Rule{% else %}New Notification Rule{% endif %}
+    </h2>
+    <a href="{% url 'weather_admin:notification_rule_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Rules
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Please correct the errors below.
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Rule Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>{% endif %}
+                        <div class="form-text">{{ form.name.help_text }}</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.alert_type.id_for_label }}" class="form-label">Alert Type</label>
+                            {{ form.alert_type }}
+                            {% if form.alert_type.errors %}<div class="invalid-feedback d-block">{{ form.alert_type.errors.0 }}</div>{% endif %}
+                            <div class="form-text">{{ form.alert_type.help_text }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.severity.id_for_label }}" class="form-label">Severity Filter</label>
+                            {{ form.severity }}
+                            {% if form.severity.errors %}<div class="invalid-feedback d-block">{{ form.severity.errors.0 }}</div>{% endif %}
+                            <div class="form-text">{{ form.severity.help_text }}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.property.id_for_label }}" class="form-label">Property</label>
+                        {{ form.property }}
+                        {% if form.property.errors %}<div class="invalid-feedback d-block">{{ form.property.errors.0 }}</div>{% endif %}
+                        <div class="form-text">{{ form.property.help_text }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.subject_template.id_for_label }}" class="form-label">Subject Template</label>
+                        {{ form.subject_template }}
+                        {% if form.subject_template.errors %}<div class="invalid-feedback d-block">{{ form.subject_template.errors.0 }}</div>{% endif %}
+                        <div class="form-text">{{ form.subject_template.help_text }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.message_template.id_for_label }}" class="form-label">Message Template</label>
+                        {{ form.message_template }}
+                        {% if form.message_template.errors %}<div class="invalid-feedback d-block">{{ form.message_template.errors.0 }}</div>{% endif %}
+                        <div class="form-text">{{ form.message_template.help_text }}</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.cooldown_hours.id_for_label }}" class="form-label">Cooldown (hours)</label>
+                            {{ form.cooldown_hours }}
+                            {% if form.cooldown_hours.errors %}<div class="invalid-feedback d-block">{{ form.cooldown_hours.errors.0 }}</div>{% endif %}
+                            <div class="form-text">{{ form.cooldown_hours.help_text }}</div>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center pt-4">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'weather_admin:notification_rule_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i>
+                            {% if is_edit %}Save Changes{% else %}Create Rule{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-braces"></i> Template Variables</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Use these variables in your subject and message templates. They will be replaced with actual values when the notification is sent.</p>
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>{property_name}</code></td><td>Property name</td></tr>
+                        <tr><td><code>{property_address}</code></td><td>Full property address</td></tr>
+                        <tr><td><code>{temperature}</code></td><td>Current temperature (&deg;F)</td></tr>
+                        <tr><td><code>{feels_like}</code></td><td>Feels-like temperature (&deg;F)</td></tr>
+                        <tr><td><code>{humidity}</code></td><td>Humidity percentage</td></tr>
+                        <tr><td><code>{wind_speed}</code></td><td>Wind speed (mph)</td></tr>
+                        <tr><td><code>{wind_gust}</code></td><td>Wind gust speed (mph)</td></tr>
+                        <tr><td><code>{snow_inches}</code></td><td>Snow accumulation (inches)</td></tr>
+                        <tr><td><code>{rain_inches}</code></td><td>Rain accumulation (inches)</td></tr>
+                        <tr><td><code>{alert_type}</code></td><td>Alert type (e.g., Snow, High Wind)</td></tr>
+                        <tr><td><code>{severity}</code></td><td>Severity level</td></tr>
+                        <tr><td><code>{timestamp}</code></td><td>Date and time of reading</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Example</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-1"><strong>Subject:</strong></p>
+                <code class="d-block mb-2">{alert_type} Alert: {property_name}</code>
+                <p class="small mb-1"><strong>Message:</strong></p>
+                <code class="d-block small">Snowfall of {snow_inches}" expected at {property_name}. This is a reminder to ensure walkways, roadways, etc. are cleared for plowing services. If you need assistance please reach out. Current temperature: {temperature}&deg;F.</code>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

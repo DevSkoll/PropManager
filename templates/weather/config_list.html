@@ -65,12 +65,17 @@
                         </small>
                     </td>
                     <td>
-                        <a href="{% url 'weather_admin:weather_config_edit' config.pk %}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-pencil"></i> Edit
-                        </a>
-                        <a href="{% url 'weather_admin:weather_snapshot_list' config.property.pk %}" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-clock-history"></i> Snapshots
-                        </a>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-info" onclick="openConfigModal('{{ config.pk }}')" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <a href="{% url 'weather_admin:weather_config_edit' config.pk %}" class="btn btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'weather_admin:weather_snapshot_list' config.property.pk %}" class="btn btn-outline-secondary" title="Snapshots">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -84,4 +89,85 @@
     <a href="{% url 'weather_admin:weather_config_create' %}">Create your first configuration.</a>
 </div>
 {% endif %}
+
+<div class="modal fade" id="configDetailModal" tabindex="-1" aria-labelledby="configDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="configDetailModalLabel">
+                    <i class="bi bi-cloud-sun"></i> Weather Configuration Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="configDetailModalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openConfigModal(configPk) {
+    var modalBody = document.getElementById('configDetailModalBody');
+    modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+    var bsModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('configDetailModal'));
+    bsModal.show();
+
+    var url = "{% url 'weather_admin:weather_config_detail_modal' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', configPk);
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(resp) {
+        if (!resp.ok) throw new Error('Failed to load');
+        return resp.text();
+    })
+    .then(function(html) {
+        modalBody.innerHTML = html;
+    })
+    .catch(function() {
+        modalBody.innerHTML = '<div class="alert alert-danger mb-0"><i class="bi bi-exclamation-triangle"></i> Failed to load configuration details.</div>';
+    });
+}
+
+function forceAction(action, configPk) {
+    var urlBase = action === 'poll'
+        ? "{% url 'weather_admin:weather_force_poll' '00000000-0000-0000-0000-000000000000' %}"
+        : "{% url 'weather_admin:weather_force_notify' '00000000-0000-0000-0000-000000000000' %}";
+    var url = urlBase.replace('00000000-0000-0000-0000-000000000000', configPk);
+    var feedbackDiv = document.getElementById('action-feedback-' + configPk);
+
+    var csrfToken = '';
+    var cookie = document.cookie.split('; ').find(function(row) { return row.startsWith('csrftoken='); });
+    if (cookie) csrfToken = cookie.split('=')[1];
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(function(resp) { return resp.json(); })
+    .then(function(data) {
+        if (feedbackDiv) {
+            var alertClass = data.success ? 'alert-success' : 'alert-danger';
+            feedbackDiv.innerHTML = '<div class="alert ' + alertClass + ' py-2 mb-0"><small>' + data.message + '</small></div>';
+            setTimeout(function() { feedbackDiv.innerHTML = ''; }, 5000);
+        }
+    })
+    .catch(function() {
+        if (feedbackDiv) {
+            feedbackDiv.innerHTML = '<div class="alert alert-danger py-2 mb-0"><small>Request failed. Please try again.</small></div>';
+        }
+    });
+}
+</script>
 {% endblock %}

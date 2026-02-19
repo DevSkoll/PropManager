@@ -1,0 +1,69 @@
+{% extends "admin_portal/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if editing %}Edit{% else %}Configure{% endif %} SMS - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'accounts_admin:admin_settings' %}">Settings</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'notifications_admin:communications_settings' %}">Communications</a></li>
+            <li class="breadcrumb-item active">{% if editing %}Edit{% else %}Configure{% endif %} SMS</li>
+        </ol>
+    </nav>
+    <h2><i class="bi bi-chat-dots"></i> {% if editing %}Edit{% else %}Configure{% endif %} SMS Provider</h2>
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Save Configuration
+                        </button>
+                        <a href="{% url 'notifications_admin:communications_settings' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Twilio Setup Guide</h5>
+            </div>
+            <div class="card-body">
+                <h6>Getting Your Credentials</h6>
+                <ol class="small">
+                    <li>Log in to your <a href="https://console.twilio.com" target="_blank">Twilio Console</a></li>
+                    <li>Your <strong>Account SID</strong> and <strong>Auth Token</strong> are on the main dashboard</li>
+                    <li>Your <strong>Phone Number</strong> is under Phone Numbers &rarr; Manage &rarr; Active numbers</li>
+                </ol>
+
+                <h6 class="mt-3">Phone Number Format</h6>
+                <ul class="small">
+                    <li>Use E.164 format: <code>+15551234567</code></li>
+                    <li>Include the <code>+</code> prefix and country code</li>
+                </ul>
+
+                <h6 class="mt-3">Trial Account Limitations</h6>
+                <ul class="small">
+                    <li>Trial accounts can only send SMS to verified numbers</li>
+                    <li>Messages include a "Sent from a Twilio trial account" prefix</li>
+                    <li>Upgrade to a paid account for production use</li>
+                </ul>
+
+                <div class="alert alert-info small mt-3 mb-0">
+                    <i class="bi bi-lightbulb"></i>
+                    After saving, use the <strong>Test Connection</strong> button on the Communications Settings page to verify your Twilio credentials.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

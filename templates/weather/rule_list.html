@@ -1,0 +1,90 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Notification Rules - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-bell"></i> Weather Notification Rules</h2>
+    <div>
+        <a href="{% url 'weather_admin:weather_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+        <a href="{% url 'weather_admin:notification_rule_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Create Rule
+        </a>
+    </div>
+</div>
+
+{% if rules %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Alert Type</th>
+                    <th>Severity</th>
+                    <th>Property</th>
+                    <th>Status</th>
+                    <th>Cooldown</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                <tr>
+                    <td><strong>{{ rule.name }}</strong></td>
+                    <td><span class="badge bg-secondary">{{ rule.get_alert_type_display }}</span></td>
+                    <td>
+                        {% if rule.severity == "emergency" %}
+                        <span class="badge bg-danger">Emergency</span>
+                        {% elif rule.severity == "warning" %}
+                        <span class="badge bg-warning text-dark">Warning</span>
+                        {% elif rule.severity == "watch" %}
+                        <span class="badge bg-info text-dark">Watch</span>
+                        {% else %}
+                        <span class="badge bg-primary">All</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if rule.property %}
+                        {{ rule.property.name }}
+                        {% else %}
+                        <span class="text-muted">All Properties</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if rule.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ rule.cooldown_hours }}h</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'weather_admin:notification_rule_edit' rule.pk %}" class="btn btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'weather_admin:notification_rule_dispatch_log' rule.pk %}" class="btn btn-outline-secondary" title="Dispatch Log">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
+                            <a href="{% url 'weather_admin:notification_rule_delete' rule.pk %}" class="btn btn-outline-danger" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No notification rules configured yet.
+    <a href="{% url 'weather_admin:notification_rule_create' %}">Create your first rule</a> to automate weather notifications.
+</div>
+{% endif %}
+{% endblock %}

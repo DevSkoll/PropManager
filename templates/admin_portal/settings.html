@@ -78,5 +78,34 @@
             </div>
         </div>
     </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-envelope-gear"></i> Communications</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Configure email and SMS providers for notifications, OTP delivery, and campaigns.</p>
+                <p>
+                    <strong>Email:</strong>
+                    {% if email_active %}
+                        <span class="badge bg-success">Configured</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Not Configured</span>
+                    {% endif %}
+                    &nbsp;
+                    <strong>SMS:</strong>
+                    {% if sms_active %}
+                        <span class="badge bg-success">Configured</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Not Configured</span>
+                    {% endif %}
+                </p>
+                <a href="{% url 'notifications_admin:communications_settings' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-gear"></i> Manage Communications
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

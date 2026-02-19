@@ -188,6 +188,10 @@ def check_weather_thresholds(snapshot_id):
             "apps.weather.tasks.send_weather_alert_notifications",
             alert_id,
         )
+        async_task(
+            "apps.weather.tasks.process_notification_rules",
+            alert_id,
+        )
 
     logger.info(
         "Threshold check for snapshot %s: %d alert(s) created",
@@ -256,8 +260,109 @@ def _determine_severity(snapshot, alert_type):
     return "watch"
 
 
+def process_notification_rules(alert_id):
+    """Process notification rules for a weather alert.
+
+    Finds matching rules, renders templates, and dispatches notifications
+    through the full multi-channel system (email, SMS, in-app) respecting
+    tenant preferences.
+
+    Args:
+        alert_id: UUID (as string) of the WeatherAlert.
+    """
+    from apps.leases.models import Lease
+    from apps.notifications.services import dispatch_event
+
+    from .models import WeatherAlert, WeatherRuleDispatchLog
+    from .services import (
+        find_matching_rules,
+        get_template_context,
+        is_rule_in_cooldown,
+        render_template,
+    )
+
+    try:
+        alert = WeatherAlert.objects.select_related("property", "snapshot").get(
+            id=alert_id
+        )
+    except WeatherAlert.DoesNotExist:
+        logger.warning("WeatherAlert %s not found", alert_id)
+        return 0
+
+    snapshot = alert.snapshot
+    if not snapshot:
+        logger.warning("WeatherAlert %s has no snapshot", alert_id)
+        return 0
+
+    rules = find_matching_rules(alert)
+    if not rules:
+        return 0
+
+    context = get_template_context(snapshot, alert)
+    total_notified = 0
+
+    for rule in rules:
+        if is_rule_in_cooldown(rule, alert.property):
+            logger.info(
+                "Rule '%s' in cooldown for property %s, skipping",
+                rule.name,
+                alert.property,
+            )
+            continue
+
+        subject = render_template(rule.subject_template, context)
+        message = render_template(rule.message_template, context)
+
+        # Find tenants with active leases at the property
+        active_leases = Lease.objects.filter(
+            unit__property=alert.property,
+            status="active",
+        ).select_related("tenant")
+
+        tenant_count = 0
+        for lease in active_leases:
+            dispatch_event("weather_alert", {
+                "subject": subject,
+                "body": message,
+                "tenant_id": str(lease.tenant.pk),
+                "notification_category": "weather",
+            })
+            tenant_count += 1
+
+        # Log the dispatch
+        WeatherRuleDispatchLog.objects.create(
+            rule=rule,
+            property=alert.property,
+            alert=alert,
+            snapshot=snapshot,
+            rendered_subject=subject,
+            rendered_message=message,
+            tenants_notified=tenant_count,
+        )
+
+        total_notified += tenant_count
+        logger.info(
+            "Rule '%s' fired for property %s: notified %d tenant(s)",
+            rule.name,
+            alert.property,
+            tenant_count,
+        )
+
+    # Mark alert as notification sent if any rules fired
+    if total_notified > 0:
+        alert.notification_sent = True
+        alert.sent_at = timezone.now()
+        alert.save(update_fields=["notification_sent", "sent_at"])
+
+    return total_notified
+
+
 def send_weather_alert_notifications(alert_id):
     """Create a Notification for each tenant with an active lease at the property.
+
+    This is the legacy notification path that creates in-app notifications only.
+    If notification rules are configured for this alert type, this function defers
+    to process_notification_rules() which handles full multi-channel dispatch.
 
     Args:
         alert_id: UUID (as string) of the WeatherAlert.
@@ -266,6 +371,7 @@ def send_weather_alert_notifications(alert_id):
     from apps.leases.models import Lease
 
     from .models import WeatherAlert
+    from .services import find_matching_rules
 
     try:
         alert = WeatherAlert.objects.select_related("property").get(id=alert_id)
@@ -273,6 +379,16 @@ def send_weather_alert_notifications(alert_id):
         logger.warning("WeatherAlert %s not found", alert_id)
         return 0
 
+    # If notification rules match this alert, skip legacy path —
+    # process_notification_rules() handles dispatch through the full channel system.
+    if find_matching_rules(alert):
+        logger.info(
+            "Alert %s matched notification rule(s), skipping legacy path",
+            alert_id,
+        )
+        return 0
+
+    # Legacy path: create in-app notifications only
     # Find all tenants with active leases at units belonging to this property
     active_leases = Lease.objects.filter(
         unit__property=alert.property,

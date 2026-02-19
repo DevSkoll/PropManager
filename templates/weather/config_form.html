@@ -21,7 +21,14 @@
             <div class="card-body">
                 <form method="post" novalidate>
                     {% csrf_token %}
-                    {% crispy form %}
+                    {{ form|crispy }}
+
+                    <div id="geocode-status" class="mb-3" style="display:none;">
+                        <div class="alert alert-info mb-0 py-2">
+                            <i class="bi bi-geo-alt"></i> <span id="geocode-message"></span>
+                        </div>
+                    </div>
+
                     <hr>
                     <div class="d-flex justify-content-end gap-2">
                         <a href="{% url 'weather_admin:weather_config_list' %}" class="btn btn-outline-secondary">Cancel</a>
@@ -35,4 +42,45 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const propertySelect = document.getElementById('id_property');
+    const latInput = document.getElementById('id_latitude');
+    const lonInput = document.getElementById('id_longitude');
+    const statusDiv = document.getElementById('geocode-status');
+    const statusMsg = document.getElementById('geocode-message');
+
+    if (!propertySelect || !latInput || !lonInput) return;
+
+    propertySelect.addEventListener('change', function() {
+        const propertyId = this.value;
+        if (!propertyId) return;
+
+        statusDiv.style.display = 'block';
+        statusMsg.textContent = 'Looking up coordinates from ZIP code...';
+        statusDiv.querySelector('.alert').className = 'alert alert-info mb-0 py-2';
+
+        fetch("{% url 'weather_admin:geocode_property' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', propertyId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(resp) {
+            if (!resp.ok) throw new Error('Geocoding failed');
+            return resp.json();
+        })
+        .then(function(data) {
+            latInput.value = data.latitude;
+            lonInput.value = data.longitude;
+            statusMsg.textContent = 'Coordinates auto-filled from ZIP ' + data.zip_code + ' (' + data.latitude + ', ' + data.longitude + ')';
+            statusDiv.querySelector('.alert').className = 'alert alert-success mb-0 py-2';
+        })
+        .catch(function() {
+            statusMsg.textContent = 'Could not auto-detect coordinates. Please enter latitude and longitude manually.';
+            statusDiv.querySelector('.alert').className = 'alert alert-warning mb-0 py-2';
+        });
+    });
+})();
+</script>
 {% endblock %}

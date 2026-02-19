@@ -1,0 +1,85 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Dispatch Log: {{ rule.name }} - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-clock-history"></i> Dispatch Log
+        <small class="text-muted">{{ rule.name }}</small>
+    </h2>
+    <div>
+        <a href="{% url 'weather_admin:notification_rule_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Rules
+        </a>
+        <a href="{% url 'weather_admin:notification_rule_edit' rule.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil"></i> Edit Rule
+        </a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <strong>Alert Type:</strong> <span class="badge bg-secondary">{{ rule.get_alert_type_display }}</span>
+            </div>
+            <div class="col-md-3">
+                <strong>Severity:</strong> {{ rule.get_severity_display }}
+            </div>
+            <div class="col-md-3">
+                <strong>Property:</strong> {% if rule.property %}{{ rule.property.name }}{% else %}All Properties{% endif %}
+            </div>
+            <div class="col-md-3">
+                <strong>Cooldown:</strong> {{ rule.cooldown_hours }}h
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if logs %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Dispatched At</th>
+                    <th>Property</th>
+                    <th>Subject</th>
+                    <th>Tenants Notified</th>
+                    <th>Alert</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.dispatched_at }}</td>
+                    <td>{{ log.property.name }}</td>
+                    <td>
+                        <span title="{{ log.rendered_message }}">{{ log.rendered_subject }}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary">{{ log.tenants_notified }}</span>
+                    </td>
+                    <td>
+                        {% if log.alert %}
+                        <a href="{% url 'weather_admin:weather_alert_detail' log.alert.pk %}">
+                            {{ log.alert.get_alert_type_display }} - {{ log.alert.get_severity_display }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> This rule has not been dispatched yet.
+</div>
+{% endif %}
+{% endblock %}

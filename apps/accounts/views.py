@@ -326,17 +326,22 @@ def admin_tenant_list(request):
 def admin_settings(request):
     """Admin settings overview page."""
     from apps.billing.models import ApiToken, PaymentGatewayConfig
+    from apps.notifications.models import EmailConfig, SMSConfig
 
     gateway_count = PaymentGatewayConfig.objects.count()
     active_gateways = PaymentGatewayConfig.objects.filter(is_active=True).count()
     api_token_count = ApiToken.objects.filter(is_active=True).count()
     staff_count = User.objects.filter(role__in=("admin", "staff"), is_active=True).count()
+    email_active = EmailConfig.objects.filter(is_active=True).exists()
+    sms_active = SMSConfig.objects.filter(is_active=True).exists()
 
     return render(request, "admin_portal/settings.html", {
         "gateway_count": gateway_count,
         "active_gateways": active_gateways,
         "api_token_count": api_token_count,
         "staff_count": staff_count,
+        "email_active": email_active,
+        "sms_active": sms_active,
     })
 
 

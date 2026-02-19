@@ -1,17 +1,28 @@
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from apps.billing.models import Invoice
 from apps.core.decorators import admin_required, tenant_required
 
 from .forms import (
+    EmailConfigForm,
     EventTypeSubscriptionForm,
     GroupContactForm,
     NotificationGroupForm,
+    SMSConfigForm,
     SendReminderForm,
     TenantNotificationPreferenceForm,
 )
-from .models import EventTypeSubscription, GroupContact, NotificationGroup
+from .models import (
+    EmailConfig,
+    EventTypeSubscription,
+    GroupContact,
+    NotificationGroup,
+    NotificationLog,
+    SMSConfig,
+)
 from .services import send_invoice_reminder
 
 
@@ -222,6 +233,179 @@ def admin_send_reminder(request, invoice_pk):
             "invoice": invoice,
             "tenant": tenant,
             "channel": channel,
+        },
+    )
+
+
+# ===========================================================================
+# Admin Views — Communications Settings
+# ===========================================================================
+
+
+@admin_required
+def admin_communications_settings(request):
+    """Communications settings hub: email and SMS config with status."""
+    email_config = EmailConfig.objects.filter(is_active=True).first()
+    sms_config = SMSConfig.objects.filter(is_active=True).first()
+    recent_logs = NotificationLog.objects.all()[:50]
+
+    return render(
+        request,
+        "notifications/admin_communications_settings.html",
+        {
+            "email_config": email_config,
+            "sms_config": sms_config,
+            "recent_logs": recent_logs,
+        },
+    )
+
+
+@admin_required
+def admin_email_config(request, pk=None):
+    """Create or edit an email configuration."""
+    if pk:
+        instance = get_object_or_404(EmailConfig, pk=pk)
+    else:
+        instance = None
+
+    if request.method == "POST":
+        form = EmailConfigForm(request.POST, instance=instance)
+        if form.is_valid():
+            config = form.save(commit=False)
+            if not instance:
+                config.created_by = request.user
+            config.updated_by = request.user
+            config.save()
+            messages.success(request, "Email configuration saved.")
+            return redirect("notifications_admin:communications_settings")
+    else:
+        form = EmailConfigForm(instance=instance)
+
+    return render(
+        request,
+        "notifications/admin_email_config_form.html",
+        {"form": form, "editing": instance is not None},
+    )
+
+
+@admin_required
+def admin_sms_config(request, pk=None):
+    """Create or edit an SMS configuration."""
+    if pk:
+        instance = get_object_or_404(SMSConfig, pk=pk)
+    else:
+        instance = None
+
+    if request.method == "POST":
+        form = SMSConfigForm(request.POST, instance=instance)
+        if form.is_valid():
+            config = form.save(commit=False)
+            if not instance:
+                config.created_by = request.user
+            config.updated_by = request.user
+            config.save()
+            messages.success(request, "SMS configuration saved.")
+            return redirect("notifications_admin:communications_settings")
+    else:
+        form = SMSConfigForm(instance=instance)
+
+    return render(
+        request,
+        "notifications/admin_sms_config_form.html",
+        {"form": form, "editing": instance is not None},
+    )
+
+
+@admin_required
+@require_POST
+def admin_email_test(request, pk):
+    """Test email config by sending a test email to the current admin."""
+    from django.core.mail import get_connection, send_mail
+    from django.utils import timezone
+
+    config = get_object_or_404(EmailConfig, pk=pk)
+    try:
+        connection = get_connection(
+            backend=config.email_backend,
+            host=config.email_host,
+            port=config.email_port,
+            username=config.email_host_user,
+            password=config.email_host_password,
+            use_tls=config.email_use_tls,
+            use_ssl=config.email_use_ssl,
+        )
+        send_mail(
+            subject="PropManager Email Test",
+            message=(
+                f"This is a test email sent at {timezone.now():%Y-%m-%d %H:%M:%S}. "
+                f"Your email configuration is working correctly."
+            ),
+            from_email=config.default_from_email,
+            recipient_list=[request.user.email],
+            connection=connection,
+            fail_silently=False,
+        )
+        config.last_tested_at = timezone.now()
+        config.last_test_success = True
+        config.save(update_fields=["last_tested_at", "last_test_success"])
+        return JsonResponse(
+            {"success": True, "message": f"Test email sent to {request.user.email}"}
+        )
+    except Exception as e:
+        config.last_tested_at = timezone.now()
+        config.last_test_success = False
+        config.save(update_fields=["last_tested_at", "last_test_success"])
+        return JsonResponse({"success": False, "message": str(e)})
+
+
+@admin_required
+@require_POST
+def admin_sms_test(request, pk):
+    """Test SMS config by verifying Twilio credentials via API."""
+    from django.utils import timezone
+
+    config = get_object_or_404(SMSConfig, pk=pk)
+    try:
+        from twilio.rest import Client
+
+        client = Client(config.account_sid, config.auth_token)
+        account = client.api.accounts(config.account_sid).fetch()
+        config.last_tested_at = timezone.now()
+        config.last_test_success = True
+        config.save(update_fields=["last_tested_at", "last_test_success"])
+        return JsonResponse(
+            {
+                "success": True,
+                "message": f"Twilio connection verified. Account: {account.friendly_name}",
+            }
+        )
+    except Exception as e:
+        config.last_tested_at = timezone.now()
+        config.last_test_success = False
+        config.save(update_fields=["last_tested_at", "last_test_success"])
+        return JsonResponse({"success": False, "message": str(e)})
+
+
+@admin_required
+def admin_notification_log(request):
+    """View notification dispatch log with filters."""
+    logs = NotificationLog.objects.all()
+
+    channel_filter = request.GET.get("channel", "")
+    status_filter = request.GET.get("status", "")
+
+    if channel_filter:
+        logs = logs.filter(channel=channel_filter)
+    if status_filter:
+        logs = logs.filter(status=status_filter)
+
+    return render(
+        request,
+        "notifications/admin_notification_log.html",
+        {
+            "logs": logs[:200],
+            "channel_filter": channel_filter,
+            "status_filter": status_filter,
         },
     )
 

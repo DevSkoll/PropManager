@@ -77,40 +77,40 @@ def create_notification(recipient_id, title, body, category="system", channel="i
 
 def _send_email_notification(notification):
     """Send an email notification to the recipient."""
-    from django.core.mail import send_mail
+    from apps.core.services.email import send_email
 
     recipient = notification.recipient
     if not recipient.email:
-        logger.warning("User %s has no email address; skipping email notification %s.", recipient, notification.pk)
+        logger.warning(
+            "User %s has no email address; skipping email notification %s.",
+            recipient,
+            notification.pk,
+        )
         return
 
-    try:
-        send_mail(
-            subject=notification.title,
-            message=notification.body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[recipient.email],
-            fail_silently=False,
-        )
-        logger.info("Email notification %s sent to %s.", notification.pk, recipient.email)
-    except Exception:
-        logger.exception("Failed to send email notification %s to %s.", notification.pk, recipient.email)
+    send_email(
+        subject=notification.title,
+        message=notification.body,
+        recipient_list=[recipient.email],
+        source="notification",
+    )
 
 
 def _send_sms_notification(notification):
-    """
-    Send an SMS notification to the recipient.
-    Placeholder — integrate with Twilio or another provider.
-    """
+    """Send an SMS notification to the recipient via Twilio."""
+    from apps.core.services.sms import sms_service
+
     recipient = notification.recipient
     if not recipient.phone_number:
-        logger.warning("User %s has no phone number; skipping SMS notification %s.", recipient, notification.pk)
+        logger.warning(
+            "User %s has no phone number; skipping SMS notification %s.",
+            recipient,
+            notification.pk,
+        )
         return
 
-    # TODO: Integrate with SMS provider (e.g. Twilio)
-    logger.info(
-        "SMS notification %s would be sent to %s: %s",
-        notification.pk,
-        recipient.phone_number,
-        notification.title,
+    sms_service.send_sms(
+        to=recipient.phone_number,
+        body=f"{notification.title}: {notification.body}",
+        source="notification",
     )

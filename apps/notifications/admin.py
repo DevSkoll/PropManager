@@ -1,10 +1,13 @@
 from django.contrib import admin
 
 from .models import (
+    EmailConfig,
     EventTypeSubscription,
     GroupContact,
     NotificationGroup,
+    NotificationLog,
     ReminderLog,
+    SMSConfig,
     TenantNotificationPreference,
 )
 
@@ -53,3 +56,23 @@ class ReminderLogAdmin(admin.ModelAdmin):
     list_filter = ("channel",)
     search_fields = ("invoice__invoice_number",)
     readonly_fields = ("sent_at",)
+
+
+@admin.register(EmailConfig)
+class EmailConfigAdmin(admin.ModelAdmin):
+    list_display = ("display_name", "email_host", "default_from_email", "is_active", "last_test_success", "created_at")
+    list_filter = ("is_active", "last_test_success")
+
+
+@admin.register(SMSConfig)
+class SMSConfigAdmin(admin.ModelAdmin):
+    list_display = ("display_name", "provider", "phone_number", "is_active", "last_test_success", "created_at")
+    list_filter = ("is_active", "provider", "last_test_success")
+
+
+@admin.register(NotificationLog)
+class NotificationLogAdmin(admin.ModelAdmin):
+    list_display = ("channel", "status", "recipient", "subject", "source", "created_at")
+    list_filter = ("channel", "status", "source")
+    search_fields = ("recipient", "subject")
+    readonly_fields = ("channel", "status", "recipient", "subject", "body_preview", "error_message", "source")

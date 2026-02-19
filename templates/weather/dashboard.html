@@ -10,6 +10,9 @@
         <a href="{% url 'weather_admin:weather_alert_list' %}" class="btn btn-outline-warning">
             <i class="bi bi-exclamation-triangle"></i> All Alerts ({{ total_alerts }})
         </a>
+        <a href="{% url 'weather_admin:notification_rule_list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-bell"></i> Notification Rules
+        </a>
         <a href="{% url 'weather_admin:weather_config_list' %}" class="btn btn-outline-secondary">
             <i class="bi bi-gear"></i> Configurations ({{ total_configs }})
         </a>

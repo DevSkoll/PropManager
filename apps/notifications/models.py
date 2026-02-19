@@ -194,3 +194,117 @@ class ReminderLog(TimeStampedModel):
 
     def __str__(self):
         return f"Reminder for {self.invoice} at {self.sent_at}"
+
+
+# ---------------------------------------------------------------------------
+# Communication Provider Config
+# ---------------------------------------------------------------------------
+
+
+class EmailConfig(TimeStampedModel, AuditMixin):
+    """DB-stored SMTP configuration. Only one active config at a time."""
+
+    display_name = models.CharField(max_length=100, default="SMTP Email")
+    email_backend = models.CharField(
+        max_length=200,
+        default="django.core.mail.backends.smtp.EmailBackend",
+        help_text="Django email backend class path",
+    )
+    email_host = models.CharField(max_length=255, help_text="SMTP server hostname")
+    email_port = models.PositiveIntegerField(default=587)
+    email_use_tls = models.BooleanField(default=True)
+    email_use_ssl = models.BooleanField(default=False)
+    email_host_user = models.CharField(max_length=255, blank=True, default="")
+    email_host_password = models.CharField(max_length=255, blank=True, default="")
+    default_from_email = models.EmailField()
+    is_active = models.BooleanField(default=False, db_index=True)
+    last_tested_at = models.DateTimeField(null=True, blank=True)
+    last_test_success = models.BooleanField(null=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Email Configuration"
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"{self.display_name} ({status})"
+
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            EmailConfig.objects.filter(is_active=True).exclude(pk=self.pk).update(
+                is_active=False
+            )
+        super().save(*args, **kwargs)
+
+
+class SMSConfig(TimeStampedModel, AuditMixin):
+    """DB-stored Twilio SMS configuration. Only one active config at a time."""
+
+    PROVIDER_CHOICES = [
+        ("twilio", "Twilio"),
+    ]
+
+    display_name = models.CharField(max_length=100, default="Twilio SMS")
+    provider = models.CharField(
+        max_length=20, choices=PROVIDER_CHOICES, default="twilio"
+    )
+    account_sid = models.CharField(max_length=100)
+    auth_token = models.CharField(max_length=100)
+    phone_number = models.CharField(
+        max_length=20,
+        help_text="Twilio phone number in E.164 format (e.g., +15551234567)",
+    )
+    is_active = models.BooleanField(default=False, db_index=True)
+    last_tested_at = models.DateTimeField(null=True, blank=True)
+    last_test_success = models.BooleanField(null=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "SMS Configuration"
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"{self.display_name} ({status})"
+
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            SMSConfig.objects.filter(is_active=True).exclude(pk=self.pk).update(
+                is_active=False
+            )
+        super().save(*args, **kwargs)
+
+
+class NotificationLog(TimeStampedModel):
+    """Audit log for all outbound email/SMS dispatches."""
+
+    LOG_CHANNEL_CHOICES = [
+        ("email", "Email"),
+        ("sms", "SMS"),
+    ]
+    LOG_STATUS_CHOICES = [
+        ("sent", "Sent"),
+        ("failed", "Failed"),
+    ]
+
+    channel = models.CharField(max_length=5, choices=LOG_CHANNEL_CHOICES)
+    status = models.CharField(max_length=6, choices=LOG_STATUS_CHOICES)
+    recipient = models.CharField(
+        max_length=255, help_text="Email address or phone number"
+    )
+    subject = models.CharField(max_length=500, blank=True, default="")
+    body_preview = models.TextField(
+        blank=True, default="", help_text="First 500 chars of the message body"
+    )
+    error_message = models.TextField(blank=True, default="")
+    source = models.CharField(
+        max_length=30,
+        blank=True,
+        default="",
+        help_text="Where the dispatch originated: notification, reminder, otp, campaign, etc.",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.channel} to {self.recipient} ({self.status})"

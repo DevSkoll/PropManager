@@ -1,0 +1,104 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Dispatch Log - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'accounts_admin:admin_settings' %}">Settings</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'notifications_admin:communications_settings' %}">Communications</a></li>
+            <li class="breadcrumb-item active">Dispatch Log</li>
+        </ol>
+    </nav>
+    <h2><i class="bi bi-journal-text"></i> Notification Dispatch Log</h2>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-auto">
+                <label class="form-label">Channel</label>
+                <select name="channel" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="email" {% if channel_filter == "email" %}selected{% endif %}>Email</option>
+                    <option value="sms" {% if channel_filter == "sms" %}selected{% endif %}>SMS</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="sent" {% if status_filter == "sent" %}selected{% endif %}>Sent</option>
+                    <option value="failed" {% if status_filter == "failed" %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+                <a href="{% url 'notifications_admin:notification_log' %}" class="btn btn-sm btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Log Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Time</th>
+                        <th>Channel</th>
+                        <th>Recipient</th>
+                        <th>Subject / Preview</th>
+                        <th>Status</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>
+                            <small>{{ log.created_at|date:"M d, Y H:i" }}</small>
+                        </td>
+                        <td>
+                            {% if log.channel == "email" %}
+                                <span class="badge bg-primary"><i class="bi bi-envelope"></i> Email</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark"><i class="bi bi-chat-dots"></i> SMS</span>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ log.recipient }}</code></td>
+                        <td>
+                            {% if log.subject %}
+                                <strong>{{ log.subject|truncatechars:50 }}</strong>
+                            {% endif %}
+                            {% if log.body_preview %}
+                                <br><small class="text-muted">{{ log.body_preview|truncatechars:80 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.status == "sent" %}
+                                <span class="badge bg-success">Sent</span>
+                            {% else %}
+                                <span class="badge bg-danger" title="{{ log.error_message }}">Failed</span>
+                                {% if log.error_message %}
+                                    <br><small class="text-danger">{{ log.error_message|truncatechars:60 }}</small>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td><small class="text-muted">{{ log.source|default:"-" }}</small></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-3">No dispatch records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
