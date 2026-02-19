@@ -1,0 +1,119 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ property.name }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'properties_admin:property_list' %}">Properties</a></li>
+        <li class="breadcrumb-item active">{{ property.name }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>{{ property.name }}</h2>
+    <a href="{% url 'properties_admin:property_edit' pk=property.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-pencil"></i> Edit Property
+    </a>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Property Details</h5></div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Type</dt>
+                    <dd class="col-sm-8">{{ property.get_property_type_display }}</dd>
+                    <dt class="col-sm-4">Address</dt>
+                    <dd class="col-sm-8">{{ property.full_address }}</dd>
+                    <dt class="col-sm-4">Total Units</dt>
+                    <dd class="col-sm-8">{{ property.total_units }}</dd>
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">
+                        {% if property.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="row g-3">
+            <div class="col-4">
+                <div class="card stat-card primary text-center">
+                    <div class="card-body">
+                        <h3>{{ property.total_units }}</h3>
+                        <small class="text-muted">Total Units</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card stat-card success text-center">
+                    <div class="card-body">
+                        <h3>{{ property.occupied_units_count }}</h3>
+                        <small class="text-muted">Occupied</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card stat-card warning text-center">
+                    <div class="card-body">
+                        <h3>{{ property.vacant_units_count }}</h3>
+                        <small class="text-muted">Vacant</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Units</h5>
+        <a href="{% url 'properties_admin:unit_create' property_pk=property.pk %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Unit
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Unit #</th>
+                    <th>Beds</th>
+                    <th>Baths</th>
+                    <th>Sq Ft</th>
+                    <th>Base Rent</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for unit in units %}
+                <tr>
+                    <td><a href="{% url 'properties_admin:unit_detail' property_pk=property.pk pk=unit.pk %}">{{ unit.unit_number }}</a></td>
+                    <td>{{ unit.bedrooms }}</td>
+                    <td>{{ unit.bathrooms }}</td>
+                    <td>{{ unit.square_feet|default:"-" }}</td>
+                    <td>{{ unit.base_rent|currency }}</td>
+                    <td>
+                        <span class="badge bg-{% if unit.status == 'occupied' %}success{% elif unit.status == 'vacant' %}warning{% else %}secondary{% endif %}">
+                            {{ unit.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'properties_admin:unit_edit' property_pk=property.pk pk=unit.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No units added yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

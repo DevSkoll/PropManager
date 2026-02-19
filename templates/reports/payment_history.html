@@ -1,0 +1,74 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Payment History - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-credit-card"></i> Payment History</h2>
+    <div>
+        <a href="?format=csv{% if date_from %}&from={{ date_from }}{% endif %}{% if date_to %}&to={{ date_to }}{% endif %}" class="btn btn-outline-success">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+        <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary">Back to Reports</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">From Date</label>
+                <input type="date" class="form-control" name="from" value="{{ date_from }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">To Date</label>
+                <input type="date" class="form-control" name="to" value="{{ date_to }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-filter"></i> Filter</button>
+                <a href="{% url 'reports:payment_history' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <strong>Total Payments: {{ total|currency }}</strong>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Tenant</th>
+                    <th>Invoice #</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Reference</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                    <td>{{ payment.tenant.get_full_name|default:payment.tenant.username }}</td>
+                    <td>{{ payment.invoice.invoice_number }}</td>
+                    <td>{{ payment.amount|currency }}</td>
+                    <td>{{ payment.get_method_display }}</td>
+                    <td>{{ payment.reference_number|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">No payments found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

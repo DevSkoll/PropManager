@@ -1,0 +1,174 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Create Campaign - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-megaphone"></i> Create Campaign</h2>
+    <a href="{% url 'marketing_admin:campaign_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Campaigns
+    </a>
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Campaign Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="{{ form.name.id_for_label }}" class="form-label">Campaign Name</label>
+                    <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}"
+                           class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                           value="{{ form.name.value|default_if_none:'' }}"
+                           placeholder="e.g., February Newsletter">
+                    {% for error in form.name.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label for="{{ form.subject.id_for_label }}" class="form-label">Email Subject</label>
+                    <input type="text" name="{{ form.subject.html_name }}" id="{{ form.subject.id_for_label }}"
+                           class="form-control {% if form.subject.errors %}is-invalid{% endif %}"
+                           value="{{ form.subject.value|default_if_none:'' }}"
+                           placeholder="e.g., Your February Update">
+                    {% for error in form.subject.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-12">
+                    <label for="{{ form.body_html.id_for_label }}" class="form-label">HTML Body</label>
+                    <textarea name="{{ form.body_html.html_name }}" id="{{ form.body_html.id_for_label }}"
+                              class="form-control {% if form.body_html.errors %}is-invalid{% endif %}"
+                              rows="10" placeholder="Enter the HTML email content...">{{ form.body_html.value|default_if_none:'' }}</textarea>
+                    {% for error in form.body_html.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-12">
+                    <label for="{{ form.body_text.id_for_label }}" class="form-label">Plain Text Body</label>
+                    <textarea name="{{ form.body_text.html_name }}" id="{{ form.body_text.id_for_label }}"
+                              class="form-control {% if form.body_text.errors %}is-invalid{% endif %}"
+                              rows="5" placeholder="Enter the plain text fallback...">{{ form.body_text.value|default_if_none:'' }}</textarea>
+                    {% for error in form.body_text.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label for="{{ form.scheduled_at.id_for_label }}" class="form-label">Schedule Send (optional)</label>
+                    <input type="datetime-local" name="{{ form.scheduled_at.html_name }}" id="{{ form.scheduled_at.id_for_label }}"
+                           class="form-control {% if form.scheduled_at.errors %}is-invalid{% endif %}"
+                           value="{{ form.scheduled_at.value|default_if_none:'' }}">
+                    <div class="form-text">Leave blank to send immediately when you click Send.</div>
+                    {% for error in form.scheduled_at.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segments -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-funnel"></i> Audience Segments</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="add-segment">
+                <i class="bi bi-plus-lg"></i> Add Segment
+            </button>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">Define which tenants should receive this campaign. Multiple segments are combined (union).</p>
+
+            {{ segment_formset.management_form }}
+
+            <div id="segment-forms">
+                {% for seg_form in segment_formset %}
+                <div class="segment-row card card-body bg-light mb-3">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">Segment Type</label>
+                            <select name="{{ seg_form.filter_type.html_name }}" class="form-select segment-filter-type">
+                                <option value="">-- Select --</option>
+                                <option value="all" {% if seg_form.filter_type.value == "all" %}selected{% endif %}>All Tenants</option>
+                                <option value="by_property" {% if seg_form.filter_type.value == "by_property" %}selected{% endif %}>By Property</option>
+                                <option value="by_lease_status" {% if seg_form.filter_type.value == "by_lease_status" %}selected{% endif %}>By Lease Status</option>
+                                <option value="by_move_in_date" {% if seg_form.filter_type.value == "by_move_in_date" %}selected{% endif %}>By Move-in Date</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Filter Value (JSON)</label>
+                            <input type="text" name="{{ seg_form.filter_value.html_name }}"
+                                   class="form-control segment-filter-value"
+                                   value="{{ seg_form.filter_value.value|default_if_none:'' }}"
+                                   placeholder='e.g., {"property_id": "uuid"} or {}'>
+                        </div>
+                        <div class="col-md-2">
+                            {% if seg_form.DELETE %}
+                            <div class="form-check">
+                                <input type="checkbox" name="{{ seg_form.DELETE.html_name }}"
+                                       id="{{ seg_form.DELETE.id_for_label }}" class="form-check-input">
+                                <label class="form-check-label text-danger" for="{{ seg_form.DELETE.id_for_label }}">
+                                    <i class="bi bi-trash"></i> Remove
+                                </label>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% for hidden in seg_form.hidden_fields %}
+                        {{ hidden }}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Create Campaign
+        </button>
+        <a href="{% url 'marketing_admin:campaign_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const addBtn = document.getElementById("add-segment");
+    const container = document.getElementById("segment-forms");
+    const totalForms = document.getElementById("id_segments-TOTAL_FORMS");
+
+    addBtn.addEventListener("click", function () {
+        const formCount = parseInt(totalForms.value);
+        const template = container.querySelector(".segment-row");
+        if (!template) return;
+
+        const newForm = template.cloneNode(true);
+        // Update form indices
+        newForm.innerHTML = newForm.innerHTML.replace(
+            /segments-\d+-/g,
+            "segments-" + formCount + "-"
+        );
+        // Clear values
+        newForm.querySelectorAll("input:not([type=hidden])").forEach(function (input) {
+            input.value = "";
+        });
+        newForm.querySelectorAll("select").forEach(function (select) {
+            select.selectedIndex = 0;
+        });
+        newForm.querySelectorAll("input[type=checkbox]").forEach(function (cb) {
+            cb.checked = false;
+        });
+        // Clear the id field for the new form
+        const idField = newForm.querySelector('input[name$="-id"]');
+        if (idField) idField.value = "";
+
+        container.appendChild(newForm);
+        totalForms.value = formCount + 1;
+    });
+});
+</script>
+{% endblock %}

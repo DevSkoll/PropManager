@@ -1,0 +1,79 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ thread.subject }} - PropManager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'communications_tenant:thread_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to messages
+    </a>
+    <h2 class="mt-2 mb-0">{{ thread.subject }}</h2>
+    <small class="text-muted">
+        {% if thread.is_closed %}
+            <span class="badge bg-secondary"><i class="bi bi-lock"></i> Closed</span>
+        {% endif %}
+    </small>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body" style="max-height: 500px; overflow-y: auto;" id="message-container">
+        {% for msg in thread_messages %}
+        <div class="d-flex mb-3 {% if msg.sender.is_admin_user %}justify-content-start{% else %}justify-content-end{% endif %}">
+            <div style="max-width: 75%;">
+                <div class="rounded-3 p-3 {% if msg.sender.is_admin_user %}bg-light{% else %}bg-primary text-white{% endif %}">
+                    <div class="mb-1">
+                        <strong style="font-size: 0.85rem;">
+                            <i class="bi bi-person-circle"></i>
+                            {{ msg.sender.get_full_name|default:msg.sender.username }}
+                            {% if msg.sender.is_admin_user %}
+                                <span class="badge bg-dark" style="font-size: 0.65rem;">Staff</span>
+                            {% endif %}
+                        </strong>
+                    </div>
+                    <p class="mb-1" style="white-space: pre-wrap;">{{ msg.body }}</p>
+                    <small class="{% if msg.sender.is_admin_user %}text-muted{% else %}text-white-50{% endif %}" style="font-size: 0.75rem;">
+                        {{ msg.created_at|date:"M d, Y g:i A" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-center text-muted py-4">No messages in this thread yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% if not thread.is_closed %}
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="id_body" class="form-label fw-semibold">Reply</label>
+                <textarea name="body" id="id_body" class="form-control" rows="3" placeholder="Type your reply..." required>{{ form.body.value|default:"" }}</textarea>
+                {% if form.body.errors %}
+                <div class="invalid-feedback d-block">{{ form.body.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send"></i> Send Reply
+            </button>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-secondary text-center">
+    <i class="bi bi-lock"></i> This thread has been closed.
+</div>
+{% endif %}
+
+{% block extra_js %}
+<script>
+    const container = document.getElementById('message-container');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+</script>
+{% endblock %}
+{% endblock %}

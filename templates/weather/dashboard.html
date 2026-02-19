@@ -1,0 +1,144 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Weather Dashboard - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-cloud-sun"></i> Weather Dashboard</h2>
+    <div>
+        <a href="{% url 'weather_admin:weather_alert_list' %}" class="btn btn-outline-warning">
+            <i class="bi bi-exclamation-triangle"></i> All Alerts ({{ total_alerts }})
+        </a>
+        <a href="{% url 'weather_admin:weather_config_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-gear"></i> Configurations ({{ total_configs }})
+        </a>
+    </div>
+</div>
+
+{% if property_weather %}
+<div class="row g-4 mb-4">
+    {% for item in property_weather %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100{% if item.alert_count > 0 %} border-warning{% endif %}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-building"></i> {{ item.config.property.name }}
+                </h5>
+                {% if item.alert_count > 0 %}
+                <span class="badge bg-warning text-dark">
+                    <i class="bi bi-exclamation-triangle"></i> {{ item.alert_count }} alert{{ item.alert_count|pluralize }}
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if item.snapshot %}
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h2 class="mb-0">{{ item.snapshot.temperature_f }}&deg;F</h2>
+                        <small class="text-muted">Feels like {{ item.snapshot.feels_like_f }}&deg;F</small>
+                    </div>
+                    <div class="text-end">
+                        {% if item.snapshot.conditions %}
+                        {% for condition in item.snapshot.conditions %}
+                        {% if condition.description %}
+                        <span class="badge bg-info text-dark">{{ condition.description }}</span>
+                        {% endif %}
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row text-center g-2">
+                    <div class="col-4">
+                        <div class="border rounded p-2">
+                            <i class="bi bi-droplet text-primary"></i>
+                            <div class="small text-muted">Humidity</div>
+                            <strong>{{ item.snapshot.humidity }}%</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border rounded p-2">
+                            <i class="bi bi-wind text-secondary"></i>
+                            <div class="small text-muted">Wind</div>
+                            <strong>{{ item.snapshot.wind_speed_mph }} mph</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border rounded p-2">
+                            <i class="bi bi-snow text-info"></i>
+                            <div class="small text-muted">Snow</div>
+                            <strong>{{ item.snapshot.snow_inches }}"</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 text-muted small">
+                    <i class="bi bi-clock"></i> Updated: {{ item.snapshot.timestamp }}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">
+                    <i class="bi bi-hourglass-split"></i> No weather data yet. Waiting for first poll.
+                </p>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'weather_admin:weather_snapshot_list' item.config.property.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-clock-history"></i> History
+                </a>
+                <a href="{% url 'weather_admin:weather_config_edit' item.config.pk %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-gear"></i> Config
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No active weather monitoring configurations.
+    <a href="{% url 'weather_admin:weather_config_create' %}">Add a property to monitor.</a>
+</div>
+{% endif %}
+
+{% if recent_alerts %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Recent Alerts</h5>
+        <a href="{% url 'weather_admin:weather_alert_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Property</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in recent_alerts %}
+                <tr>
+                    <td>
+                        <a href="{% url 'weather_admin:weather_alert_detail' alert.pk %}">{{ alert.title }}</a>
+                    </td>
+                    <td>{{ alert.property.name }}</td>
+                    <td><span class="badge bg-secondary">{{ alert.get_alert_type_display }}</span></td>
+                    <td>
+                        {% if alert.severity == "emergency" %}
+                        <span class="badge bg-danger">Emergency</span>
+                        {% elif alert.severity == "warning" %}
+                        <span class="badge bg-warning text-dark">Warning</span>
+                        {% else %}
+                        <span class="badge bg-info text-dark">Watch</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ alert.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if editing %}Edit{% else %}New{% endif %} Announcement - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'communications_admin:announcement_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to announcements
+    </a>
+    <h2 class="mt-2">
+        <i class="bi bi-megaphone"></i>
+        {% if editing %}Edit Announcement{% else %}New Announcement{% endif %}
+    </h2>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i>
+                            {% if editing %}Update{% else %}Create{% endif %} Announcement
+                        </button>
+                        <a href="{% url 'communications_admin:announcement_list' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

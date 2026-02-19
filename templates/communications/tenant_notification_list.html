@@ -1,0 +1,78 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}Notifications - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-bell"></i> Notifications</h2>
+</div>
+
+{% regroup notifications by created_at.date as date_groups %}
+
+{% for group in date_groups %}
+<div class="mb-4">
+    <h6 class="text-muted mb-3 text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+        <i class="bi bi-calendar3"></i> {{ group.grouper|date:"l, M d, Y" }}
+    </h6>
+    <div class="list-group">
+        {% for notification in group.list %}
+        <div id="notification-{{ notification.pk }}" class="list-group-item {% if not notification.is_read %}list-group-item-light border-start border-primary border-3{% endif %}">
+            <div class="d-flex w-100 justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        {% if notification.category == "billing" %}
+                            <i class="bi bi-currency-dollar text-success"></i>
+                        {% elif notification.category == "work_order" %}
+                            <i class="bi bi-tools text-warning"></i>
+                        {% elif notification.category == "lease" %}
+                            <i class="bi bi-file-earmark-text text-info"></i>
+                        {% elif notification.category == "weather" %}
+                            <i class="bi bi-cloud-sun text-primary"></i>
+                        {% elif notification.category == "announcement" %}
+                            <i class="bi bi-megaphone text-danger"></i>
+                        {% elif notification.category == "message" %}
+                            <i class="bi bi-chat-dots text-primary"></i>
+                        {% else %}
+                            <i class="bi bi-gear text-secondary"></i>
+                        {% endif %}
+
+                        <h6 class="mb-0 {% if not notification.is_read %}fw-bold{% endif %}">
+                            {{ notification.title }}
+                        </h6>
+                    </div>
+                    <p class="mb-1 text-muted small">{{ notification.body|truncatewords:30 }}</p>
+                    <small class="text-muted">{{ notification.created_at|date:"g:i A" }}</small>
+
+                    {% if notification.action_url %}
+                        <a href="{{ notification.action_url }}" class="btn btn-sm btn-outline-primary ms-2">
+                            <i class="bi bi-arrow-right"></i> View
+                        </a>
+                    {% endif %}
+                </div>
+
+                <div class="ms-3 text-end">
+                    {% if not notification.is_read %}
+                        <button class="btn btn-sm btn-outline-secondary"
+                                hx-post="{% url 'communications_tenant:notification_list' %}"
+                                hx-target="#notification-{{ notification.pk }}"
+                                hx-swap="outerHTML"
+                                hx-vals='{"notification_id": "{{ notification.pk }}"}'>
+                            <i class="bi bi-check2"></i> Mark read
+                        </button>
+                    {% else %}
+                        <span class="badge bg-light text-muted"><i class="bi bi-check2-all"></i> Read</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% empty %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-bell-slash" style="font-size: 3rem;"></i>
+    <p class="mt-3 mb-0">You have no notifications.</p>
+</div>
+{% endfor %}
+{% endblock %}

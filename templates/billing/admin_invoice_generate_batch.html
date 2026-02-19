@@ -1,0 +1,38 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+{% load crispy_forms_tags %}
+
+{% block title %}Batch Generate Invoices - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'billing_admin:invoice_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Invoices
+    </a>
+    <h2 class="mt-2"><i class="bi bi-lightning-charge"></i> Batch Generate Invoices</h2>
+    <p class="text-muted">
+        Generate invoices for all active leases within a selected billing cycle. Each lease will
+        receive a rent invoice for the cycle. Leases that already have an invoice for the
+        selected cycle will be skipped.
+    </p>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <a href="{% url 'billing_admin:invoice_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-lightning-charge"></i> Generate Invoices
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

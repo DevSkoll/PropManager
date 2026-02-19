@@ -7,7 +7,7 @@
 {% block body %}
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
-        <a class="navbar-brand" href="{% url 'accounts_tenant:tenant_login' %}">
+        <a class="navbar-brand" href="{% url 'accounts_tenant:tenant_dashboard' %}">
             <i class="bi bi-house-door-fill"></i> PropManager
         </a>
         {% if user.is_authenticated %}
@@ -17,7 +17,7 @@
         <div class="collapse navbar-collapse" id="tenantNav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="{% url 'accounts_tenant:tenant_dashboard' %}">
                         <i class="bi bi-speedometer2"></i> Dashboard
                     </a>
                 </li>
@@ -48,10 +48,10 @@
                         <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Profile</a></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts_tenant:tenant_profile' %}"><i class="bi bi-person"></i> Profile</a></li>
                         <li><a class="dropdown-item" href="#"><i class="bi bi-bell"></i> Notifications</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts_tenant:tenant_logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
                     </ul>
                 </li>
             </ul>

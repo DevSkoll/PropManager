@@ -1,0 +1,99 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Marketing Campaigns - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-megaphone"></i> Marketing Campaigns</h2>
+    <a href="{% url 'marketing_admin:campaign_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> New Campaign
+    </a>
+</div>
+
+<!-- Status Filter Buttons -->
+<div class="mb-3">
+    <a href="{% url 'marketing_admin:campaign_list' %}"
+       class="btn btn-sm {% if not status_filter %}btn-dark{% else %}btn-outline-dark{% endif %} me-1">
+        All
+    </a>
+    {% for value, label in status_choices %}
+    <a href="{% url 'marketing_admin:campaign_list' %}?status={{ value }}"
+       class="btn btn-sm {% if status_filter == value %}btn-dark{% else %}btn-outline-dark{% endif %} me-1">
+        {{ label }}
+    </a>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Subject</th>
+                        <th>Status</th>
+                        <th class="text-center">Recipients</th>
+                        <th class="text-center">Open Rate</th>
+                        <th>Sent At</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for campaign in campaigns %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'marketing_admin:campaign_detail' pk=campaign.pk %}" class="fw-semibold text-decoration-none">
+                                {{ campaign.name }}
+                            </a>
+                        </td>
+                        <td>{{ campaign.subject|truncatechars:50 }}</td>
+                        <td>
+                            {% if campaign.status == "draft" %}
+                                <span class="badge bg-secondary">Draft</span>
+                            {% elif campaign.status == "scheduled" %}
+                                <span class="badge bg-info">Scheduled</span>
+                            {% elif campaign.status == "sending" %}
+                                <span class="badge bg-warning text-dark">Sending</span>
+                            {% elif campaign.status == "sent" %}
+                                <span class="badge bg-success">Sent</span>
+                            {% elif campaign.status == "cancelled" %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">{{ campaign.recipient_count }}</td>
+                        <td class="text-center">
+                            {% if campaign.status == "sent" %}
+                                {{ campaign.open_rate }}%
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if campaign.sent_at %}
+                                {{ campaign.sent_at|date:"M d, Y g:i A" }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'marketing_admin:campaign_detail' pk=campaign.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-megaphone" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">No campaigns found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

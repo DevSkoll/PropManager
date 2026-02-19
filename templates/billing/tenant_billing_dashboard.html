@@ -1,0 +1,169 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}Billing - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-receipt"></i> Billing</h2>
+</div>
+
+<!-- Balance Summary -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Balance Due</h6>
+                        <h2 class="mb-0 {% if total_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ total_balance|currency }}
+                        </h2>
+                    </div>
+                    <div class="{% if total_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                        <i class="bi bi-currency-dollar" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Outstanding Invoices</h6>
+                        <h2 class="mb-0">{{ outstanding_count }}</h2>
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-file-earmark-text" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-4">
+                <a href="{% url 'billing_tenant:invoice_list' %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-receipt"></i> View All Invoices
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Invoices -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-receipt-cutoff"></i> Recent Invoices</h5>
+        <a href="{% url 'billing_tenant:invoice_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Status</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Balance Due</th>
+                        <th>Due Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in recent_invoices %}
+                    <tr>
+                        <td class="fw-semibold">{{ invoice.invoice_number }}</td>
+                        <td>
+                            {% if invoice.status == "draft" %}
+                                <span class="badge bg-secondary">Draft</span>
+                            {% elif invoice.status == "issued" %}
+                                <span class="badge bg-info">Issued</span>
+                            {% elif invoice.status == "paid" %}
+                                <span class="badge bg-success">Paid</span>
+                            {% elif invoice.status == "partial" %}
+                                <span class="badge bg-warning text-dark">Partial</span>
+                            {% elif invoice.status == "overdue" %}
+                                <span class="badge bg-danger">Overdue</span>
+                            {% elif invoice.status == "cancelled" %}
+                                <span class="badge bg-dark">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ invoice.total_amount|currency }}</td>
+                        <td class="text-end {% if invoice.balance_due > 0 %}text-danger{% endif %}">
+                            {{ invoice.balance_due|currency }}
+                        </td>
+                        <td>{{ invoice.due_date|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'billing_tenant:invoice_detail' pk=invoice.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">No invoices yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Payments -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-cash-stack"></i> Recent Payments</h5>
+        <a href="{% url 'billing_tenant:payment_history' %}" class="btn btn-sm btn-outline-primary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Invoice</th>
+                        <th class="text-end">Amount</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in recent_payments %}
+                    <tr>
+                        <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                        <td>{{ payment.invoice.invoice_number }}</td>
+                        <td class="text-end">{{ payment.amount|currency }}</td>
+                        <td>{{ payment.get_method_display }}</td>
+                        <td>
+                            {% if payment.status == "completed" %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif payment.status == "pending" %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif payment.status == "failed" %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% elif payment.status == "refunded" %}
+                                <span class="badge bg-secondary">Refunded</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">No payments yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}My Invoices - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'billing_tenant:billing_dashboard' %}" class="text-decoration-none text-muted">
+            <i class="bi bi-arrow-left"></i> Back to Billing
+        </a>
+        <h2 class="mt-2"><i class="bi bi-receipt-cutoff"></i> My Invoices</h2>
+    </div>
+</div>
+
+<!-- Status Filter Buttons -->
+<div class="mb-3">
+    <a href="{% url 'billing_tenant:invoice_list' %}"
+       class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-outline-primary{% endif %} me-1">
+        All
+    </a>
+    {% for value, label in status_choices %}
+    <a href="{% url 'billing_tenant:invoice_list' %}?status={{ value }}"
+       class="btn btn-sm {% if status_filter == value %}btn-primary{% else %}btn-outline-primary{% endif %} me-1">
+        {{ label }}
+    </a>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Unit</th>
+                        <th>Status</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Paid</th>
+                        <th class="text-end">Balance Due</th>
+                        <th>Due Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in invoices %}
+                    <tr>
+                        <td class="fw-semibold">{{ invoice.invoice_number }}</td>
+                        <td>{{ invoice.lease.unit }}</td>
+                        <td>
+                            {% if invoice.status == "draft" %}
+                                <span class="badge bg-secondary">Draft</span>
+                            {% elif invoice.status == "issued" %}
+                                <span class="badge bg-info">Issued</span>
+                            {% elif invoice.status == "paid" %}
+                                <span class="badge bg-success">Paid</span>
+                            {% elif invoice.status == "partial" %}
+                                <span class="badge bg-warning text-dark">Partial</span>
+                            {% elif invoice.status == "overdue" %}
+                                <span class="badge bg-danger">Overdue</span>
+                            {% elif invoice.status == "cancelled" %}
+                                <span class="badge bg-dark">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ invoice.total_amount|currency }}</td>
+                        <td class="text-end">{{ invoice.amount_paid|currency }}</td>
+                        <td class="text-end {% if invoice.balance_due > 0 %}text-danger fw-semibold{% endif %}">
+                            {{ invoice.balance_due|currency }}
+                        </td>
+                        <td>{{ invoice.due_date|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'billing_tenant:invoice_detail' pk=invoice.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">No invoices found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

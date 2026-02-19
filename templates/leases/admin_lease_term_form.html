@@ -1,0 +1,32 @@
+{% extends "admin_portal/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Add Term - PropManager Admin{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'leases_admin:lease_list' %}">Leases</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'leases_admin:lease_detail' pk=lease.pk %}">{{ lease.tenant }}</a></li>
+        <li class="breadcrumb-item active">Add Term</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><h4 class="mb-0">Add Lease Term</h4></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Add Term</button>
+                        <a href="{% url 'leases_admin:lease_detail' pk=lease.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

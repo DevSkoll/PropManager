@@ -21,6 +21,23 @@ def phone_format(value):
     return value
 
 
+@register.filter
+def human_filesize(value):
+    """Convert a file size in bytes to a human-readable string (KB, MB, GB)."""
+    try:
+        value = int(value)
+    except (ValueError, TypeError):
+        return value
+    if value < 1024:
+        return f"{value} B"
+    elif value < 1024 * 1024:
+        return f"{value / 1024:.1f} KB"
+    elif value < 1024 * 1024 * 1024:
+        return f"{value / (1024 * 1024):.1f} MB"
+    else:
+        return f"{value / (1024 * 1024 * 1024):.1f} GB"
+
+
 @register.simple_tag(takes_context=True)
 def active_nav(context, url_name):
     request = context.get("request")

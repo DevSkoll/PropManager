@@ -1,0 +1,87 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Weather Configurations - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-gear"></i> Weather Configurations</h2>
+    <div>
+        <a href="{% url 'weather_admin:weather_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+        <a href="{% url 'weather_admin:weather_config_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Configuration
+        </a>
+    </div>
+</div>
+
+{% if configs %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Property</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Active</th>
+                    <th>Polling Interval</th>
+                    <th>Thresholds</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for config in configs %}
+                <tr>
+                    <td>
+                        <strong>{{ config.property.name }}</strong>
+                    </td>
+                    <td>{{ config.latitude }}</td>
+                    <td>{{ config.longitude }}</td>
+                    <td>
+                        {% if config.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ config.polling_interval_hours }}h</td>
+                    <td>
+                        <small>
+                            <span class="text-nowrap" title="Snow threshold">
+                                <i class="bi bi-snow"></i> {{ config.snow_threshold_inches }}"
+                            </span>
+                            <span class="text-nowrap ms-2" title="Wind threshold">
+                                <i class="bi bi-wind"></i> {{ config.wind_threshold_mph }} mph
+                            </span>
+                            <br>
+                            <span class="text-nowrap" title="Low temperature threshold">
+                                <i class="bi bi-thermometer-low"></i> {{ config.temp_low_threshold_f }}&deg;F
+                            </span>
+                            <span class="text-nowrap ms-2" title="High temperature threshold">
+                                <i class="bi bi-thermometer-high"></i> {{ config.temp_high_threshold_f }}&deg;F
+                            </span>
+                        </small>
+                    </td>
+                    <td>
+                        <a href="{% url 'weather_admin:weather_config_edit' config.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <a href="{% url 'weather_admin:weather_snapshot_list' config.property.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-clock-history"></i> Snapshots
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No weather configurations found.
+    <a href="{% url 'weather_admin:weather_config_create' %}">Create your first configuration.</a>
+</div>
+{% endif %}
+{% endblock %}

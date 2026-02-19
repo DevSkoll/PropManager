@@ -1,0 +1,57 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}My Messages - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-chat-dots"></i> My Messages</h2>
+    <a href="{% url 'communications_tenant:thread_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> New Message
+    </a>
+</div>
+
+<div class="list-group">
+    {% for item in thread_data %}
+    <a href="{% url 'communications_tenant:thread_detail' item.thread.pk %}"
+       class="list-group-item list-group-item-action {% if item.unread > 0 %}border-start border-primary border-3{% endif %}">
+        <div class="d-flex w-100 justify-content-between align-items-start">
+            <div>
+                <h6 class="mb-1 {% if item.unread > 0 %}fw-bold{% endif %}">
+                    {% if item.unread > 0 %}
+                        <i class="bi bi-circle-fill text-primary" style="font-size: 0.5rem; vertical-align: middle;"></i>
+                    {% endif %}
+                    {{ item.thread.subject }}
+                    {% if item.thread.is_closed %}
+                        <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">Closed</span>
+                    {% endif %}
+                </h6>
+                {% with last=item.thread.last_message %}
+                {% if last %}
+                <p class="mb-1 text-muted small">
+                    <strong>{{ last.sender.get_full_name|default:last.sender.username }}:</strong>
+                    {{ last.body|truncatewords:15 }}
+                </p>
+                {% endif %}
+                {% endwith %}
+            </div>
+            <div class="text-end">
+                <small class="text-muted">{{ item.thread.updated_at|date:"M d, Y" }}</small>
+                {% if item.unread > 0 %}
+                <br>
+                <span class="badge bg-primary rounded-pill">{{ item.unread }} new</span>
+                {% endif %}
+            </div>
+        </div>
+    </a>
+    {% empty %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+        <p class="mt-3 mb-1">You have no messages yet.</p>
+        <a href="{% url 'communications_tenant:thread_create' %}" class="btn btn-outline-primary mt-2">
+            <i class="bi bi-plus-lg"></i> Send a message to management
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

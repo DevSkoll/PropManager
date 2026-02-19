@@ -1,0 +1,95 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+{% load crispy_forms_tags %}
+
+{% block title %}Submit Work Order - PropManager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'workorders_tenant:workorder_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Work Orders
+    </a>
+    <h2 class="mt-2"><i class="bi bi-plus-circle"></i> Submit Work Order</h2>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Maintenance Request</h5>
+            </div>
+            <div class="card-body">
+                {% if active_lease %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    This request will be submitted for <strong>{{ active_lease.unit }}</strong>.
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    No active lease found. Please contact management if this is an error.
+                </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_title" class="form-label">Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" id="id_title" class="form-control {% if form.title.errors %}is-invalid{% endif %}"
+                               value="{{ form.title.value|default:'' }}" placeholder="Brief description of the issue" required>
+                        {% if form.title.errors %}
+                        <div class="invalid-feedback">{{ form.title.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea name="description" id="id_description" rows="5"
+                                  class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                                  placeholder="Please describe the issue in detail. Include location within the unit, when the issue started, and any other relevant information."
+                                  required>{{ form.description.value|default:'' }}</textarea>
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_priority" class="form-label">Priority</label>
+                            <select name="priority" id="id_priority" class="form-select">
+                                <option value="low" {% if form.priority.value == "low" %}selected{% endif %}>Low</option>
+                                <option value="medium" {% if form.priority.value == "medium" or not form.priority.value %}selected{% endif %}>Medium</option>
+                                <option value="high" {% if form.priority.value == "high" %}selected{% endif %}>High</option>
+                                <option value="emergency" {% if form.priority.value == "emergency" %}selected{% endif %}>Emergency</option>
+                            </select>
+                            <small class="text-muted">Select Emergency only for urgent safety or health issues.</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_category" class="form-label">Category</label>
+                            <select name="category" id="id_category" class="form-select">
+                                <option value="plumbing" {% if form.category.value == "plumbing" %}selected{% endif %}>Plumbing</option>
+                                <option value="electrical" {% if form.category.value == "electrical" %}selected{% endif %}>Electrical</option>
+                                <option value="hvac" {% if form.category.value == "hvac" %}selected{% endif %}>HVAC</option>
+                                <option value="appliance" {% if form.category.value == "appliance" %}selected{% endif %}>Appliance</option>
+                                <option value="structural" {% if form.category.value == "structural" %}selected{% endif %}>Structural</option>
+                                <option value="pest_control" {% if form.category.value == "pest_control" %}selected{% endif %}>Pest Control</option>
+                                <option value="landscaping" {% if form.category.value == "landscaping" %}selected{% endif %}>Landscaping</option>
+                                <option value="cleaning" {% if form.category.value == "cleaning" %}selected{% endif %}>Cleaning</option>
+                                <option value="general" {% if form.category.value == "general" or not form.category.value %}selected{% endif %}>General</option>
+                                <option value="other" {% if form.category.value == "other" %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="d-flex">
+                        <button type="submit" class="btn btn-primary" {% if not active_lease %}disabled{% endif %}>
+                            <i class="bi bi-send"></i> Submit Work Order
+                        </button>
+                        <a href="{% url 'workorders_tenant:workorder_list' %}" class="btn btn-outline-secondary ms-2">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

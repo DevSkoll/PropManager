@@ -1,0 +1,176 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}Invoice {{ invoice.invoice_number }} - PropManager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'billing_tenant:invoice_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Invoices
+    </a>
+    <h2 class="mt-2"><i class="bi bi-receipt-cutoff"></i> Invoice {{ invoice.invoice_number }}</h2>
+</div>
+
+<!-- Invoice Summary -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Invoice Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted" style="width: 40%;">Invoice Number</th>
+                        <td>{{ invoice.invoice_number }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Status</th>
+                        <td>
+                            {% if invoice.status == "draft" %}
+                                <span class="badge bg-secondary">Draft</span>
+                            {% elif invoice.status == "issued" %}
+                                <span class="badge bg-info">Issued</span>
+                            {% elif invoice.status == "paid" %}
+                                <span class="badge bg-success">Paid</span>
+                            {% elif invoice.status == "partial" %}
+                                <span class="badge bg-warning text-dark">Partial</span>
+                            {% elif invoice.status == "overdue" %}
+                                <span class="badge bg-danger">Overdue</span>
+                            {% elif invoice.status == "cancelled" %}
+                                <span class="badge bg-dark">Cancelled</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Unit</th>
+                        <td>{{ invoice.lease.unit }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Issue Date</th>
+                        <td>{{ invoice.issue_date|date:"M d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Due Date</th>
+                        <td>{{ invoice.due_date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% if invoice.billing_cycle %}
+                    <tr>
+                        <th class="text-muted">Billing Cycle</th>
+                        <td>{{ invoice.billing_cycle.name }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <!-- Balance Card -->
+        <div class="card {% if invoice.balance_due > 0 %}border-danger{% else %}border-success{% endif %}">
+            <div class="card-body text-center py-4">
+                <h6 class="text-muted mb-2">Balance Due</h6>
+                <h1 class="{% if invoice.balance_due > 0 %}text-danger{% else %}text-success{% endif %}">
+                    {{ invoice.balance_due|currency }}
+                </h1>
+                <div class="mt-2">
+                    <span class="text-muted">Total: {{ invoice.total_amount|currency }}</span>
+                    <span class="mx-2">|</span>
+                    <span class="text-success">Paid: {{ invoice.amount_paid|currency }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Line Items -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Charges</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Unit Price</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in line_items %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ item.get_charge_type_display }}</span>
+                        </td>
+                        <td>{{ item.description }}</td>
+                        <td class="text-end">{{ item.quantity }}</td>
+                        <td class="text-end">{{ item.unit_price|currency }}</td>
+                        <td class="text-end fw-semibold">{{ item.amount|currency }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3">No charges.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold">Total</td>
+                        <td class="text-end fw-bold">{{ invoice.total_amount|currency }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Payment History for this Invoice -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-cash-stack"></i> Payments</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Method</th>
+                        <th class="text-end">Amount</th>
+                        <th>Reference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td>{{ payment.payment_date|date:"M d, Y g:i A" }}</td>
+                        <td>{{ payment.get_method_display }}</td>
+                        <td class="text-end fw-semibold text-success">{{ payment.amount|currency }}</td>
+                        <td>{{ payment.reference_number|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-3">No payments recorded for this invoice.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if invoice.notes %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-sticky"></i> Notes</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-0">{{ invoice.notes }}</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

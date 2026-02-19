@@ -1,0 +1,123 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Documents - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> Documents</h2>
+    <a href="{% url 'documents_admin:document_upload' %}" class="btn btn-primary">
+        <i class="bi bi-upload"></i> Upload Document
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="filterType" class="form-label">Document Type</label>
+                <select name="type" id="filterType" class="form-select">
+                    <option value="">All Types</option>
+                    {% for value, label in document_type_choices %}
+                    <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="filterCategory" class="form-label">Category</label>
+                <select name="category" id="filterCategory" class="form-select">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.pk }}" {% if selected_category == cat.pk|slugify %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-outline-secondary">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+                <a href="{% url 'documents_admin:document_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Linked To</th>
+                    <th>Size</th>
+                    <th>Uploaded</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr>
+                    <td>
+                        <a href="{% url 'documents_admin:document_detail' pk=doc.pk %}">{{ doc.title }}</a>
+                    </td>
+                    <td>
+                        {% if doc.document_type == "lease" %}
+                        <span class="badge bg-primary">Lease</span>
+                        {% elif doc.document_type == "notice" %}
+                        <span class="badge bg-warning text-dark">Notice</span>
+                        {% elif doc.document_type == "inspection" %}
+                        <span class="badge bg-info text-dark">Inspection</span>
+                        {% elif doc.document_type == "receipt" %}
+                        <span class="badge bg-success">Receipt</span>
+                        {% elif doc.document_type == "insurance" %}
+                        <span class="badge bg-secondary">Insurance</span>
+                        {% elif doc.document_type == "photo" %}
+                        <span class="badge bg-dark">Photo</span>
+                        {% else %}
+                        <span class="badge bg-light text-dark">Other</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ doc.category.name|default:"-" }}</td>
+                    <td>
+                        {% if doc.property %}
+                        <span class="text-muted small">Property:</span> {{ doc.property }}
+                        {% elif doc.unit %}
+                        <span class="text-muted small">Unit:</span> {{ doc.unit }}
+                        {% elif doc.lease %}
+                        <span class="text-muted small">Lease:</span> {{ doc.lease }}
+                        {% elif doc.tenant %}
+                        <span class="text-muted small">Tenant:</span> {{ doc.tenant.get_full_name|default:doc.tenant.username }}
+                        {% elif doc.work_order %}
+                        <span class="text-muted small">Work Order:</span> {{ doc.work_order }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ doc.file_size|human_filesize }}</td>
+                    <td>{{ doc.created_at|date:"M d, Y" }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'documents_admin:document_download' pk=doc.pk %}" class="btn btn-sm btn-outline-primary" title="Download">
+                            <i class="bi bi-download"></i>
+                        </a>
+                        <form method="post" action="{% url 'documents_admin:document_delete' pk=doc.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this document?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No documents found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

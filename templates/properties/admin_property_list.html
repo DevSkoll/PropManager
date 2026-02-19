@@ -1,0 +1,68 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Properties - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-building"></i> Properties</h2>
+    <a href="{% url 'properties_admin:property_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Add Property
+    </a>
+</div>
+
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <a href="{% url 'properties_admin:property_list' %}" class="btn btn-sm btn-{% if not status_filter %}primary{% else %}outline-primary{% endif %}">All</a>
+        <a href="?status=active" class="btn btn-sm btn-{% if status_filter == 'active' %}primary{% else %}outline-primary{% endif %}">Active</a>
+        <a href="?status=inactive" class="btn btn-sm btn-{% if status_filter == 'inactive' %}primary{% else %}outline-primary{% endif %}">Inactive</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Address</th>
+                    <th>Units</th>
+                    <th>Occupied</th>
+                    <th>Vacant</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prop in properties %}
+                <tr>
+                    <td><a href="{% url 'properties_admin:property_detail' pk=prop.pk %}">{{ prop.name }}</a></td>
+                    <td>{{ prop.get_property_type_display }}</td>
+                    <td>{{ prop.city }}, {{ prop.state }}</td>
+                    <td>{{ prop.total_units }}</td>
+                    <td><span class="text-success">{{ prop.occupied_units_count }}</span></td>
+                    <td><span class="text-warning">{{ prop.vacant_units_count }}</span></td>
+                    <td>
+                        {% if prop.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'properties_admin:property_edit' pk=prop.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">No properties found. Add your first property!</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Create{% endif %} Weather Config - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-gear"></i>
+        {% if is_edit %}Edit Weather Configuration{% else %}New Weather Configuration{% endif %}
+    </h2>
+    <a href="{% url 'weather_admin:weather_config_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% crispy form %}
+                    <hr>
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'weather_admin:weather_config_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i>
+                            {% if is_edit %}Save Changes{% else %}Create Configuration{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

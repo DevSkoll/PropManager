@@ -1,0 +1,77 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Rent Roll - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-cash-stack"></i> Rent Roll</h2>
+    <div>
+        <a href="?format=csv" class="btn btn-outline-success"><i class="bi bi-download"></i> Export CSV</a>
+        <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary">Back to Reports</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h6 class="text-muted">Active Leases</h6>
+                <h3>{{ leases|length }}</h3>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted">Total Monthly Rent</h6>
+                <h3 class="text-primary">{{ total_rent|currency }}</h3>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted">Annual Revenue (est.)</h6>
+                <h3 class="text-success">{{ total_rent|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Property</th>
+                    <th>Unit</th>
+                    <th>Tenant</th>
+                    <th>Monthly Rent</th>
+                    <th>Lease Start</th>
+                    <th>Lease End</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lease in leases %}
+                <tr>
+                    <td>{{ lease.unit.property.name }}</td>
+                    <td>{{ lease.unit.unit_number }}</td>
+                    <td>{{ lease.tenant.get_full_name|default:lease.tenant.username }}</td>
+                    <td>{{ lease.monthly_rent|currency }}</td>
+                    <td>{{ lease.start_date }}</td>
+                    <td>{{ lease.end_date|default:"Month-to-Month" }}</td>
+                    <td>{{ lease.get_lease_type_display }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No active leases.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if leases %}
+            <tfoot>
+                <tr class="table-dark">
+                    <td colspan="3"><strong>Total</strong></td>
+                    <td><strong>{{ total_rent|currency }}</strong></td>
+                    <td colspan="3"></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+{% endblock %}

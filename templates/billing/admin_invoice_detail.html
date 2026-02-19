@@ -1,0 +1,228 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Invoice {{ invoice.invoice_number }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'billing_admin:invoice_list' %}" class="text-decoration-none text-muted">
+            <i class="bi bi-arrow-left"></i> Back to Invoices
+        </a>
+        <h2 class="mt-2 mb-0">
+            <i class="bi bi-receipt-cutoff"></i> Invoice {{ invoice.invoice_number }}
+        </h2>
+    </div>
+    <div>
+        {% if invoice.status != "paid" and invoice.status != "cancelled" %}
+        <a href="{% url 'billing_admin:record_payment' %}?invoice={{ invoice.pk }}" class="btn btn-success">
+            <i class="bi bi-cash-coin"></i> Record Payment
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Invoice Header -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Invoice Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted" style="width: 40%;">Invoice Number</th>
+                        <td>{{ invoice.invoice_number }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Status</th>
+                        <td>
+                            {% if invoice.status == "draft" %}
+                                <span class="badge bg-secondary">Draft</span>
+                            {% elif invoice.status == "issued" %}
+                                <span class="badge bg-info">Issued</span>
+                            {% elif invoice.status == "paid" %}
+                                <span class="badge bg-success">Paid</span>
+                            {% elif invoice.status == "partial" %}
+                                <span class="badge bg-warning text-dark">Partial</span>
+                            {% elif invoice.status == "overdue" %}
+                                <span class="badge bg-danger">Overdue</span>
+                            {% elif invoice.status == "cancelled" %}
+                                <span class="badge bg-dark">Cancelled</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Issue Date</th>
+                        <td>{{ invoice.issue_date|date:"M d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Due Date</th>
+                        <td>{{ invoice.due_date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% if invoice.billing_cycle %}
+                    <tr>
+                        <th class="text-muted">Billing Cycle</th>
+                        <td>{{ invoice.billing_cycle.name }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if invoice.notes %}
+                    <tr>
+                        <th class="text-muted">Notes</th>
+                        <td>{{ invoice.notes }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Tenant &amp; Lease</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted" style="width: 40%;">Tenant</th>
+                        <td>{{ invoice.tenant.get_full_name|default:invoice.tenant.username }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Email</th>
+                        <td>{{ invoice.tenant.email }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Unit</th>
+                        <td>{{ invoice.lease.unit }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Lease Status</th>
+                        <td>{{ invoice.lease.get_status_display }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Totals Summary -->
+        <div class="card mt-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Total Amount</span>
+                    <span class="fw-semibold">{{ invoice.total_amount|currency }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Amount Paid</span>
+                    <span class="text-success fw-semibold">{{ invoice.amount_paid|currency }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span class="fw-bold">Balance Due</span>
+                    <span class="fw-bold {% if invoice.balance_due > 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ invoice.balance_due|currency }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Line Items -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Line Items</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Unit Price</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in line_items %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ item.get_charge_type_display }}</span>
+                        </td>
+                        <td>{{ item.description }}</td>
+                        <td class="text-end">{{ item.quantity }}</td>
+                        <td class="text-end">{{ item.unit_price|currency }}</td>
+                        <td class="text-end fw-semibold">{{ item.amount|currency }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3">No line items.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold">Total</td>
+                        <td class="text-end fw-bold">{{ invoice.total_amount|currency }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Payment History -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-cash-stack"></i> Payment History</h5>
+        {% if invoice.status != "paid" and invoice.status != "cancelled" %}
+        <a href="{% url 'billing_admin:record_payment' %}?invoice={{ invoice.pk }}" class="btn btn-sm btn-success">
+            <i class="bi bi-plus-lg"></i> Record Payment
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Method</th>
+                        <th class="text-end">Amount</th>
+                        <th>Status</th>
+                        <th>Reference</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td>{{ payment.payment_date|date:"M d, Y g:i A" }}</td>
+                        <td>{{ payment.get_method_display }}</td>
+                        <td class="text-end">{{ payment.amount|currency }}</td>
+                        <td>
+                            {% if payment.status == "completed" %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif payment.status == "pending" %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif payment.status == "failed" %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% elif payment.status == "refunded" %}
+                                <span class="badge bg-secondary">Refunded</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ payment.reference_number|default:"-" }}</td>
+                        <td>{{ payment.notes|truncatewords:10|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-3">No payments recorded.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

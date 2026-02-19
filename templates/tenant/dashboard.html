@@ -1,0 +1,131 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}Dashboard - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Welcome, {{ user.get_full_name|default:user.username }}!</h2>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card {% if balance_due > 0 %}danger{% else %}primary{% endif %} card-hover">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Balance Due</h6>
+                        <h3 class="mb-0">{{ balance_due|currency }}</h3>
+                    </div>
+                    <div class="{% if balance_due > 0 %}text-danger{% else %}text-primary{% endif %}">
+                        <i class="bi bi-currency-dollar" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card success card-hover">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Open Work Orders</h6>
+                        <h3 class="mb-0">{{ open_wo_count }}</h3>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-tools" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card warning card-hover">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Notifications</h6>
+                        <h3 class="mb-0">{{ unread_count }}</h3>
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-bell" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card info card-hover">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Weather Alerts</h6>
+                        <h3 class="mb-0">{{ weather_alert_count }}</h3>
+                    </div>
+                    <div class="text-info">
+                        <i class="bi bi-cloud-sun" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Invoices</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Due Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in recent_invoices %}
+                        <tr>
+                            <td>{{ invoice.invoice_number }}</td>
+                            <td>{{ invoice.due_date }}</td>
+                            <td>{{ invoice.total_amount|currency }}</td>
+                            <td>
+                                <span class="badge bg-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}danger{% elif invoice.status == 'partial' %}warning{% else %}secondary{% endif %}">
+                                    {{ invoice.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-muted text-center py-3">No invoices yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Announcements</h5>
+            </div>
+            <div class="card-body">
+                {% for announcement in announcements %}
+                <div class="mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <h6>{{ announcement.title }}</h6>
+                    <p class="mb-1 small">{{ announcement.body|truncatewords:30 }}</p>
+                    <small class="text-muted">{{ announcement.published_at|timesince }} ago</small>
+                </div>
+                {% empty %}
+                <p class="text-muted">No announcements.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

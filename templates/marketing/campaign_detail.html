@@ -1,0 +1,233 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ campaign.name }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1"><i class="bi bi-megaphone"></i> {{ campaign.name }}</h2>
+        <p class="text-muted mb-0">
+            {% if campaign.status == "draft" %}
+                <span class="badge bg-secondary">Draft</span>
+            {% elif campaign.status == "scheduled" %}
+                <span class="badge bg-info">Scheduled</span>
+            {% elif campaign.status == "sending" %}
+                <span class="badge bg-warning text-dark">Sending</span>
+            {% elif campaign.status == "sent" %}
+                <span class="badge bg-success">Sent</span>
+            {% elif campaign.status == "cancelled" %}
+                <span class="badge bg-danger">Cancelled</span>
+            {% endif %}
+            &middot; Subject: <strong>{{ campaign.subject }}</strong>
+            {% if campaign.sent_at %}
+                &middot; Sent: {{ campaign.sent_at|date:"M d, Y g:i A" }}
+            {% endif %}
+            {% if campaign.scheduled_at and campaign.status == "scheduled" %}
+                &middot; Scheduled: {{ campaign.scheduled_at|date:"M d, Y g:i A" }}
+            {% endif %}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'marketing_admin:campaign_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        {% if campaign.status == "draft" %}
+        <a href="{% url 'marketing_admin:campaign_edit' pk=campaign.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        {% endif %}
+        <a href="{% url 'marketing_admin:campaign_preview' pk=campaign.pk %}" class="btn btn-outline-info">
+            <i class="bi bi-eye"></i> Preview
+        </a>
+        {% if campaign.status == "draft" %}
+        <form method="post" action="{% url 'marketing_admin:campaign_send' pk=campaign.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success"
+                    onclick="return confirm('Are you sure you want to send this campaign?');">
+                <i class="bi bi-send"></i> {% if campaign.scheduled_at %}Schedule{% else %}Send Now{% endif %}
+            </button>
+        </form>
+        {% endif %}
+        {% if campaign.status == "scheduled" or campaign.status == "sending" %}
+        <form method="post" action="{% url 'marketing_admin:campaign_cancel' pk=campaign.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger"
+                    onclick="return confirm('Are you sure you want to cancel this campaign?');">
+                <i class="bi bi-x-circle"></i> Cancel Campaign
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Total Recipients</h6>
+                <h3 class="mb-0">{{ stats.total }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Sent</h6>
+                <h3 class="mb-0 text-primary">{{ stats.sent }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Opened</h6>
+                <h3 class="mb-0 text-success">{{ stats.opened }}</h3>
+                <small class="text-muted">{{ stats.open_rate }}%</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Clicked</h6>
+                <h3 class="mb-0 text-info">{{ stats.clicked }}</h3>
+                <small class="text-muted">{{ stats.click_rate }}%</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Bounced</h6>
+                <h3 class="mb-0 text-warning">{{ stats.bounced }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Failed</h6>
+                <h3 class="mb-0 text-danger">{{ stats.failed }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Segments -->
+{% if campaign.segments.all %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-funnel"></i> Segments</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Segment Type</th>
+                        <th>Filter Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for segment in campaign.segments.all %}
+                    <tr>
+                        <td>{{ segment.get_filter_type_display }}</td>
+                        <td><code>{{ segment.filter_value }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recipient Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-people"></i> Recipients</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tenant</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Sent At</th>
+                        <th>Opened At</th>
+                        <th>Clicked At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for recipient in recipients %}
+                    <tr>
+                        <td>{{ recipient.tenant.get_full_name|default:recipient.tenant.username }}</td>
+                        <td>{{ recipient.email }}</td>
+                        <td>
+                            {% if recipient.status == "pending" %}
+                                <span class="badge bg-secondary">Pending</span>
+                            {% elif recipient.status == "sent" %}
+                                <span class="badge bg-primary">Sent</span>
+                            {% elif recipient.status == "delivered" %}
+                                <span class="badge bg-info">Delivered</span>
+                            {% elif recipient.status == "opened" %}
+                                <span class="badge bg-success">Opened</span>
+                            {% elif recipient.status == "clicked" %}
+                                <span class="badge bg-success">Clicked</span>
+                            {% elif recipient.status == "bounced" %}
+                                <span class="badge bg-warning text-dark">Bounced</span>
+                            {% elif recipient.status == "failed" %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ recipient.sent_at|date:"M d, Y g:i A"|default:"--" }}</td>
+                        <td>{{ recipient.opened_at|date:"M d, Y g:i A"|default:"--" }}</td>
+                        <td>{{ recipient.clicked_at|date:"M d, Y g:i A"|default:"--" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-people" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">No recipients yet. Campaign has not been sent.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Links Tracking -->
+{% if campaign.links.all %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-link-45deg"></i> Tracked Links</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>URL</th>
+                        <th class="text-center">Clicks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for link in campaign.links.all %}
+                    <tr>
+                        <td><a href="{{ link.original_url }}" target="_blank" rel="noopener">{{ link.original_url|truncatechars:80 }}</a></td>
+                        <td class="text-center">{{ link.click_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

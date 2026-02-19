@@ -1,0 +1,59 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}My Lease - PropManager{% endblock %}
+
+{% block content %}
+<h2><i class="bi bi-file-earmark-text"></i> My Lease</h2>
+
+{% if lease %}
+<div class="row g-4 mt-2">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Lease Details</h5></div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Property</dt>
+                    <dd class="col-sm-7">{{ lease.unit.property.name }}</dd>
+                    <dt class="col-sm-5">Unit</dt>
+                    <dd class="col-sm-7">{{ lease.unit.unit_number }}</dd>
+                    <dt class="col-sm-5">Lease Type</dt>
+                    <dd class="col-sm-7">{{ lease.get_lease_type_display }}</dd>
+                    <dt class="col-sm-5">Status</dt>
+                    <dd class="col-sm-7">
+                        <span class="badge bg-success">{{ lease.get_status_display }}</span>
+                    </dd>
+                    <dt class="col-sm-5">Start Date</dt>
+                    <dd class="col-sm-7">{{ lease.start_date }}</dd>
+                    <dt class="col-sm-5">End Date</dt>
+                    <dd class="col-sm-7">{{ lease.end_date|default:"Month-to-Month" }}</dd>
+                    <dt class="col-sm-5">Monthly Rent</dt>
+                    <dd class="col-sm-7">{{ lease.monthly_rent|currency }}</dd>
+                    <dt class="col-sm-5">Security Deposit</dt>
+                    <dd class="col-sm-7">{{ lease.security_deposit|currency }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Lease Terms</h5></div>
+            <div class="card-body">
+                {% for term in terms %}
+                <div class="mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <strong>{{ term.title }}</strong>
+                    <p class="mb-0 mt-1">{{ term.description }}</p>
+                </div>
+                {% empty %}
+                <p class="text-muted">No specific terms listed.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info mt-4">
+    <i class="bi bi-info-circle"></i> You don't have an active lease on file. Please contact your landlord for more information.
+</div>
+{% endif %}
+{% endblock %}

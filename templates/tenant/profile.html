@@ -1,0 +1,75 @@
+{% extends "tenant/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}My Profile - PropManager{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-person"></i> My Profile</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <h5 class="mb-3">Personal Information</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="id_first_name" name="first_name"
+                                   value="{{ form.first_name.value|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="id_last_name" name="last_name"
+                                   value="{{ form.last_name.value|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                            <small class="text-muted">Contact admin to change email.</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_phone_number" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="id_phone_number" name="phone_number"
+                                   value="{{ form.phone_number.value|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_preferred_contact" class="form-label">Preferred Contact Method</label>
+                        <select class="form-select" id="id_preferred_contact" name="preferred_contact">
+                            <option value="email" {% if form.preferred_contact.value == "email" %}selected{% endif %}>Email</option>
+                            <option value="sms" {% if form.preferred_contact.value == "sms" %}selected{% endif %}>SMS</option>
+                        </select>
+                    </div>
+
+                    <hr>
+                    <h5 class="mb-3">Emergency Contact</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_emergency_contact_name" class="form-label">Emergency Contact Name</label>
+                            {{ form.emergency_contact_name }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_emergency_contact_phone" class="form-label">Emergency Contact Phone</label>
+                            {{ form.emergency_contact_phone }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_notes" class="form-label">Notes</label>
+                        {{ form.notes }}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

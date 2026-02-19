@@ -1,0 +1,82 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+{% load crispy_forms_tags %}
+
+{% block title %}Assign Contractor - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'workorders_admin:workorder_detail' workorder.pk %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Work Order
+    </a>
+    <h2 class="mt-2"><i class="bi bi-person-plus"></i> Assign Contractor</h2>
+    <p class="text-muted">Assigning contractor to: <strong>{{ workorder.title }}</strong></p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Contractor Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_contractor_name" class="form-label">Contractor Name <span class="text-danger">*</span></label>
+                        <input type="text" name="contractor_name" id="id_contractor_name" class="form-control"
+                               value="{{ form.contractor_name.value|default:'' }}" required>
+                        {% if form.contractor_name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.contractor_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_phone" class="form-label">Phone</label>
+                            <input type="text" name="phone" id="id_phone" class="form-control"
+                                   value="{{ form.phone.value|default:'' }}" placeholder="(555) 555-5555">
+                            {% if form.phone.errors %}
+                            <div class="invalid-feedback d-block">{{ form.phone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_email" class="form-label">Email</label>
+                            <input type="email" name="email" id="id_email" class="form-control"
+                                   value="{{ form.email.value|default:'' }}" placeholder="contractor@example.com">
+                            {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_notes" class="form-label">Notes</label>
+                        <textarea name="notes" id="id_notes" rows="3" class="form-control"
+                                  placeholder="Special instructions for the contractor...">{{ form.notes.value|default:'' }}</textarea>
+                        {% if form.notes.errors %}
+                        <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_expiry_days" class="form-label">Access Link Expiry (days)</label>
+                        <input type="number" name="expiry_days" id="id_expiry_days" class="form-control"
+                               value="{{ form.expiry_days.value|default:'30' }}" min="1" max="365">
+                        <small class="text-muted">How many days the contractor's access link will remain active.</small>
+                        {% if form.expiry_days.errors %}
+                        <div class="invalid-feedback d-block">{{ form.expiry_days.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <hr>
+                    <div class="d-flex">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-person-check"></i> Assign Contractor
+                        </button>
+                        <a href="{% url 'workorders_admin:workorder_detail' workorder.pk %}" class="btn btn-outline-secondary ms-2">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

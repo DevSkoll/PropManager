@@ -1,0 +1,185 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ document.title }} - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> {{ document.title }}</h2>
+    <a href="{% url 'documents_admin:document_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Documents
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Document Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <th class="text-muted" style="width: 200px;">Title</th>
+                            <td>{{ document.title }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Type</th>
+                            <td>{{ document.get_document_type_display }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Category</th>
+                            <td>{{ document.category.name|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">File Name</th>
+                            <td>{{ document.file.name|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">File Size</th>
+                            <td>{{ document.file_size|human_filesize }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">MIME Type</th>
+                            <td>{{ document.mime_type|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Tenant Visible</th>
+                            <td>
+                                {% if document.is_tenant_visible %}
+                                <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Description</th>
+                            <td>{{ document.description|default:"-"|linebreaksbr }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Linked Entity</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <th class="text-muted" style="width: 200px;">Property</th>
+                            <td>{{ document.property|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Unit</th>
+                            <td>{{ document.unit|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Lease</th>
+                            <td>{{ document.lease|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Tenant</th>
+                            <td>
+                                {% if document.tenant %}
+                                {{ document.tenant.get_full_name|default:document.tenant.username }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Work Order</th>
+                            <td>{{ document.work_order|default:"-" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Actions</h5>
+            </div>
+            <div class="card-body d-grid gap-2">
+                <a href="{% url 'documents_admin:document_download' pk=document.pk %}" class="btn btn-primary">
+                    <i class="bi bi-download"></i> Download File
+                </a>
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                    <i class="bi bi-trash"></i> Delete Document
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Audit Info</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <th class="text-muted">Uploaded</th>
+                            <td>{{ document.created_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Updated</th>
+                            <td>{{ document.updated_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Created By</th>
+                            <td>
+                                {% if document.created_by %}
+                                {{ document.created_by.get_full_name|default:document.created_by.username }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Updated By</th>
+                            <td>
+                                {% if document.updated_by %}
+                                {{ document.updated_by.get_full_name|default:document.updated_by.username }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete <strong>{{ document.title }}</strong>? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'documents_admin:document_delete' pk=document.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

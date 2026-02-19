@@ -1,0 +1,63 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}My Documents - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark"></i> My Documents</h2>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th class="text-end">Download</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr>
+                    <td>
+                        {% if doc.mime_type == "application/pdf" %}
+                        <i class="bi bi-file-pdf text-danger"></i>
+                        {% elif "image/" in doc.mime_type %}
+                        <i class="bi bi-file-image text-primary"></i>
+                        {% elif "word" in doc.mime_type or doc.mime_type == "application/msword" %}
+                        <i class="bi bi-file-word text-primary"></i>
+                        {% elif "spreadsheet" in doc.mime_type or "excel" in doc.mime_type %}
+                        <i class="bi bi-file-excel text-success"></i>
+                        {% elif "text/" in doc.mime_type %}
+                        <i class="bi bi-file-text text-secondary"></i>
+                        {% else %}
+                        <i class="bi bi-file-earmark text-muted"></i>
+                        {% endif %}
+                        {{ doc.title }}
+                    </td>
+                    <td>{{ doc.get_document_type_display }}</td>
+                    <td>{{ doc.category.name|default:"-" }}</td>
+                    <td>{{ doc.created_at|date:"M d, Y" }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'documents_tenant:document_download' pk=doc.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download"></i> Download
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+                        No documents available.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ workorder.title }} - PropManager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'workorders_tenant:workorder_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Work Orders
+    </a>
+    <h2 class="mt-2">{{ workorder.title }}</h2>
+</div>
+
+<div class="row g-4">
+    <!-- Main Details -->
+    <div class="col-lg-8">
+        <!-- Work Order Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Work Order Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Status</div>
+                    <div class="col-sm-9">
+                        {% if workorder.status == "created" %}
+                            <span class="badge bg-secondary">Submitted</span>
+                        {% elif workorder.status == "verified" %}
+                            <span class="badge bg-info">Verified</span>
+                        {% elif workorder.status == "assigned" %}
+                            <span class="badge bg-primary">Assigned</span>
+                        {% elif workorder.status == "in_progress" %}
+                            <span class="badge bg-warning text-dark">In Progress</span>
+                        {% elif workorder.status == "completed" %}
+                            <span class="badge bg-success">Completed</span>
+                        {% elif workorder.status == "closed" %}
+                            <span class="badge bg-dark">Closed</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Priority</div>
+                    <div class="col-sm-9">
+                        {% if workorder.priority == "low" %}
+                            <span class="badge bg-success">Low</span>
+                        {% elif workorder.priority == "medium" %}
+                            <span class="badge bg-info">Medium</span>
+                        {% elif workorder.priority == "high" %}
+                            <span class="badge bg-warning text-dark">High</span>
+                        {% elif workorder.priority == "emergency" %}
+                            <span class="badge bg-danger">Emergency</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Category</div>
+                    <div class="col-sm-9">{{ workorder.get_category_display }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Unit</div>
+                    <div class="col-sm-9">{{ workorder.unit }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Submitted</div>
+                    <div class="col-sm-9">{{ workorder.created_at|date:"M d, Y g:i A" }}</div>
+                </div>
+                {% if workorder.scheduled_date %}
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Scheduled</div>
+                    <div class="col-sm-9">{{ workorder.scheduled_date|date:"M d, Y" }}</div>
+                </div>
+                {% endif %}
+                {% if workorder.completed_date %}
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Completed</div>
+                    <div class="col-sm-9">{{ workorder.completed_date|date:"M d, Y" }}</div>
+                </div>
+                {% endif %}
+                <div class="row">
+                    <div class="col-sm-3 fw-bold">Description</div>
+                    <div class="col-sm-9">{{ workorder.description|linebreaksbr }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-chat-left-text"></i> Notes</h5>
+            </div>
+            <div class="card-body">
+                {% for note in notes %}
+                <div class="d-flex mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="rounded-circle bg-{% if note.author_contractor_token %}info{% else %}primary{% endif %} text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            {% if note.author_contractor_token %}
+                                <i class="bi bi-wrench"></i>
+                            {% else %}
+                                <i class="bi bi-person"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <strong>
+                                {% if note.author_user %}
+                                    {{ note.author_user.get_full_name|default:note.author_user.username }}
+                                {% elif note.author_contractor_token %}
+                                    {{ note.author_contractor_token.contractor_name }} (Contractor)
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </strong>
+                            <small class="text-muted">{{ note.created_at|date:"M d, Y g:i A" }}</small>
+                        </div>
+                        <p class="mb-0 mt-1">{{ note.text|linebreaksbr }}</p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted mb-0">No notes yet.</p>
+                {% endfor %}
+            </div>
+            {% if workorder.status != "closed" %}
+            <div class="card-footer">
+                <form method="post" action="{% url 'workorders_tenant:workorder_add_note' workorder.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_text" class="form-label">Add a Note</label>
+                        <textarea name="text" id="id_text" rows="3" class="form-control" placeholder="Add additional information or comments..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Add Note
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Images -->
+        {% if images %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-images"></i> Images</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for img in images %}
+                    <div class="col-sm-6 col-md-4">
+                        <div class="card h-100">
+                            <img src="{{ img.image.url }}" class="card-img-top" alt="{{ img.caption|default:'Work order image' }}" style="height: 200px; object-fit: cover;">
+                            <div class="card-body p-2">
+                                <small class="text-muted">
+                                    {{ img.caption|default:"No caption" }}
+                                    <br>{{ img.created_at|date:"M d, Y" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Status Timeline</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="d-flex align-items-center mb-3">
+                        <span class="badge rounded-pill {% if workorder.status == 'created' %}bg-secondary{% else %}bg-success{% endif %} me-2" style="width: 12px; height: 12px;">&nbsp;</span>
+                        <span>Submitted</span>
+                        <small class="text-muted ms-auto">{{ workorder.created_at|date:"M d" }}</small>
+                    </li>
+                    <li class="d-flex align-items-center mb-3">
+                        <span class="badge rounded-pill {% if workorder.status == 'verified' %}bg-info{% elif workorder.status in 'assigned,in_progress,completed,closed' %}bg-success{% else %}bg-light border{% endif %} me-2" style="width: 12px; height: 12px;">&nbsp;</span>
+                        <span class="{% if workorder.status == 'created' %}text-muted{% endif %}">Verified</span>
+                    </li>
+                    <li class="d-flex align-items-center mb-3">
+                        <span class="badge rounded-pill {% if workorder.status == 'assigned' %}bg-primary{% elif workorder.status in 'in_progress,completed,closed' %}bg-success{% else %}bg-light border{% endif %} me-2" style="width: 12px; height: 12px;">&nbsp;</span>
+                        <span class="{% if workorder.status in 'created,verified' %}text-muted{% endif %}">Assigned</span>
+                    </li>
+                    <li class="d-flex align-items-center mb-3">
+                        <span class="badge rounded-pill {% if workorder.status == 'in_progress' %}bg-warning{% elif workorder.status in 'completed,closed' %}bg-success{% else %}bg-light border{% endif %} me-2" style="width: 12px; height: 12px;">&nbsp;</span>
+                        <span class="{% if workorder.status in 'created,verified,assigned' %}text-muted{% endif %}">In Progress</span>
+                    </li>
+                    <li class="d-flex align-items-center mb-3">
+                        <span class="badge rounded-pill {% if workorder.status == 'completed' %}bg-success{% elif workorder.status == 'closed' %}bg-success{% else %}bg-light border{% endif %} me-2" style="width: 12px; height: 12px;">&nbsp;</span>
+                        <span class="{% if workorder.status in 'created,verified,assigned,in_progress' %}text-muted{% endif %}">Completed</span>
+                        {% if workorder.completed_date %}
+                        <small class="text-muted ms-auto">{{ workorder.completed_date|date:"M d" }}</small>
+                        {% endif %}
+                    </li>
+                    <li class="d-flex align-items-center">
+                        <span class="badge rounded-pill {% if workorder.status == 'closed' %}bg-dark{% else %}bg-light border{% endif %} me-2" style="width: 12px; height: 12px;">&nbsp;</span>
+                        <span class="{% if workorder.status != 'closed' %}text-muted{% endif %}">Closed</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

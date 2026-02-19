@@ -1,0 +1,85 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Work Order Summary - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-tools"></i> Work Order Summary</h2>
+    <div>
+        <a href="?format=csv" class="btn btn-outline-success"><i class="bi bi-download"></i> Export CSV</a>
+        <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary">Back to Reports</a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card stat-card primary">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Total Work Orders</h6>
+                <h3>{{ total_wo }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card stat-card warning">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Total Actual Cost</h6>
+                <h3>{{ total_cost|currency }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">By Status</h5></div>
+            <div class="card-body">
+                {% for item in status_summary %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-{% if item.status == 'completed' %}success{% elif item.status == 'in_progress' %}warning{% elif item.status == 'assigned' %}primary{% elif item.status == 'closed' %}dark{% else %}secondary{% endif %}">
+                        {{ item.status|title }}
+                    </span>
+                    <strong>{{ item.count }}</strong>
+                </div>
+                {% empty %}
+                <p class="text-muted">No data.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">By Priority</h5></div>
+            <div class="card-body">
+                {% for item in priority_summary %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-{% if item.priority == 'emergency' %}danger{% elif item.priority == 'high' %}warning{% elif item.priority == 'medium' %}info{% else %}success{% endif %}">
+                        {{ item.priority|title }}
+                    </span>
+                    <strong>{{ item.count }}</strong>
+                </div>
+                {% empty %}
+                <p class="text-muted">No data.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">By Category</h5></div>
+            <div class="card-body">
+                {% for item in category_summary %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>{{ item.category|title }}</span>
+                    <strong>{{ item.count }}</strong>
+                </div>
+                {% empty %}
+                <p class="text-muted">No data.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

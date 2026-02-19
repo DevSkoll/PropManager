@@ -1,0 +1,70 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Leases - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> Leases</h2>
+    <a href="{% url 'leases_admin:lease_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Create Lease
+    </a>
+</div>
+
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <a href="{% url 'leases_admin:lease_list' %}" class="btn btn-sm btn-{% if not status_filter %}primary{% else %}outline-primary{% endif %}">All</a>
+        {% for value, label in status_choices %}
+        <a href="?status={{ value }}" class="btn btn-sm btn-{% if status_filter == value %}primary{% else %}outline-primary{% endif %}">{{ label }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Tenant</th>
+                    <th>Property / Unit</th>
+                    <th>Type</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Monthly Rent</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lease in leases %}
+                <tr>
+                    <td>{{ lease.tenant.get_full_name|default:lease.tenant.username }}</td>
+                    <td>{{ lease.unit.property.name }} - {{ lease.unit.unit_number }}</td>
+                    <td>{{ lease.get_lease_type_display }}</td>
+                    <td>{{ lease.start_date }}</td>
+                    <td>{{ lease.end_date|default:"-" }}</td>
+                    <td>{{ lease.monthly_rent|currency }}</td>
+                    <td>
+                        <span class="badge bg-{% if lease.status == 'active' %}success{% elif lease.status == 'draft' %}secondary{% elif lease.status == 'expired' %}warning{% elif lease.status == 'terminated' %}danger{% else %}info{% endif %}">
+                            {{ lease.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'leases_admin:lease_detail' pk=lease.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{% url 'leases_admin:lease_edit' pk=lease.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">No leases found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Weather Alerts - PropManager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-exclamation-triangle"></i> Weather Alerts</h2>
+    <a href="{% url 'weather_admin:weather_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Dashboard
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="alert_type" class="form-label">Alert Type</label>
+                <select name="alert_type" id="alert_type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for value, label in alert_type_choices %}
+                    <option value="{{ value }}" {% if current_alert_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="severity" class="form-label">Severity</label>
+                <select name="severity" id="severity" class="form-select">
+                    <option value="">All Severities</option>
+                    {% for value, label in severity_choices %}
+                    <option value="{{ value }}" {% if current_severity == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+                <a href="{% url 'weather_admin:weather_alert_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if alerts %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Property</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Notified</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in alerts %}
+                <tr>
+                    <td>
+                        <a href="{% url 'weather_admin:weather_alert_detail' alert.pk %}">
+                            {{ alert.title }}
+                        </a>
+                    </td>
+                    <td>{{ alert.property.name }}</td>
+                    <td>
+                        <span class="badge bg-secondary">{{ alert.get_alert_type_display }}</span>
+                    </td>
+                    <td>
+                        {% if alert.severity == "emergency" %}
+                        <span class="badge bg-danger">Emergency</span>
+                        {% elif alert.severity == "warning" %}
+                        <span class="badge bg-warning text-dark">Warning</span>
+                        {% else %}
+                        <span class="badge bg-info text-dark">Watch</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if alert.notification_sent %}
+                        <span class="text-success"><i class="bi bi-check-circle-fill"></i> Sent</span>
+                        {% else %}
+                        <span class="text-muted"><i class="bi bi-dash-circle"></i> No</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ alert.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No weather alerts found matching your criteria.
+</div>
+{% endif %}
+{% endblock %}
