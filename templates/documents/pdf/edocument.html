@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ edocument.title }}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.75in 1in;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9pt;
+                color: #666;
+            }
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+        }
+
+        /* Header */
+        .document-header {
+            text-align: center;
+            margin-bottom: 1.5em;
+            padding-bottom: 1em;
+            border-bottom: 2px solid #000;
+        }
+
+        .document-header h1 {
+            font-size: 16pt;
+            margin: 0 0 0.25em 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .document-meta {
+            font-size: 10pt;
+            color: #444;
+        }
+
+        /* Content */
+        .document-body {
+            text-align: justify;
+        }
+
+        .document-body h1 {
+            font-size: 14pt;
+            text-align: center;
+            margin: 1.5em 0 1em 0;
+            text-transform: uppercase;
+        }
+
+        .document-body h2 {
+            font-size: 12pt;
+            margin: 1.25em 0 0.5em 0;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 0.25em;
+        }
+
+        .document-body h3 {
+            font-size: 11pt;
+            margin: 1em 0 0.5em 0;
+            font-style: italic;
+        }
+
+        .document-body p {
+            margin: 0.5em 0;
+            text-indent: 0;
+        }
+
+        .document-body ul, .document-body ol {
+            margin: 0.5em 0 0.5em 1.5em;
+        }
+
+        .document-body li {
+            margin: 0.25em 0;
+        }
+
+        /* Tables */
+        .document-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+        }
+
+        .document-body th, .document-body td {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+            text-align: left;
+        }
+
+        .document-body th {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+
+        /* Signature blocks */
+        .signature-block {
+            display: inline-block;
+            margin: 0.75em 0;
+            padding: 0.5em 1em;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+
+        .signature-block.signed {
+            background: #f0fff0;
+            border: 1px solid #4caf50;
+            border-radius: 4px;
+        }
+
+        .signature-block.pending {
+            background: #fffbf0;
+            border: 1px dashed #ffc107;
+            border-radius: 4px;
+        }
+
+        .signature-image {
+            max-height: 50px;
+            max-width: 180px;
+        }
+
+        .signature-label {
+            display: block;
+            font-size: 9pt;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .signature-placeholder {
+            height: 40px;
+            width: 150px;
+            border-bottom: 1px solid #000;
+            display: inline-block;
+        }
+
+        /* Audit section */
+        .audit-section {
+            margin-top: 2em;
+            padding-top: 1em;
+            border-top: 2px solid #000;
+            page-break-inside: avoid;
+        }
+
+        .audit-section h2 {
+            font-size: 11pt;
+            margin: 0 0 0.75em 0;
+            border: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+        }
+
+        .audit-table th, .audit-table td {
+            border: 1px solid #ccc;
+            padding: 4px 8px;
+            text-align: left;
+        }
+
+        .audit-table th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+
+        /* Footer */
+        .document-footer {
+            margin-top: 1.5em;
+            padding-top: 0.75em;
+            border-top: 1px solid #ccc;
+            font-size: 8pt;
+            color: #666;
+            text-align: center;
+        }
+
+        .document-footer p {
+            margin: 0.25em 0;
+            text-align: center;
+            text-indent: 0;
+        }
+
+        /* Utility classes */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .mt-1 { margin-top: 0.5em; }
+        .mb-1 { margin-bottom: 0.5em; }
+    </style>
+</head>
+<body>
+    <div class="document-header">
+        <h1>{{ edocument.title }}</h1>
+        <div class="document-meta">
+            {% if edocument.property %}
+            <strong>Property:</strong> {{ edocument.property.name }}<br>
+            {% endif %}
+            {% if edocument.lease %}
+            <strong>Lease:</strong> {{ edocument.lease.unit.unit_number }} - {{ edocument.lease.tenant.get_full_name }}<br>
+            {% endif %}
+            <strong>Document Date:</strong> {{ edocument.created_at|date:"F j, Y" }}
+        </div>
+    </div>
+
+    <div class="document-body">
+        {{ body_html|safe }}
+    </div>
+
+    <div class="audit-section">
+        <h2>Electronic Signature Verification</h2>
+        <p style="font-size: 9pt; margin-bottom: 0.5em;">
+            This document was electronically signed by all parties listed below.
+            Each signature was captured with consent and verified at the time of signing.
+        </p>
+        <table class="audit-table">
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Signer Name</th>
+                    <th style="width: 20%;">Role</th>
+                    <th style="width: 30%;">Signed At (UTC)</th>
+                    <th style="width: 20%;">IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for signer in signers %}
+                <tr>
+                    <td>{{ signer.name }}</td>
+                    <td>{{ signer.role }}</td>
+                    <td>{{ signer.signed_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ signer.ip_address }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #666;">No signatures recorded</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="document-footer">
+        <p><strong>Document ID:</strong> {{ edocument.pk }}</p>
+        <p><strong>Generated:</strong> {{ generated_at|date:"Y-m-d H:i:s" }} UTC</p>
+        <p>This is an electronically signed and legally binding document.</p>
+        <p>Powered by PropManager eDocument System</p>
+    </div>
+</body>
+</html>

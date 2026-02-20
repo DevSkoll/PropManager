@@ -1,0 +1,285 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Create{% endif %} Template - eDocuments{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<style>
+    .editor-container {
+        display: flex;
+        gap: 1rem;
+    }
+    .editor-main {
+        flex: 1;
+        min-width: 0;
+    }
+    .editor-sidebar {
+        width: 280px;
+        flex-shrink: 0;
+    }
+    .variable-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .variable-item {
+        padding: 0.5rem;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    .variable-item:hover {
+        background: #f0f0f0;
+    }
+    .variable-item code {
+        color: #198754;
+        font-weight: 600;
+    }
+    .tag-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+        margin: 0.25rem;
+    }
+    .preview-container {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 1rem;
+        background: #fff;
+        min-height: 300px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .preview-container .signature-block,
+    .preview-container .initials-block {
+        border: 2px dashed #6c757d;
+        padding: 0.5rem;
+        margin: 0.5rem 0;
+        border-radius: 4px;
+        background: #f8f9fa;
+        text-align: center;
+    }
+    .preview-container .signature-block {
+        min-height: 60px;
+    }
+    .preview-container .initials-block {
+        min-height: 40px;
+        display: inline-block;
+        min-width: 100px;
+    }
+    .EasyMDEContainer .CodeMirror {
+        height: 500px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>{% if is_edit %}Edit Template{% else %}Create eDocument Template{% endif %}</h2>
+        <small class="text-muted">Create reusable document templates with signature blocks</small>
+    </div>
+    <a href="{% url 'documents_admin:template_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Templates
+    </a>
+</div>
+
+<form method="post" id="templateForm">
+    {% csrf_token %}
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <label class="form-label">Template Name</label>
+            {{ form.name }}
+            {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Type</label>
+            {{ form.template_type }}
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Property (optional)</label>
+            {{ form.property }}
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <label class="form-label">Description</label>
+            {{ form.description }}
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <div class="editor-main">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-markdown me-2"></i>Document Content (Markdown)</span>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-primary tag-btn" onclick="insertTag('SIGNATURE', 'Landlord')">
+                            [SIGNATURE:Landlord]
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary tag-btn" onclick="insertTag('SIGNATURE', 'Tenant')">
+                            [SIGNATURE:Tenant]
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary tag-btn" onclick="insertTag('INITIALS', 'Tenant')">
+                            [INITIALS:Tenant]
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {{ form.content }}
+                </div>
+            </div>
+            {% if form.content.errors %}<div class="text-danger small mt-1">{{ form.content.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="editor-sidebar">
+            <!-- Variables Panel -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-braces me-2"></i>Variables
+                </div>
+                <div class="card-body variable-list p-2">
+                    {% for category, vars in available_variables.items %}
+                    <div class="mb-2">
+                        <small class="text-muted text-uppercase fw-bold">{{ category }}</small>
+                        {% for var_name, description in vars %}
+                        <div class="variable-item" onclick="insertVariable('{{ var_name }}')" title="{{ description }}">
+                            <code>{{ "{{" }}{{ var_name }}{{ "}}" }}</code>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Signature Tags Panel -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-pen me-2"></i>Signature Tags
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2">Click to insert at cursor:</p>
+                    <div class="d-grid gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="insertTag('SIGNATURE', 'Landlord')">
+                            [SIGNATURE:Landlord]
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="insertTag('SIGNATURE', 'Tenant')">
+                            [SIGNATURE:Tenant]
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="insertTag('SIGNATURE', 'Tenant2')">
+                            [SIGNATURE:Tenant2]
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="insertTag('SIGNATURE', 'Cosigner')">
+                            [SIGNATURE:Cosigner]
+                        </button>
+                        <hr class="my-2">
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="insertTag('INITIALS', 'Landlord')">
+                            [INITIALS:Landlord]
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="insertTag('INITIALS', 'Tenant')">
+                            [INITIALS:Tenant]
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="insertTag('INITIALS', 'Tenant2')">
+                            [INITIALS:Tenant2]
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-question-circle me-2"></i>Help
+                </div>
+                <div class="card-body small">
+                    <p><strong>Variables:</strong> Use <code>{{ "{{" }}variable{{ "}}" }}</code> to insert dynamic content.</p>
+                    <p><strong>Signatures:</strong> Use <code>[SIGNATURE:Role]</code> for full signatures.</p>
+                    <p><strong>Initials:</strong> Use <code>[INITIALS:Role]</code> for initials.</p>
+                    <p class="mb-0"><strong>Roles:</strong> Landlord, Tenant, Tenant2, Tenant3, Cosigner</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex justify-content-between align-items-center">
+        <div class="form-check">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                Template is active and available for use
+            </label>
+        </div>
+        <div>
+            <a href="{% url 'documents_admin:template_list' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i> {% if is_edit %}Save Changes{% else %}Create Template{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    let easyMDE;
+    const sampleVariables = {{ sample_variables|safe }};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize EasyMDE
+        easyMDE = new EasyMDE({
+            element: document.getElementById('{{ form.content.id_for_label }}'),
+            spellChecker: false,
+            status: ['lines', 'words'],
+            toolbar: [
+                'bold', 'italic', 'heading', '|',
+                'quote', 'unordered-list', 'ordered-list', '|',
+                'link', 'table', 'horizontal-rule', '|',
+                'preview', 'side-by-side', 'fullscreen', '|',
+                'guide'
+            ],
+            previewRender: function(plainText) {
+                // Replace variables with sample values for preview
+                let content = plainText;
+                for (const [key, value] of Object.entries(sampleVariables)) {
+                    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+                    content = content.replace(regex, `<span class="text-success">${value}</span>`);
+                }
+
+                // Replace signature tags with placeholders
+                content = content.replace(/\[SIGNATURE:(\w+)\]/gi, function(match, role) {
+                    return `<div class="signature-block"><i class="bi bi-pen"></i> Signature: ${role}</div>`;
+                });
+                content = content.replace(/\[INITIALS:(\w+)\]/gi, function(match, role) {
+                    return `<span class="initials-block"><i class="bi bi-pen"></i> ${role}</span>`;
+                });
+
+                return marked.parse(content);
+            }
+        });
+
+        // Add Bootstrap classes to form fields
+        document.querySelectorAll('input[type="text"], select, textarea').forEach(function(el) {
+            if (!el.classList.contains('CodeMirror-input')) {
+                el.classList.add('form-control');
+            }
+        });
+        document.querySelectorAll('input[type="checkbox"]').forEach(function(el) {
+            el.classList.add('form-check-input');
+        });
+    });
+
+    function insertVariable(varName) {
+        const text = `{{${varName}}}`;
+        easyMDE.codemirror.replaceSelection(text);
+        easyMDE.codemirror.focus();
+    }
+
+    function insertTag(type, role) {
+        const text = `[${type}:${role}]`;
+        easyMDE.codemirror.replaceSelection(text);
+        easyMDE.codemirror.focus();
+    }
+</script>
+{% endblock %}

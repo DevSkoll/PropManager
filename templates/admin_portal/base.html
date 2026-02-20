@@ -21,6 +21,11 @@
                         <i class="bi bi-speedometer2"></i> Dashboard
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'accounts_admin:admin_analytics_dashboard' %}">
+                        <i class="bi bi-graph-up-arrow"></i> Analytics
+                    </a>
+                </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                         <i class="bi bi-building"></i> Properties
@@ -80,6 +85,9 @@
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{% url 'communications_admin:thread_list' %}">Messages</a></li>
                         <li><a class="dropdown-item" href="{% url 'documents_admin:document_list' %}">Documents</a></li>
+                        <li><a class="dropdown-item" href="{% url 'documents_admin:edoc_list' %}"><i class="bi bi-pen"></i> eDocuments</a></li>
+                        <li><a class="dropdown-item" href="{% url 'documents_admin:template_list' %}"><i class="bi bi-file-earmark-code"></i> eDoc Templates</a></li>
+                        <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{% url 'weather_admin:weather_dashboard' %}">Weather</a></li>
                         <li><a class="dropdown-item" href="{% url 'marketing_admin:campaign_list' %}">Marketing</a></li>
                         <li><a class="dropdown-item" href="{% url 'notifications_admin:group_list' %}"><i class="bi bi-bell"></i> Notification Groups</a></li>

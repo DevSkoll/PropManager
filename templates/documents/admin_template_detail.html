@@ -1,0 +1,185 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ template.name }} - eDocument Template{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preview-container {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 1.5rem;
+        background: #fff;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .preview-container .signature-block,
+    .preview-container .initials-block {
+        border: 2px dashed #6c757d;
+        padding: 0.5rem;
+        margin: 0.5rem 0;
+        border-radius: 4px;
+        background: #f8f9fa;
+        text-align: center;
+    }
+    .preview-container .signature-block {
+        min-height: 60px;
+    }
+    .preview-container .initials-block {
+        min-height: 40px;
+        display: inline-block;
+        min-width: 100px;
+    }
+    .role-badge {
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>{{ template.name }}</h2>
+        <span class="badge bg-secondary">{{ template.get_template_type_display }}</span>
+        {% if template.is_active %}
+        <span class="badge bg-success">Active</span>
+        {% else %}
+        <span class="badge bg-secondary">Archived</span>
+        {% endif %}
+    </div>
+    <div>
+        <a href="{% url 'documents_admin:template_list' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+        <a href="{% url 'documents_admin:template_edit' pk=template.pk %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-pencil me-1"></i> Edit
+        </a>
+        <a href="{% url 'documents_admin:edoc_create' %}?template={{ template.pk }}" class="btn btn-primary">
+            <i class="bi bi-file-earmark-plus me-1"></i> Use This Template
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Info Card -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Template Info
+            </div>
+            <div class="card-body">
+                {% if template.description %}
+                <p class="text-muted">{{ template.description }}</p>
+                <hr>
+                {% endif %}
+
+                <div class="mb-3">
+                    <small class="text-muted">Property</small>
+                    <p class="mb-0">{{ template.property.name|default:"All Properties" }}</p>
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-muted">Documents Created</small>
+                    <p class="mb-0">{{ document_count }}</p>
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-muted">Created</small>
+                    <p class="mb-0">{{ template.created_at|date:"M d, Y H:i" }}</p>
+                </div>
+
+                {% if template.updated_at != template.created_at %}
+                <div class="mb-3">
+                    <small class="text-muted">Last Updated</small>
+                    <p class="mb-0">{{ template.updated_at|date:"M d, Y H:i" }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Signature Roles -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-pen me-2"></i>Required Signers
+            </div>
+            <div class="card-body">
+                {% if parsed_tags.roles %}
+                <p class="text-muted small">Roles that must sign this document:</p>
+                {% for role in parsed_tags.unique_roles %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-primary role-badge">{{ role|title }}</span>
+                    <small class="text-muted">
+                        {% for tag in parsed_tags.tags %}
+                            {% if tag.role == role %}
+                                {% if tag.tag_type == "signature" %}
+                                <span class="badge bg-success">Sig</span>
+                                {% else %}
+                                <span class="badge bg-info">Init</span>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </small>
+                </div>
+                {% endfor %}
+                <hr>
+                <small class="text-muted">
+                    <strong>{{ parsed_tags.signature_count }}</strong> signature/initials blocks total
+                </small>
+                {% else %}
+                <p class="text-muted">No signature tags found in this template.</p>
+                {% endif %}
+
+                {% if parsed_tags.errors %}
+                <div class="alert alert-warning mt-3">
+                    <strong>Warnings:</strong>
+                    <ul class="mb-0">
+                        {% for error in parsed_tags.errors %}
+                        <li class="small">{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-lightning me-2"></i>Actions
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'documents_admin:edoc_create' %}?template={{ template.pk }}" class="btn btn-success">
+                        <i class="bi bi-file-earmark-plus me-1"></i> Create Document from Template
+                    </a>
+                    <a href="{% url 'documents_admin:template_edit' pk=template.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i> Edit Template
+                    </a>
+                    <form method="post" action="{% url 'documents_admin:template_delete' pk=template.pk %}" class="d-grid">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to {% if document_count > 0 %}archive{% else %}delete{% endif %} this template?')">
+                            <i class="bi bi-trash me-1"></i> {% if document_count > 0 %}Archive{% else %}Delete{% endif %} Template
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-eye me-2"></i>Document Preview (with sample data)
+    </div>
+    <div class="card-body">
+        <div class="preview-container">
+            {{ preview_html|safe }}
+        </div>
+    </div>
+</div>
+{% endblock %}

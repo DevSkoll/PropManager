@@ -1,0 +1,223 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Create eDocument{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<style>
+    .editor-container {
+        display: flex;
+        gap: 1rem;
+    }
+    .editor-main {
+        flex: 1;
+        min-width: 0;
+    }
+    .editor-sidebar {
+        width: 280px;
+        flex-shrink: 0;
+    }
+    .variable-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .variable-item {
+        padding: 0.5rem;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    .variable-item:hover {
+        background: #f0f0f0;
+    }
+    .variable-item code {
+        color: #198754;
+    }
+    .template-card {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .template-card:hover {
+        border-color: #0d6efd;
+    }
+    .template-card.selected {
+        border-color: #198754;
+        background: rgba(25, 135, 84, 0.05);
+    }
+    .EasyMDEContainer .CodeMirror {
+        height: 400px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>Create eDocument</h2>
+        <small class="text-muted">Create a new document for signing</small>
+    </div>
+    <a href="{% url 'documents_admin:edoc_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to eDocuments
+    </a>
+</div>
+
+{% if not selected_template %}
+<!-- Template Selection -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-file-earmark-text me-2"></i>Select a Template (Optional)
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for template in templates %}
+            <div class="col-md-4">
+                <a href="{% url 'documents_admin:edoc_create' %}?template={{ template.pk }}" class="card template-card h-100 text-decoration-none">
+                    <div class="card-body">
+                        <h6 class="card-title">{{ template.name }}</h6>
+                        <span class="badge bg-secondary">{{ template.get_template_type_display }}</span>
+                        {% if template.description %}
+                        <p class="card-text small text-muted mt-2 mb-0">{{ template.description|truncatewords:15 }}</p>
+                        {% endif %}
+                    </div>
+                </a>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="text-muted mb-0">No templates available. <a href="{% url 'documents_admin:template_create' %}">Create one</a> or write from scratch below.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Creating document from template: <strong>{{ selected_template.name }}</strong>
+    <a href="{% url 'documents_admin:edoc_create' %}" class="ms-3">Use different template</a>
+</div>
+{% endif %}
+
+<form method="post" id="edocForm">
+    {% csrf_token %}
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <label class="form-label">Document Title</label>
+            {{ form.title }}
+            {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Link to Lease (optional)</label>
+            {{ form.lease }}
+            <small class="text-muted">Variables will be filled from lease data</small>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <div class="editor-main">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-markdown me-2"></i>Document Content</span>
+                </div>
+                <div class="card-body p-0">
+                    {{ form.content }}
+                </div>
+            </div>
+            {% if form.content.errors %}<div class="text-danger small mt-1">{{ form.content.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="editor-sidebar">
+            <!-- Variables Panel -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-braces me-2"></i>Variables
+                </div>
+                <div class="card-body variable-list p-2">
+                    {% for category, vars in available_variables.items %}
+                    <div class="mb-2">
+                        <small class="text-muted text-uppercase fw-bold">{{ category }}</small>
+                        {% for var_name, description in vars %}
+                        <div class="variable-item" onclick="insertVariable('{{ var_name }}')" title="{{ description }}">
+                            <code>{{ "{{" }}{{ var_name }}{{ "}}" }}</code>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Signature Tags Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-pen me-2"></i>Signature Tags
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="insertTag('SIGNATURE', 'Landlord')">
+                            [SIGNATURE:Landlord]
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="insertTag('SIGNATURE', 'Tenant')">
+                            [SIGNATURE:Tenant]
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="insertTag('INITIALS', 'Tenant')">
+                            [INITIALS:Tenant]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex justify-content-end">
+        <a href="{% url 'documents_admin:edoc_list' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i> Create Document
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    let easyMDE;
+    const sampleVariables = {{ sample_variables|safe }};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        easyMDE = new EasyMDE({
+            element: document.getElementById('{{ form.content.id_for_label }}'),
+            spellChecker: false,
+            status: ['lines', 'words'],
+            toolbar: ['bold', 'italic', 'heading', '|', 'quote', 'unordered-list', 'ordered-list', '|', 'preview', 'side-by-side', '|', 'guide'],
+            previewRender: function(plainText) {
+                let content = plainText;
+                for (const [key, value] of Object.entries(sampleVariables)) {
+                    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+                    content = content.replace(regex, `<span class="text-success">${value}</span>`);
+                }
+                content = content.replace(/\[SIGNATURE:(\w+)\]/gi, '<div style="border:2px dashed #6c757d;padding:0.5rem;margin:0.5rem 0;text-align:center;background:#f8f9fa;">Signature: $1</div>');
+                content = content.replace(/\[INITIALS:(\w+)\]/gi, '<span style="border:2px dashed #6c757d;padding:0.25rem 0.5rem;background:#f8f9fa;">Init: $1</span>');
+                return marked.parse(content);
+            }
+        });
+
+        document.querySelectorAll('input[type="text"], select, textarea').forEach(function(el) {
+            if (!el.classList.contains('CodeMirror-input')) {
+                el.classList.add('form-control');
+            }
+        });
+    });
+
+    function insertVariable(varName) {
+        easyMDE.codemirror.replaceSelection(`{{${varName}}}`);
+        easyMDE.codemirror.focus();
+    }
+
+    function insertTag(type, role) {
+        easyMDE.codemirror.replaceSelection(`[${type}:${role}]`);
+        easyMDE.codemirror.focus();
+    }
+</script>
+{% endblock %}

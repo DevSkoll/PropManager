@@ -1,0 +1,224 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ edoc.title }} - eDocument{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preview-container {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 1.5rem;
+        background: #fff;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .preview-container .signature-block.signed {
+        border: 2px solid #198754;
+        background: rgba(25, 135, 84, 0.05);
+    }
+    .preview-container .signature-block.pending {
+        border: 2px dashed #ffc107;
+        background: #fffbe6;
+    }
+    .signer-card {
+        border-left: 4px solid;
+    }
+    .signer-card.signed {
+        border-left-color: #198754;
+    }
+    .signer-card.pending {
+        border-left-color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>{{ edoc.title }}</h2>
+        {% if edoc.status == "draft" %}
+        <span class="badge bg-secondary">Draft</span>
+        {% elif edoc.status == "pending" %}
+        <span class="badge bg-warning text-dark">Pending Signatures</span>
+        {% elif edoc.status == "partial" %}
+        <span class="badge bg-info">Partially Signed</span>
+        {% elif edoc.status == "completed" %}
+        <span class="badge bg-success">Completed</span>
+        {% elif edoc.status == "cancelled" %}
+        <span class="badge bg-danger">Cancelled</span>
+        {% endif %}
+    </div>
+    <div>
+        <a href="{% url 'documents_admin:edoc_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Info & Actions -->
+    <div class="col-lg-4 mb-4">
+        <!-- Document Info -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Document Info
+            </div>
+            <div class="card-body">
+                {% if edoc.template %}
+                <div class="mb-3">
+                    <small class="text-muted">Template</small>
+                    <p class="mb-0">{{ edoc.template.name }}</p>
+                </div>
+                {% endif %}
+
+                {% if edoc.tenant %}
+                <div class="mb-3">
+                    <small class="text-muted">Tenant</small>
+                    <p class="mb-0">{{ edoc.tenant.get_full_name|default:edoc.tenant.username }}</p>
+                </div>
+                {% endif %}
+
+                {% if edoc.lease %}
+                <div class="mb-3">
+                    <small class="text-muted">Lease</small>
+                    <p class="mb-0">{{ edoc.lease.unit }}</p>
+                </div>
+                {% endif %}
+
+                {% if edoc.sent_at %}
+                <div class="mb-3">
+                    <small class="text-muted">Sent</small>
+                    <p class="mb-0">{{ edoc.sent_at|date:"M d, Y H:i" }}</p>
+                </div>
+                {% endif %}
+
+                {% if edoc.completed_at %}
+                <div class="mb-3">
+                    <small class="text-muted">Completed</small>
+                    <p class="mb-0">{{ edoc.completed_at|date:"M d, Y H:i" }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-graph-up me-2"></i>Signing Progress
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>{{ progress.signed }} of {{ progress.total }} signed</span>
+                        <span>{{ progress.percent }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: {{ progress.percent }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signers -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>Signers
+            </div>
+            <div class="card-body">
+                {% for signer in signers %}
+                <div class="card signer-card {% if signer.is_signed %}signed{% else %}pending{% endif %} mb-2">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ signer.name }}</strong>
+                                <br><small class="text-muted">{{ signer.get_role_display }}</small>
+                            </div>
+                            {% if signer.is_signed %}
+                            <span class="badge bg-success">Signed</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                            {% endif %}
+                        </div>
+                        {% if signer.is_signed %}
+                        <small class="text-muted d-block mt-1">
+                            {{ signer.signed_at|date:"M d, Y H:i" }}
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted mb-0">No signers assigned yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-lightning me-2"></i>Actions
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if edoc.status == "draft" %}
+                    <a href="{% url 'documents_admin:edoc_edit' pk=edoc.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i> Edit Document
+                    </a>
+                    <a href="{% url 'documents_admin:edoc_assign_signers' pk=edoc.pk %}" class="btn btn-primary">
+                        <i class="bi bi-people me-1"></i> Assign Signers
+                    </a>
+                    {% endif %}
+
+                    {% if edoc.status == "draft" and signers %}
+                    <form method="post" action="{% url 'documents_admin:edoc_send' pk=edoc.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-send me-1"></i> Send for Signing
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if edoc.status in "pending,partial" %}
+                    {% for signer in signers %}
+                        {% if signer.role == "landlord" and not signer.is_signed %}
+                    <a href="{% url 'documents_admin:edoc_sign_landlord' pk=edoc.pk %}" class="btn btn-success">
+                        <i class="bi bi-pen me-1"></i> Sign as Landlord
+                    </a>
+                        {% endif %}
+                    {% endfor %}
+                    {% endif %}
+
+                    {% if edoc.status == "completed" and edoc.final_pdf %}
+                    <a href="{% url 'documents_admin:edoc_pdf' pk=edoc.pk %}" class="btn btn-success">
+                        <i class="bi bi-file-pdf me-1"></i> Download PDF
+                    </a>
+                    {% endif %}
+
+                    {% if edoc.status != "completed" and edoc.status != "cancelled" %}
+                    <form method="post" action="{% url 'documents_admin:edoc_cancel' pk=edoc.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger w-100" onclick="return confirm('Are you sure you want to cancel this document?')">
+                            <i class="bi bi-x-circle me-1"></i> Cancel Document
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Preview -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-eye me-2"></i>Document Preview
+            </div>
+            <div class="card-body">
+                <div class="preview-container">
+                    {{ rendered_html|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

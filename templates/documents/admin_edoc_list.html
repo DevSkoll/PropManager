@@ -1,0 +1,132 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}eDocuments{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>eDocuments</h2>
+        <small class="text-muted">Documents created for signing</small>
+    </div>
+    <div>
+        <a href="{% url 'documents_admin:template_list' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-file-earmark-text me-1"></i> Templates
+        </a>
+        <a href="{% url 'documents_admin:edoc_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Create eDocument
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Documents Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Tenant / Lease</th>
+                    <th>Progress</th>
+                    <th>Sent</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for edoc in edocs %}
+                <tr>
+                    <td>
+                        <a href="{% url 'documents_admin:edoc_detail' pk=edoc.pk %}" class="text-decoration-none fw-medium">
+                            {{ edoc.title }}
+                        </a>
+                        {% if edoc.template %}
+                        <br><small class="text-muted">from {{ edoc.template.name }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if edoc.status == "draft" %}
+                        <span class="badge bg-secondary">Draft</span>
+                        {% elif edoc.status == "pending" %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                        {% elif edoc.status == "partial" %}
+                        <span class="badge bg-info">Partial</span>
+                        {% elif edoc.status == "completed" %}
+                        <span class="badge bg-success">Completed</span>
+                        {% elif edoc.status == "cancelled" %}
+                        <span class="badge bg-danger">Cancelled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if edoc.tenant %}
+                        {{ edoc.tenant.get_full_name|default:edoc.tenant.username }}
+                        {% endif %}
+                        {% if edoc.lease %}
+                        <br><small class="text-muted">{{ edoc.lease.unit }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% with progress=edoc.signature_progress %}
+                        <div class="progress" style="height: 20px; min-width: 100px;">
+                            <div class="progress-bar bg-success" style="width: {{ progress.percent }}%">
+                                {{ progress.signed }}/{{ progress.total }}
+                            </div>
+                        </div>
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% if edoc.sent_at %}
+                        <small class="text-muted">{{ edoc.sent_at|date:"M d, Y" }}</small>
+                        {% else %}
+                        <small class="text-muted">Not sent</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'documents_admin:edoc_detail' pk=edoc.pk %}" class="btn btn-outline-primary" title="View">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if edoc.status == "draft" %}
+                            <a href="{% url 'documents_admin:edoc_edit' pk=edoc.pk %}" class="btn btn-outline-secondary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                            {% if edoc.status == "completed" and edoc.final_pdf %}
+                            <a href="{% url 'documents_admin:edoc_pdf' pk=edoc.pk %}" class="btn btn-outline-success" title="Download PDF">
+                                <i class="bi bi-file-pdf"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-file-earmark-text fs-1"></i>
+                        <p class="mb-0 mt-2">No documents yet</p>
+                        <a href="{% url 'documents_admin:edoc_create' %}" class="btn btn-primary mt-3">Create Your First eDocument</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

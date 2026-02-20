@@ -1,0 +1,158 @@
+{% extends "tenant/base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ edoc.title }} - PropManager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .document-content {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 2rem;
+    }
+    .document-content h1, .document-content h2 {
+        border-bottom: 1px solid #eee;
+        padding-bottom: 0.5rem;
+    }
+    .signature-block.signed {
+        background: #d1e7dd;
+        border: 2px solid #198754;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+        text-align: center;
+    }
+    .signature-image {
+        max-height: 80px;
+        max-width: 200px;
+    }
+    .signer-status {
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>
+            {% if edoc.status == 'completed' %}
+            <i class="bi bi-file-earmark-check text-success"></i>
+            {% else %}
+            <i class="bi bi-file-earmark-text"></i>
+            {% endif %}
+            {{ edoc.title }}
+        </h2>
+        <small class="text-muted">
+            {% if edoc.status == 'completed' %}
+            Completed {{ edoc.completed_at|date:"M d, Y" }}
+            {% else %}
+            Status: {{ edoc.get_status_display }}
+            {% endif %}
+        </small>
+    </div>
+    <div>
+        {% if edoc.final_pdf %}
+        <a href="{% url 'documents_tenant:edoc_pdf' pk=edoc.pk %}" class="btn btn-primary">
+            <i class="bi bi-download me-1"></i> Download PDF
+        </a>
+        {% endif %}
+        <a href="{% url 'documents_tenant:edoc_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Document Content -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-file-earmark-text me-2"></i>Document
+                {% if edoc.is_locked %}
+                <span class="badge bg-secondary ms-2">
+                    <i class="bi bi-lock-fill"></i> Locked
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="document-content">
+                    {{ rendered_html|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Info -->
+    <div class="col-lg-4">
+        <!-- Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Document Info
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-{% if edoc.status == 'completed' %}success{% elif edoc.status == 'pending' %}warning{% elif edoc.status == 'partial' %}info{% else %}secondary{% endif %}">
+                            {{ edoc.get_status_display }}
+                        </span>
+                    </dd>
+
+                    {% if edoc.sent_at %}
+                    <dt class="col-sm-4">Sent</dt>
+                    <dd class="col-sm-8">{{ edoc.sent_at|date:"M d, Y" }}</dd>
+                    {% endif %}
+
+                    {% if edoc.completed_at %}
+                    <dt class="col-sm-4">Completed</dt>
+                    <dd class="col-sm-8">{{ edoc.completed_at|date:"M d, Y" }}</dd>
+                    {% endif %}
+
+                    {% if edoc.property %}
+                    <dt class="col-sm-4">Property</dt>
+                    <dd class="col-sm-8">{{ edoc.property.name }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <!-- Signers -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>Signatures
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled signer-status mb-0">
+                    {% for s in all_signers %}
+                    <li class="mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{{ s.name }}</strong>
+                                <span class="text-muted">({{ s.get_role_display }})</span>
+                                {% if s.user == request.user %}
+                                <span class="badge bg-primary">You</span>
+                                {% endif %}
+                            </div>
+                            {% if s.is_signed %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check"></i> Signed
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">Pending</span>
+                            {% endif %}
+                        </div>
+                        {% if s.is_signed %}
+                        <small class="text-muted">
+                            {{ s.signed_at|date:"M d, Y g:i A" }}
+                        </small>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Assign Signers - {{ edoc.title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>Assign Signers</h2>
+        <small class="text-muted">{{ edoc.title }}</small>
+    </div>
+    <a href="{% url 'documents_admin:edoc_detail' pk=edoc.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>Configure Signers
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    This document requires signatures from the following roles. Assign a user or enter details manually for each signer.
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% for role in required_roles %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <strong>{{ role|title }}</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">User Account (optional)</label>
+                                    {{ form|get_field:role|add_prefix:"signer_" }}
+                                    <small class="text-muted">Select to auto-fill name/email</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="name_{{ role }}" class="form-control"
+                                           value="{{ form.data|default_if_none:'' }}"
+                                           required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input type="email" name="email_{{ role }}" class="form-control"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'documents_admin:edoc_detail' pk=edoc.pk %}" class="btn btn-outline-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> Save Signers
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Required Roles
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">The following roles were detected in the document:</p>
+                <ul class="list-unstyled">
+                    {% for role in required_roles %}
+                    <li class="mb-2">
+                        <span class="badge bg-primary">{{ role|title }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-fill name and email when user is selected
+    document.querySelectorAll('select[name^="signer_"]').forEach(function(select) {
+        select.addEventListener('change', function() {
+            const role = this.name.replace('signer_', '');
+            const option = this.options[this.selectedIndex];
+
+            if (option.value) {
+                // Get user data via AJAX or from data attributes
+                // For now, just clear to let user fill manually
+            }
+        });
+    });
+
+    // Add form-control class
+    document.querySelectorAll('select').forEach(function(el) {
+        el.classList.add('form-select');
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}eDocument Templates{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>eDocument Templates</h2>
+        <small class="text-muted">Reusable document templates with signature blocks</small>
+    </div>
+    <a href="{% url 'documents_admin:template_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> Create Template
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Type</label>
+                <select name="type" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Types</option>
+                    {% for value, label in template_types %}
+                    <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select name="active" class="form-select" onchange="this.form.submit()">
+                    <option value="">All</option>
+                    <option value="1" {% if current_active == "1" %}selected{% endif %}>Active</option>
+                    <option value="0" {% if current_active == "0" %}selected{% endif %}>Archived</option>
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Templates Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Property</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for template in templates %}
+                <tr>
+                    <td>
+                        <a href="{% url 'documents_admin:template_detail' pk=template.pk %}" class="text-decoration-none fw-medium">
+                            {{ template.name }}
+                        </a>
+                        {% if template.description %}
+                        <br><small class="text-muted">{{ template.description|truncatewords:10 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary">{{ template.get_template_type_display }}</span>
+                    </td>
+                    <td>
+                        {% if template.property %}
+                        {{ template.property.name }}
+                        {% else %}
+                        <span class="text-muted">All Properties</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if template.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Archived</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small class="text-muted">{{ template.created_at|date:"M d, Y" }}</small>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'documents_admin:template_detail' pk=template.pk %}" class="btn btn-outline-primary" title="View">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'documents_admin:template_edit' pk=template.pk %}" class="btn btn-outline-secondary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'documents_admin:edoc_create' %}?template={{ template.pk }}" class="btn btn-outline-success" title="Use Template">
+                                <i class="bi bi-file-earmark-plus"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-file-earmark-text fs-1"></i>
+                        <p class="mb-0 mt-2">No templates yet</p>
+                        <a href="{% url 'documents_admin:template_create' %}" class="btn btn-primary mt-3">Create Your First Template</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
