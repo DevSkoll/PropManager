@@ -1,0 +1,138 @@
+{% extends "admin_portal/base.html" %}
+{% load static core_tags %}
+
+{% block title %}Dashboard - PropManager{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/dashboard-launcher.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="launcher-header mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Welcome back, {{ user.get_full_name|default:user.username }}</h2>
+            <p class="text-muted mb-0">Here's what's happening with your properties</p>
+        </div>
+        <a href="{% url 'accounts_admin:admin_analytics_dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-graph-up-arrow me-1"></i> Full Analytics
+        </a>
+    </div>
+
+    <!-- Mini KPI Banner -->
+    <div class="kpi-banner">
+        <div class="kpi-item kpi-success">
+            <div class="kpi-icon">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Revenue This Month</div>
+                <div class="kpi-value">{{ month_revenue|currency }}</div>
+            </div>
+        </div>
+
+        <div class="kpi-item kpi-danger">
+            <div class="kpi-icon">
+                <i class="bi bi-exclamation-circle"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Outstanding</div>
+                <div class="kpi-value">{{ outstanding_balance|currency }}</div>
+            </div>
+        </div>
+
+        <div class="kpi-item kpi-primary">
+            <div class="kpi-icon">
+                <i class="bi bi-building"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Occupancy</div>
+                <div class="kpi-value">{{ occupancy_rate }}%</div>
+                <div class="kpi-subtext">{{ occupied_units }}/{{ total_units }} units</div>
+            </div>
+        </div>
+
+        <div class="kpi-item {% if emergency_wo > 0 %}kpi-danger{% else %}kpi-warning{% endif %}">
+            <div class="kpi-icon">
+                <i class="bi bi-tools"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Open Work Orders</div>
+                <div class="kpi-value">{{ open_wo }}</div>
+                {% if emergency_wo > 0 %}
+                <div class="kpi-subtext text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> {{ emergency_wo }} emergency
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Bar -->
+<div class="launcher-search mb-4">
+    <div class="search-wrapper">
+        <i class="bi bi-search search-icon"></i>
+        <input
+            type="text"
+            id="appSearch"
+            class="search-input"
+            placeholder="Search apps..."
+            autocomplete="off"
+        >
+        <div class="search-hint">
+            <kbd>⌘</kbd><kbd>K</kbd>
+        </div>
+    </div>
+</div>
+
+<!-- App Grid -->
+<div class="launcher-grid" id="appGrid">
+    {% for category_key, tiles in tiles_by_category %}
+    <div class="category-section" data-category="{{ category_key }}">
+        <div class="category-header">
+            <i class="bi {{ category_info|get_item:category_key|get_item:'icon' }} me-2"></i>
+            <span>{{ category_info|get_item:category_key|get_item:'name' }}</span>
+        </div>
+
+        <div class="app-tiles">
+            {% for tile in tiles %}
+            <a href="{% url tile.url %}"
+               class="app-tile gradient-{{ tile.gradient }}"
+               data-app-id="{{ tile.id }}"
+               data-keywords="{{ tile.keywords|join:',' }}"
+               data-name="{{ tile.name|lower }}"
+               data-description="{{ tile.description|lower }}">
+
+                <div class="app-icon">
+                    <i class="bi {{ tile.icon }}"></i>
+                </div>
+
+                <div class="app-name">{{ tile.name }}</div>
+
+                {% if tile.description %}
+                <div class="app-description">{{ tile.description }}</div>
+                {% endif %}
+
+                {% if tile.badge_count > 0 %}
+                <div class="app-badge">{{ tile.badge_count }}</div>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- No Results Message -->
+<div id="noResults" class="no-results" style="display: none;">
+    <i class="bi bi-search fs-1 text-muted"></i>
+    <p class="text-muted mt-3 mb-0">No apps found matching your search</p>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard-launcher.js' %}"></script>
+{% endblock %}

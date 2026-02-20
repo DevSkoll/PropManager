@@ -44,3 +44,25 @@ def active_nav(context, url_name):
     if request and request.resolver_match and request.resolver_match.url_name == url_name:
         return "active"
     return ""
+
+
+@register.filter
+def ordinal(value):
+    """Convert an integer to its ordinal representation (1st, 2nd, 3rd, etc.)."""
+    try:
+        value = int(value)
+    except (ValueError, TypeError):
+        return value
+    if 11 <= (value % 100) <= 13:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(value % 10, "th")
+    return f"{value}{suffix}"
+
+
+@register.filter
+def get_item(dictionary, key):
+    """Get an item from a dictionary by key."""
+    if isinstance(dictionary, dict):
+        return dictionary.get(key)
+    return None

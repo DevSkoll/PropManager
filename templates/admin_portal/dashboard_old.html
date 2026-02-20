@@ -1,0 +1,325 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Admin Dashboard - PropManager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border: none;
+        border-radius: 12px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .stat-card.primary { border-left: 4px solid #0d6efd; }
+    .stat-card.success { border-left: 4px solid #198754; }
+    .stat-card.warning { border-left: 4px solid #ffc107; }
+    .stat-card.danger { border-left: 4px solid #dc3545; }
+    .stat-card.info { border-left: 4px solid #0dcaf0; }
+
+    .action-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    .action-item:hover {
+        text-decoration: none;
+    }
+    .action-item.danger {
+        background: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+    .action-item.danger:hover {
+        background: rgba(220, 53, 69, 0.2);
+    }
+    .action-item.warning {
+        background: rgba(255, 193, 7, 0.15);
+        color: #856404;
+    }
+    .action-item.warning:hover {
+        background: rgba(255, 193, 7, 0.25);
+    }
+    .action-item.info {
+        background: rgba(13, 202, 240, 0.1);
+        color: #0dcaf0;
+    }
+
+    .quick-stat {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 8px;
+        background: #f8f9fa;
+    }
+    .quick-stat h4 {
+        margin-bottom: 0.25rem;
+        font-weight: 700;
+    }
+    .quick-stat small {
+        color: #6c757d;
+    }
+
+    .activity-item {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+    }
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Dashboard</h2>
+    <a href="{% url 'accounts_admin:admin_analytics_dashboard' %}" class="btn btn-outline-primary">
+        <i class="bi bi-graph-up-arrow me-1"></i> Full Analytics
+    </a>
+</div>
+
+<!-- ROW 1: Primary KPIs -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Revenue This Month</h6>
+                        <h3 class="mb-0 text-success">{{ month_revenue|currency }}</h3>
+                    </div>
+                    <i class="bi bi-cash-stack text-success fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card danger h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Outstanding</h6>
+                        <h3 class="mb-0 text-danger">{{ outstanding_balance|currency }}</h3>
+                        {% if overdue_invoices > 0 %}
+                        <small class="text-danger">{{ overdue_invoices }} overdue</small>
+                        {% endif %}
+                    </div>
+                    <i class="bi bi-exclamation-circle text-danger fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Occupancy</h6>
+                        <h3 class="mb-0 text-primary">{{ occupancy_rate }}%</h3>
+                        <small class="text-muted">{{ occupied_units }}/{{ total_units }} units</small>
+                    </div>
+                    <i class="bi bi-building text-primary fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Open Work Orders</h6>
+                        <h3 class="mb-0 {% if emergency_wo > 0 %}text-danger{% else %}text-warning{% endif %}">{{ open_wo }}</h3>
+                        {% if emergency_wo > 0 %}
+                        <small class="text-danger"><i class="bi bi-exclamation-triangle"></i> {{ emergency_wo }} emergency</small>
+                        {% endif %}
+                    </div>
+                    <i class="bi bi-tools text-warning fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 2: Quick Stats Bar -->
+<div class="row g-3 mb-4">
+    <div class="col">
+        <div class="quick-stat">
+            <h4 class="text-primary">{{ total_properties }}</h4>
+            <small>Properties</small>
+        </div>
+    </div>
+    <div class="col">
+        <div class="quick-stat">
+            <h4 class="text-success">{{ active_tenants }}</h4>
+            <small>Tenants</small>
+        </div>
+    </div>
+    <div class="col">
+        <div class="quick-stat">
+            <h4 class="{% if expiring_30 > 0 %}text-danger{% else %}text-muted{% endif %}">{{ expiring_30 }}</h4>
+            <small>Expiring 30d</small>
+        </div>
+    </div>
+    <div class="col">
+        <div class="quick-stat">
+            <h4 class="text-info">{{ month_to_month }}</h4>
+            <small>Month-to-Month</small>
+        </div>
+    </div>
+    <div class="col">
+        <div class="quick-stat">
+            <h4 class="{% if pending_signatures > 0 %}text-warning{% else %}text-muted{% endif %}">{{ pending_signatures }}</h4>
+            <small>Pending Sigs</small>
+        </div>
+    </div>
+    <div class="col">
+        <div class="quick-stat">
+            <h4 class="text-success">{{ payments_today_count }}</h4>
+            <small>Payments Today</small>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 3: Action Items + Recent Payments -->
+<div class="row g-4 mb-4">
+    <!-- Action Items -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-lightning-charge me-2"></i>Action Items</h6>
+                {% if action_items %}
+                <span class="badge bg-danger">{{ action_items|length }}</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% for item in action_items %}
+                <a href="{% url item.url %}{{ item.params }}" class="action-item {{ item.type }}">
+                    <i class="bi {{ item.icon }} me-2 fs-5"></i>
+                    <span>{{ item.title }}</span>
+                </a>
+                {% empty %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-check-circle fs-1 text-success"></i>
+                    <p class="mb-0 mt-2">All clear!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Payments -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-cash me-2"></i>Recent Payments</h6>
+                <a href="{% url 'billing_admin:payment_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                {% for payment in recent_payments %}
+                <div class="activity-item">
+                    <div class="d-flex justify-content-between">
+                        <strong class="text-success">{{ payment.amount|currency }}</strong>
+                        <small class="text-muted">{{ payment.payment_date|timesince }} ago</small>
+                    </div>
+                    <small class="text-muted">{{ payment.tenant.get_full_name|default:payment.tenant.username }}</small>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center py-3">No recent payments</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Weather Alerts -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-cloud-sun me-2"></i>Weather Alerts</h6>
+                <a href="{% url 'weather_admin:weather_alert_list' %}" class="btn btn-sm btn-outline-info">View All</a>
+            </div>
+            <div class="card-body">
+                {% for alert in recent_alerts %}
+                <div class="activity-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ alert.title }}</strong>
+                            <br>
+                            <small class="text-muted">{{ alert.property.name|default:"All Properties" }}</small>
+                        </div>
+                        <span class="badge bg-{% if alert.severity == 'emergency' %}danger{% elif alert.severity == 'warning' %}warning{% else %}info{% endif %}">
+                            {{ alert.get_severity_display }}
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-3 text-muted">
+                    <i class="bi bi-sun fs-1"></i>
+                    <p class="mb-0 mt-2">No active alerts</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 4: Recent Work Orders -->
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-tools me-2"></i>Recent Work Orders</h6>
+                <a href="{% url 'workorders_admin:workorder_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Unit</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Reported</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for wo in recent_work_orders %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'workorders_admin:workorder_detail' pk=wo.pk %}" class="text-decoration-none">
+                                    {{ wo.title|truncatewords:6 }}
+                                </a>
+                            </td>
+                            <td>{{ wo.unit }}</td>
+                            <td>
+                                <span class="badge bg-{% if wo.priority == 'emergency' %}danger{% elif wo.priority == 'high' %}warning{% elif wo.priority == 'medium' %}info{% else %}secondary{% endif %}">
+                                    {{ wo.get_priority_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if wo.status == 'completed' %}success{% elif wo.status == 'in_progress' %}primary{% elif wo.status == 'assigned' %}info{% else %}secondary{% endif %}">
+                                    {{ wo.get_status_display }}
+                                </span>
+                            </td>
+                            <td><small class="text-muted">{{ wo.created_at|timesince }} ago</small></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-muted text-center py-4">
+                                <i class="bi bi-inbox fs-1"></i>
+                                <p class="mb-0 mt-2">No work orders yet</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

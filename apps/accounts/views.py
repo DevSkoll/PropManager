@@ -123,6 +123,21 @@ def tenant_dashboard(request):
         created_at__gte=timezone.now() - timezone.timedelta(days=7),
     ).count()
 
+    # Get active lease with related unit/property for address display
+    active_lease = Lease.objects.filter(
+        tenant=request.user, status="active"
+    ).select_related("unit__property").first()
+
+    # Get rewards balance and streak
+    from apps.rewards.models import RewardBalance, StreakEvaluation
+    reward_balance = RewardBalance.objects.filter(tenant=request.user).first()
+    streak_info = None
+    if active_lease:
+        streak_info = StreakEvaluation.objects.filter(
+            tenant=request.user,
+            config__property=active_lease.unit.property
+        ).first()
+
     # Recent invoices and announcements
     recent_invoices = Invoice.objects.filter(tenant=request.user).order_by("-issue_date")[:5]
     announcements = Announcement.objects.filter(
@@ -138,6 +153,9 @@ def tenant_dashboard(request):
         "weather_alert_count": weather_alert_count,
         "recent_invoices": recent_invoices,
         "announcements": announcements,
+        "active_lease": active_lease,
+        "reward_balance": reward_balance,
+        "streak_info": streak_info,
     })
 
 
@@ -225,53 +243,309 @@ def admin_otp_verify(request):
 
 @admin_required
 def admin_dashboard(request):
-    from django.db.models import Count, Sum
-    from apps.properties.models import Property, Unit
-    from apps.billing.models import Invoice
-    from apps.workorders.models import WorkOrder
-    from apps.leases.models import Lease
-    from apps.weather.models import WeatherAlert
+    """
+    Modern app launcher dashboard with mini KPIs and searchable app grid.
+    """
+    from decimal import Decimal
 
-    total_properties = Property.objects.filter(is_active=True).count()
+    from django.db.models import Sum
+    from django.db.models.functions import Coalesce
+
+    from apps.billing.models import Invoice, Payment
+    from apps.core.dashboard_data import CATEGORY_INFO, get_app_tiles
+    from apps.properties.models import Unit
+    from apps.workorders.models import WorkOrder
+
+    today = timezone.now().date()
+    month_start = today.replace(day=1)
+
+    # MINI KPIs (4 key metrics only)
+    # Revenue this month
+    month_revenue = Payment.objects.filter(
+        status="completed",
+        payment_date__date__gte=month_start,
+        payment_date__date__lte=today,
+    ).aggregate(total=Coalesce(Sum("amount"), Decimal("0")))["total"]
+
+    # Outstanding balance
+    outstanding = Invoice.objects.filter(
+        status__in=["issued", "partial", "overdue"]
+    ).aggregate(
+        total=Coalesce(Sum("total_amount"), Decimal("0")),
+        paid=Coalesce(Sum("amount_paid"), Decimal("0")),
+    )
+    outstanding_balance = outstanding["total"] - outstanding["paid"]
+
+    # Occupancy
     total_units = Unit.objects.count()
     occupied_units = Unit.objects.filter(status="occupied").count()
     occupancy_rate = round((occupied_units / total_units * 100), 1) if total_units > 0 else 0
 
-    active_tenants = User.objects.filter(role="tenant", is_active=True).count()
-
+    # Open work orders
     open_wo = WorkOrder.objects.exclude(status__in=["completed", "closed"]).count()
-
-    outstanding = Invoice.objects.filter(
-        status__in=["issued", "partial", "overdue"]
-    ).aggregate(
-        total=Sum("total_amount"), paid=Sum("amount_paid")
+    emergency_wo = (
+        WorkOrder.objects.filter(priority="emergency")
+        .exclude(status__in=["completed", "closed"])
+        .count()
     )
-    outstanding_balance = (outstanding["total"] or 0) - (outstanding["paid"] or 0)
 
-    expiring_leases = Lease.objects.filter(
-        status="active",
-        end_date__lte=timezone.now().date() + timezone.timedelta(days=60),
-        end_date__gte=timezone.now().date(),
-    ).select_related("tenant", "unit", "unit__property").count()
+    # Get app tiles with badges
+    app_tiles = get_app_tiles()
 
-    recent_alerts = WeatherAlert.objects.select_related("property").order_by("-created_at")[:5]
+    # Calculate badges for each tile
+    for tile in app_tiles:
+        tile.badge_count = tile.get_badge_count(request)
 
-    recent_work_orders = WorkOrder.objects.select_related(
-        "unit", "unit__property", "reported_by"
-    ).order_by("-created_at")[:10]
+    # Organize by category
+    tiles_by_category = {}
+    for tile in app_tiles:
+        if tile.category not in tiles_by_category:
+            tiles_by_category[tile.category] = []
+        tiles_by_category[tile.category].append(tile)
 
-    return render(request, "admin_portal/dashboard.html", {
-        "total_properties": total_properties,
-        "active_tenants": active_tenants,
-        "open_wo": open_wo,
-        "outstanding_balance": outstanding_balance,
+    # Sort categories by order
+    sorted_categories = sorted(
+        tiles_by_category.items(), key=lambda x: CATEGORY_INFO[x[0]]["order"]
+    )
+
+    return render(
+        request,
+        "admin_portal/dashboard_launcher.html",
+        {
+            # Mini KPIs
+            "month_revenue": month_revenue,
+            "outstanding_balance": outstanding_balance,
+            "occupancy_rate": occupancy_rate,
+            "occupied_units": occupied_units,
+            "total_units": total_units,
+            "open_wo": open_wo,
+            "emergency_wo": emergency_wo,
+            # App launcher data
+            "app_tiles": app_tiles,
+            "tiles_by_category": sorted_categories,
+            "category_info": CATEGORY_INFO,
+        },
+    )
+
+
+@admin_required
+def admin_analytics_dashboard(request):
+    """
+    Comprehensive SPLUNK-style analytics dashboard with time-framed metrics,
+    trend analysis, charts, and actionable alerts.
+    """
+    import json
+    from datetime import date, timedelta
+
+    from django.db.models import Sum
+    from django.urls import reverse
+
+    from apps.billing.models import Invoice, Payment
+    from apps.core.dashboard_utils import (
+        get_aging_receivables,
+        get_lease_metrics,
+        get_payment_methods_chart_data,
+        get_period_comparison,
+        get_revenue_chart_data,
+        get_tenant_health_metrics,
+        get_workorder_charts_data,
+        get_workorder_metrics,
+    )
+    from apps.leases.models import Lease
+    from apps.properties.models import Property, Unit
+    from apps.weather.models import WeatherAlert
+    from apps.workorders.models import WorkOrder
+
+    # Time range handling
+    range_param = request.GET.get("range", "30")
+    property_filter = request.GET.get("property", "all")
+
+    today = timezone.now().date()
+
+    if range_param == "7":
+        start_date = today - timedelta(days=7)
+        range_label = "Last 7 Days"
+    elif range_param == "30":
+        start_date = today - timedelta(days=30)
+        range_label = "Last 30 Days"
+    elif range_param == "90":
+        start_date = today - timedelta(days=90)
+        range_label = "Last 90 Days"
+    elif range_param == "ytd":
+        start_date = date(today.year, 1, 1)
+        range_label = "Year to Date"
+    else:
+        start_date = today - timedelta(days=30)
+        range_label = "Last 30 Days"
+        range_param = "30"
+
+    end_date = today
+
+    # Property filter
+    property_ids = None
+    if property_filter != "all":
+        try:
+            property_ids = [int(property_filter)]
+        except ValueError:
+            pass
+
+    # Gather all metrics
+    financial = get_period_comparison(start_date, end_date, property_ids)
+    workorders = get_workorder_metrics(start_date, end_date, property_ids)
+    leases = get_lease_metrics(property_ids)
+    tenant_health = get_tenant_health_metrics(start_date, end_date, property_ids)
+    aging = get_aging_receivables(property_ids)
+
+    # Chart data
+    revenue_chart = get_revenue_chart_data(start_date, end_date, property_ids)
+    wo_charts = get_workorder_charts_data(start_date, end_date, property_ids)
+    payment_methods_chart = get_payment_methods_chart_data(
+        tenant_health["method_breakdown"]
+    )
+
+    # Occupancy metrics
+    unit_filters = {}
+    if property_ids:
+        unit_filters["property_id__in"] = property_ids
+
+    total_units = Unit.objects.filter(**unit_filters).count() if unit_filters else Unit.objects.count()
+    occupied_units = Unit.objects.filter(status="occupied", **unit_filters).count() if unit_filters else Unit.objects.filter(status="occupied").count()
+    occupancy_rate = round((occupied_units / total_units * 100), 1) if total_units > 0 else 0
+
+    # Recent activity
+    recent_payments = (
+        Payment.objects.filter(status="completed")
+        .select_related("tenant", "invoice")
+        .order_by("-payment_date")[:5]
+    )
+
+    recent_workorders = (
+        WorkOrder.objects.select_related("unit", "unit__property")
+        .order_by("-updated_at")[:5]
+    )
+
+    # Build alerts list
+    alerts = []
+
+    # Overdue invoices
+    overdue_count = financial["current"]["overdue_count"]
+    if overdue_count > 0:
+        alerts.append({
+            "type": "danger",
+            "icon": "bi-exclamation-circle",
+            "title": f"{overdue_count} Overdue Invoice{'s' if overdue_count != 1 else ''}",
+            "url": reverse("billing_admin:invoice_list") + "?status=overdue",
+        })
+
+    # Emergency work orders
+    if workorders["emergency_open"] > 0:
+        alerts.append({
+            "type": "danger",
+            "icon": "bi-tools",
+            "title": f"{workorders['emergency_open']} Emergency Work Order{'s' if workorders['emergency_open'] != 1 else ''}",
+            "url": reverse("workorders_admin:workorder_list") + "?priority=emergency",
+        })
+
+    # Expiring leases
+    if leases["expiring_30"] > 0:
+        alerts.append({
+            "type": "warning",
+            "icon": "bi-file-earmark-text",
+            "title": f"{leases['expiring_30']} Lease{'s' if leases['expiring_30'] != 1 else ''} Expiring in 30 Days",
+            "url": reverse("leases_admin:lease_list") + "?expiring=30",
+        })
+
+    # Pending signatures
+    if leases["pending_signatures"] > 0:
+        alerts.append({
+            "type": "info",
+            "icon": "bi-pen",
+            "title": f"{leases['pending_signatures']} Pending Signature{'s' if leases['pending_signatures'] != 1 else ''}",
+            "url": reverse("leases_admin:lease_list") + "?signature_status=pending",
+        })
+
+    # Weather alerts (last 24 hours)
+    recent_weather = (
+        WeatherAlert.objects.filter(
+            created_at__gte=timezone.now() - timedelta(hours=24),
+            severity__in=["warning", "emergency"],
+        )
+        .select_related("property")
+        .order_by("-created_at")[:3]
+    )
+
+    for alert in recent_weather:
+        alerts.append({
+            "type": "warning" if alert.severity == "warning" else "danger",
+            "icon": "bi-cloud-lightning",
+            "title": f"{alert.title} - {alert.property.name if alert.property else 'All Properties'}",
+            "url": reverse("weather_admin:weather_alert_list"),
+        })
+
+    # Properties for filter dropdown
+    properties = Property.objects.filter(is_active=True).order_by("name")
+
+    # Calculate aging total
+    aging_total = sum(bucket["total"] for bucket in aging.values())
+
+    context = {
+        # Time range
+        "range": range_param,
+        "range_label": range_label,
+        "start_date": start_date,
+        "end_date": end_date,
+        # Property filter
+        "property_filter": property_filter,
+        "properties": properties,
+        # KPIs
+        "total_revenue": financial["current"]["total_revenue"],
+        "revenue_trend": financial["revenue_trend"],
+        "collection_rate": financial["current"]["collection_rate"],
+        "collection_trend": financial["collection_trend"],
         "occupancy_rate": occupancy_rate,
-        "total_units": total_units,
         "occupied_units": occupied_units,
-        "expiring_leases": expiring_leases,
-        "recent_alerts": recent_alerts,
-        "recent_work_orders": recent_work_orders,
-    })
+        "total_units": total_units,
+        "outstanding_balance": financial["current"]["outstanding_balance"],
+        "overdue_count": overdue_count,
+        # Financial
+        "expected_revenue": financial["current"]["expected_revenue"],
+        "late_fees_collected": financial["current"]["late_fees_collected"],
+        # Work Orders
+        "wo_total": workorders["total_in_period"],
+        "wo_completed": workorders["completed_in_period"],
+        "wo_avg_resolution": workorders["avg_resolution_days"],
+        "wo_open_by_priority": workorders["open_by_priority"],
+        "wo_total_open": workorders["total_open"],
+        "wo_emergency_open": workorders["emergency_open"],
+        "wo_by_category": workorders["category_counts"],
+        # Leases
+        "pending_signatures": leases["pending_signatures"],
+        "expiring_30": leases["expiring_30"],
+        "expiring_60": leases["expiring_60"],
+        "expiring_90": leases["expiring_90"],
+        "month_to_month": leases["month_to_month"],
+        "total_active_leases": leases["total_active"],
+        # Tenant Health
+        "on_time_rate": tenant_health["on_time_rate"],
+        "avg_days_to_payment": tenant_health["avg_days_to_payment"],
+        "payment_methods": tenant_health["method_breakdown"],
+        "reward_balance_total": tenant_health["reward_total_balance"],
+        "avg_streak": tenant_health["avg_payment_streak"],
+        # Aging
+        "aging_buckets": aging,
+        "aging_total": aging_total,
+        # Charts (JSON for JavaScript)
+        "revenue_chart_data": json.dumps(revenue_chart),
+        "wo_priority_chart_data": json.dumps(wo_charts["priority_chart"]),
+        "wo_category_chart_data": json.dumps(wo_charts["category_chart"]),
+        "payment_methods_chart_data": json.dumps(payment_methods_chart),
+        # Activity & Alerts
+        "recent_payments": recent_payments,
+        "recent_workorders": recent_workorders,
+        "alerts": alerts,
+    }
+
+    return render(request, "admin_portal/analytics_dashboard.html", context)
 
 
 # --- Admin: Tenant Management ---
