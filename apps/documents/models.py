@@ -252,7 +252,7 @@ class EDocument(TimeStampedModel, AuditMixin):
         related_name="edocuments_received",
         help_text="Primary tenant for this document",
     )
-    property = models.ForeignKey(
+    edoc_property = models.ForeignKey(
         "properties.Property",
         on_delete=models.SET_NULL,
         null=True,

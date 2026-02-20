@@ -106,7 +106,7 @@ class EDocumentCreateForm(forms.ModelForm):
 
     class Meta:
         model = EDocument
-        fields = ["title", "content", "lease", "tenant", "property"]
+        fields = ["title", "content", "lease", "tenant", "edoc_property"]
         widgets = {
             "content": forms.Textarea(attrs={
                 "rows": 20,
@@ -119,7 +119,7 @@ class EDocumentCreateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["lease"].required = False
         self.fields["tenant"].required = False
-        self.fields["property"].required = False
+        self.fields["edoc_property"].required = False
 
         # Limit tenant choices to tenant role users
         self.fields["tenant"].queryset = User.objects.filter(role="tenant", is_active=True)

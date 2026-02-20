@@ -206,7 +206,7 @@ def admin_template_preview(request, pk):
 def admin_edoc_list(request):
     """List all eDocuments."""
     edocs = EDocument.objects.select_related(
-        "template", "lease", "tenant", "property"
+        "template", "lease", "tenant", "edoc_property"
     ).order_by("-created_at")
 
     # Filters
@@ -280,7 +280,7 @@ def admin_edoc_create(request):
 def admin_edoc_detail(request, pk):
     """View eDocument details with signing progress."""
     edoc = get_object_or_404(
-        EDocument.objects.select_related("template", "lease", "tenant", "property"),
+        EDocument.objects.select_related("template", "lease", "tenant", "edoc_property"),
         pk=pk
     )
 

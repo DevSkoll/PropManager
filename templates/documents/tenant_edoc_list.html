@@ -35,8 +35,8 @@
                             {{ item.edoc.title }}
                         </h6>
                         <small class="text-muted">
-                            {% if item.edoc.property %}
-                            <i class="bi bi-building"></i> {{ item.edoc.property.name }}
+                            {% if item.edoc.edoc_property %}
+                            <i class="bi bi-building"></i> {{ item.edoc.edoc_property.name }}
                             {% endif %}
                             {% if item.edoc.lease %}
                             <i class="bi bi-file-text ms-2"></i> Lease #{{ item.edoc.lease.pk|truncatechars:8 }}

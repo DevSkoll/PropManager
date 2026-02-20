@@ -110,9 +110,9 @@
                     <dd class="col-sm-8">{{ edoc.completed_at|date:"M d, Y" }}</dd>
                     {% endif %}
 
-                    {% if edoc.property %}
+                    {% if edoc.edoc_property %}
                     <dt class="col-sm-4">Property</dt>
-                    <dd class="col-sm-8">{{ edoc.property.name }}</dd>
+                    <dd class="col-sm-8">{{ edoc.edoc_property.name }}</dd>
                     {% endif %}
                 </dl>
             </div>

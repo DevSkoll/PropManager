@@ -90,7 +90,7 @@ class EDocumentAdmin(admin.ModelAdmin):
     list_display = ("title", "status", "tenant", "lease", "sent_at", "completed_at", "is_locked")
     list_filter = ("status", "is_locked")
     search_fields = ("title", "content")
-    raw_id_fields = ("template", "lease", "tenant", "property")
+    raw_id_fields = ("template", "lease", "tenant", "edoc_property")
     readonly_fields = (
         "rendered_html", "sent_at", "completed_at", "final_pdf", "is_locked",
         "created_at", "updated_at", "created_by", "updated_by",
@@ -102,7 +102,7 @@ class EDocumentAdmin(admin.ModelAdmin):
             "fields": ("title", "template", "status")
         }),
         ("Attachments", {
-            "fields": ("lease", "tenant", "property"),
+            "fields": ("lease", "tenant", "edoc_property"),
         }),
         ("Content", {
             "fields": ("content", "rendered_html"),

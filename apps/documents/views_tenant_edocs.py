@@ -65,7 +65,7 @@ def tenant_edoc_list(request):
         # Either the tenant field matches or user is a signer
         pk__in=signer_doc_ids
     ).select_related(
-        "template", "lease", "property"
+        "template", "lease", "edoc_property"
     ).order_by("-sent_at")
 
     # Also include completed docs for viewing
@@ -74,7 +74,7 @@ def tenant_edoc_list(request):
     ).filter(
         pk__in=signer_doc_ids
     ).select_related(
-        "template", "lease", "property"
+        "template", "lease", "edoc_property"
     ).order_by("-completed_at")[:10]
 
     # Separate by signing status for this user
@@ -99,7 +99,7 @@ def tenant_edoc_list(request):
 def tenant_edoc_detail(request, pk):
     """View eDocument and sign if required."""
     edoc = get_object_or_404(
-        EDocument.objects.select_related("template", "lease", "property"),
+        EDocument.objects.select_related("template", "lease", "edoc_property"),
         pk=pk
     )
     _verify_tenant_edoc_access(request.user, edoc)
