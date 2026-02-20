@@ -26,6 +26,13 @@ class Property(TimeStampedModel, AuditMixin):
     is_active = models.BooleanField(default=True, db_index=True)
     description = models.TextField(blank=True, default="")
 
+    # Property manager contact info (for tenant display)
+    manager_name = models.CharField(max_length=100, blank=True, default="")
+    manager_email = models.EmailField(blank=True, default="")
+    manager_phone = models.CharField(max_length=20, blank=True, default="")
+    office_address = models.CharField(max_length=255, blank=True, default="")
+    office_hours = models.CharField(max_length=100, blank=True, default="")
+
     class Meta:
         verbose_name_plural = "Properties"
         ordering = ["name"]

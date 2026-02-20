@@ -456,10 +456,18 @@ def admin_edoc_send(request, pk):
     edoc.sent_at = timezone.now()
     edoc.save(update_fields=["status", "sent_at"])
 
-    # TODO: Send notification emails to signers
-    # _send_signing_notifications(edoc)
+    # Send notification emails to signers
+    from .notifications import send_signing_request
 
-    messages.success(request, f"Document sent to {edoc.signers.count()} signer(s).")
+    notified_count = 0
+    for signer in edoc.signers.all():
+        if send_signing_request(edoc, signer):
+            notified_count += 1
+
+    messages.success(
+        request,
+        f"Document sent to {edoc.signers.count()} signer(s). {notified_count} notification(s) sent."
+    )
     return redirect("documents_admin:edoc_detail", pk=pk)
 
 
@@ -534,11 +542,17 @@ def admin_edoc_sign_as_landlord(request, pk):
                 # Check if document is complete
                 if edoc.is_fully_signed:
                     edoc.check_completion()
+                    # Send completion notification
+                    from .notifications import send_document_completed
+                    send_document_completed(edoc)
                     messages.success(request, "Document fully signed and completed!")
                 else:
                     if edoc.status == "pending":
                         edoc.status = "partial"
                         edoc.save(update_fields=["status"])
+                    # Notify other parties of signature
+                    from .notifications import send_signature_received
+                    send_signature_received(edoc, signer)
                     messages.success(request, "Signature captured.")
 
                 return redirect("documents_admin:edoc_detail", pk=pk)

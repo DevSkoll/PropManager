@@ -244,11 +244,17 @@ def tenant_edoc_sign(request, pk):
             if edoc.is_fully_signed:
                 edoc.check_completion()
                 all_complete = True
+                # Send completion notification
+                from .notifications import send_document_completed
+                send_document_completed(edoc)
             else:
                 if edoc.status == "pending":
                     edoc.status = "partial"
                     edoc.save(update_fields=["status"])
                 all_complete = False
+                # Notify admin and next signer
+                from .notifications import send_signature_received
+                send_signature_received(edoc, signer)
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)

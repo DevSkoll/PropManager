@@ -13,6 +13,7 @@ urlpatterns = [
     path("admin-portal/", include("apps.properties.urls_admin")),
     path("tenant/", include("apps.leases.urls_tenant")),
     path("admin-portal/", include("apps.leases.urls_admin")),
+    path("lease/", include("apps.leases.urls_signing")),
     path("tenant/", include("apps.billing.urls_tenant")),
     path("admin-portal/", include("apps.billing.urls_admin")),
     path("tenant/", include("apps.rewards.urls_tenant")),

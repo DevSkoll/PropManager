@@ -8,6 +8,20 @@
     <h2>Welcome, {{ user.get_full_name|default:user.username }}!</h2>
 </div>
 
+{% if active_lease %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-house-door text-primary" style="font-size: 2rem;"></i>
+            <div class="ms-3">
+                <h5 class="mb-0">{{ active_lease.unit.property.name }} - Unit {{ active_lease.unit.unit_number }}</h5>
+                <p class="text-muted mb-0">{{ active_lease.unit.property.full_address }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row g-4">
     <div class="col-md-6 col-lg-3">
         <div class="card stat-card {% if balance_due > 0 %}danger{% else %}primary{% endif %} card-hover">
@@ -73,15 +87,68 @@
 
 <div class="row g-4 mt-2">
     <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Recent Invoices</h5>
+        <div class="card border-0 text-white mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body py-4">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <i class="bi bi-star-fill" style="font-size: 2.5rem; opacity: 0.9;"></i>
+                    </div>
+                    <div class="col">
+                        <h6 class="text-white-50 mb-1">Rewards Balance</h6>
+                        <h2 class="mb-0">{% if reward_balance %}{{ reward_balance.balance|currency }}{% else %}$0.00{% endif %}</h2>
+                    </div>
+                    <div class="col-auto text-end">
+                        {% if streak_info and streak_info.current_streak_months > 0 %}
+                        <div class="mb-2">
+                            <span class="badge bg-white bg-opacity-25 px-3 py-2">
+                                <i class="bi bi-fire text-warning"></i> {{ streak_info.current_streak_months }} month streak
+                            </span>
+                        </div>
+                        {% endif %}
+                        <a href="{% url 'rewards_tenant:rewards_dashboard' %}" class="btn btn-light btn-sm">View Rewards</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if active_lease %}
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-person-badge"></i> Property Manager</h6>
+            </div>
+            <div class="card-body">
+                {% if active_lease.unit.property.manager_name %}
+                <p class="mb-2"><strong>{{ active_lease.unit.property.manager_name }}</strong></p>
+                {% if active_lease.unit.property.manager_phone %}
+                <p class="mb-2 small"><i class="bi bi-telephone text-muted"></i> <a href="tel:{{ active_lease.unit.property.manager_phone }}">{{ active_lease.unit.property.manager_phone }}</a></p>
+                {% endif %}
+                {% if active_lease.unit.property.manager_email %}
+                <p class="mb-2 small"><i class="bi bi-envelope text-muted"></i> <a href="mailto:{{ active_lease.unit.property.manager_email }}">{{ active_lease.unit.property.manager_email }}</a></p>
+                {% endif %}
+                {% if active_lease.unit.property.office_hours %}
+                <p class="mb-0 small"><i class="bi bi-clock text-muted"></i> {{ active_lease.unit.property.office_hours }}</p>
+                {% endif %}
+                {% else %}
+                <p class="text-muted small mb-0">Contact info not available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-receipt"></i> Recent Invoices</h5>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
-                            <th>Invoice #</th>
+                            <th>Invoice</th>
                             <th>Due Date</th>
                             <th>Amount</th>
                             <th>Status</th>
@@ -91,7 +158,7 @@
                         {% for invoice in recent_invoices %}
                         <tr>
                             <td>{{ invoice.invoice_number }}</td>
-                            <td>{{ invoice.due_date }}</td>
+                            <td>{{ invoice.due_date|date:"M j, Y" }}</td>
                             <td>{{ invoice.total_amount|currency }}</td>
                             <td>
                                 <span class="badge bg-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}danger{% elif invoice.status == 'partial' %}warning{% else %}secondary{% endif %}">
@@ -109,20 +176,20 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-4">
-        <div class="card">
+    <div class="col-lg-6">
+        <div class="card h-100">
             <div class="card-header">
-                <h5 class="mb-0">Announcements</h5>
+                <h5 class="mb-0"><i class="bi bi-megaphone"></i> Announcements</h5>
             </div>
             <div class="card-body">
                 {% for announcement in announcements %}
-                <div class="mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
-                    <h6>{{ announcement.title }}</h6>
-                    <p class="mb-1 small">{{ announcement.body|truncatewords:30 }}</p>
+                <div class="{% if not forloop.last %}mb-3 border-bottom pb-3{% endif %}">
+                    <h6 class="mb-1">{{ announcement.title }}</h6>
+                    <p class="mb-1 small text-muted">{{ announcement.body|truncatewords:25 }}</p>
                     <small class="text-muted">{{ announcement.published_at|timesince }} ago</small>
                 </div>
                 {% empty %}
-                <p class="text-muted">No announcements.</p>
+                <p class="text-muted mb-0">No announcements.</p>
                 {% endfor %}
             </div>
         </div>

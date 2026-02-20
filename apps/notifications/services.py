@@ -26,6 +26,10 @@ EVENT_TO_CATEGORY = {
     "weather_alert": "weather_updates",
     "new_tenant": None,
     "reward_earned": "rewards",
+    # eDocument signing events
+    "edoc_signing_request": None,
+    "edoc_signed": None,
+    "edoc_completed": None,
 }
 
 

@@ -145,7 +145,7 @@
                         <small class="text-muted text-uppercase fw-bold">{{ category }}</small>
                         {% for var_name, description in vars %}
                         <div class="variable-item" onclick="insertVariable('{{ var_name }}')" title="{{ description }}">
-                            <code>{{ "{{" }}{{ var_name }}{{ "}}" }}</code>
+                            <code>{% templatetag openvariable %}{{ var_name }}{% templatetag closevariable %}</code>
                         </div>
                         {% endfor %}
                     </div>
@@ -193,7 +193,7 @@
                     <i class="bi bi-question-circle me-2"></i>Help
                 </div>
                 <div class="card-body small">
-                    <p><strong>Variables:</strong> Use <code>{{ "{{" }}variable{{ "}}" }}</code> to insert dynamic content.</p>
+                    <p><strong>Variables:</strong> Use <code>{% templatetag openvariable %}variable{% templatetag closevariable %}</code> to insert dynamic content.</p>
                     <p><strong>Signatures:</strong> Use <code>[SIGNATURE:Role]</code> for full signatures.</p>
                     <p><strong>Initials:</strong> Use <code>[INITIALS:Role]</code> for initials.</p>
                     <p class="mb-0"><strong>Roles:</strong> Landlord, Tenant, Tenant2, Tenant3, Cosigner</p>
@@ -271,13 +271,13 @@
     });
 
     function insertVariable(varName) {
-        const text = `{{${varName}}}`;
+        var text = '{% templatetag openvariable %}' + varName + '{% templatetag closevariable %}';
         easyMDE.codemirror.replaceSelection(text);
         easyMDE.codemirror.focus();
     }
 
     function insertTag(type, role) {
-        const text = `[${type}:${role}]`;
+        var text = '[' + type + ':' + role + ']';
         easyMDE.codemirror.replaceSelection(text);
         easyMDE.codemirror.focus();
     }

@@ -37,7 +37,9 @@
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label">User Account (optional)</label>
-                                    {{ form|get_field:role|add_prefix:"signer_" }}
+                                    {% with field_name="signer_"|add:role %}
+                                        {{ form|get_field:field_name }}
+                                    {% endwith %}
                                     <small class="text-muted">Select to auto-fill name/email</small>
                                 </div>
                                 <div class="col-md-4">

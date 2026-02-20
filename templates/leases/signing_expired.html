@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Link Expired - PropManager{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="mb-4">
+                <i class="bi bi-clock-history text-warning" style="font-size: 5rem;"></i>
+            </div>
+            <h2 class="mb-3">Signing Link Expired</h2>
+            <p class="text-muted mb-4">
+                This signing link has expired. For security purposes, lease signing links are only valid for 7 days.
+            </p>
+
+            <div class="card text-start mb-4">
+                <div class="card-body">
+                    <h6 class="card-title">What to do next</h6>
+                    <p class="mb-0">
+                        Please contact your property manager to request a new signing link. They can resend the
+                        lease signing invitation from the admin portal.
+                    </p>
+                </div>
+            </div>
+
+            <p class="text-muted small">
+                If you believe this is an error, please contact support.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

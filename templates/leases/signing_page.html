@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Sign Lease - {{ lease.unit.property.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .signature-canvas {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        background: #fff;
+        cursor: crosshair;
+        touch-action: none;
+    }
+    .signature-canvas.signing {
+        border-color: #0d6efd;
+    }
+    .lease-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+    }
+    .terms-box {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        background: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h2><i class="bi bi-pen"></i> Electronic Lease Signing</h2>
+                <p class="text-muted">{{ lease.unit.property.name }} - Unit {{ lease.unit.unit_number }}</p>
+            </div>
+
+            <!-- Signer Info -->
+            <div class="alert alert-info mb-4">
+                <strong>Signing as:</strong> {{ signature.signer_name }} ({{ signature.get_signer_type_display }})
+            </div>
+
+            <!-- Lease Summary -->
+            <div class="card lease-summary mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Lease Summary</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Property:</strong> {{ lease.unit.property.name }}</p>
+                            <p class="mb-1"><strong>Unit:</strong> {{ lease.unit.unit_number }}</p>
+                            <p class="mb-1"><strong>Address:</strong> {{ lease.unit.property.full_address }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Lease Period:</strong> {{ lease.start_date|date:"M j, Y" }} - {{ lease.end_date|date:"M j, Y"|default:"Month-to-Month" }}</p>
+                            <p class="mb-1"><strong>Monthly Rent:</strong> {{ lease.monthly_rent|currency }}</p>
+                            <p class="mb-1"><strong>Security Deposit:</strong> {{ lease.security_deposit|currency }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lease Terms -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-list-check"></i> Lease Terms & Conditions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="terms-box">
+                        {% for term in terms %}
+                        <div class="mb-3">
+                            <h6>{{ term.title }}</h6>
+                            <p class="text-muted mb-0">{{ term.description }}</p>
+                        </div>
+                        {% if not forloop.last %}<hr>{% endif %}
+                        {% empty %}
+                        <p class="text-muted">Standard lease terms apply.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Signature Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-pen-fill"></i> Your Signature</h5>
+                </div>
+                <div class="card-body">
+                    <form id="signatureForm" method="post">
+                        {% csrf_token %}
+
+                        <!-- Agreement Checkbox -->
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                            <label class="form-check-label" for="agreeTerms">
+                                I have read and agree to all terms and conditions of this lease agreement.
+                            </label>
+                        </div>
+
+                        <!-- Signature Canvas -->
+                        <div class="mb-3">
+                            <label class="form-label">Draw your signature below:</label>
+                            <div class="d-flex flex-column align-items-center">
+                                <canvas id="signatureCanvas" class="signature-canvas mb-2" width="500" height="200"></canvas>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSignature">
+                                    <i class="bi bi-eraser"></i> Clear Signature
+                                </button>
+                            </div>
+                            <input type="hidden" name="signature_data" id="signatureData">
+                        </div>
+
+                        <!-- Typed Name Confirmation -->
+                        <div class="mb-4">
+                            <label for="typedName" class="form-label">Type your full legal name to confirm:</label>
+                            <input type="text" class="form-control" id="typedName" name="typed_name"
+                                   placeholder="{{ signature.signer_name }}" required>
+                            <div class="form-text">Please type "{{ signature.signer_name }}" exactly as shown.</div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="bi bi-check-circle"></i> Sign Lease Agreement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div class="alert alert-danger d-none" id="errorAlert"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    const clearBtn = document.getElementById('clearSignature');
+    const form = document.getElementById('signatureForm');
+    const signatureData = document.getElementById('signatureData');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorAlert = document.getElementById('errorAlert');
+
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let hasSignature = false;
+
+    // Set up canvas
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        if (e.touches) {
+            return {
+                x: (e.touches[0].clientX - rect.left) * scaleX,
+                y: (e.touches[0].clientY - rect.top) * scaleY
+            };
+        }
+        return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
+        };
+    }
+
+    function startDrawing(e) {
+        isDrawing = true;
+        canvas.classList.add('signing');
+        const pos = getPos(e);
+        lastX = pos.x;
+        lastY = pos.y;
+        e.preventDefault();
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+
+        lastX = pos.x;
+        lastY = pos.y;
+        hasSignature = true;
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+        canvas.classList.remove('signing');
+    }
+
+    // Mouse events
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+
+    // Touch events
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDrawing);
+
+    // Clear button
+    clearBtn.addEventListener('click', function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasSignature = false;
+    });
+
+    // Form submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        errorAlert.classList.add('d-none');
+
+        // Validate signature
+        if (!hasSignature) {
+            errorAlert.textContent = 'Please draw your signature above.';
+            errorAlert.classList.remove('d-none');
+            return;
+        }
+
+        // Validate agreement
+        if (!document.getElementById('agreeTerms').checked) {
+            errorAlert.textContent = 'You must agree to the terms and conditions.';
+            errorAlert.classList.remove('d-none');
+            return;
+        }
+
+        // Convert canvas to base64
+        signatureData.value = canvas.toDataURL('image/png');
+
+        // Submit
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Submitting...';
+
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(form.action || window.location.href.replace(/\/$/, '') + '/submit/', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                window.location.href = data.redirect;
+            } else {
+                errorAlert.textContent = data.error || 'An error occurred. Please try again.';
+                errorAlert.classList.remove('d-none');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Sign Lease Agreement';
+            }
+        } catch (err) {
+            errorAlert.textContent = 'Network error. Please try again.';
+            errorAlert.classList.remove('d-none');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Sign Lease Agreement';
+        }
+    });
+});
+</script>
+{% endblock %}

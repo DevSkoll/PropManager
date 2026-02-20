@@ -1,0 +1,102 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Send for Signature - {{ lease.unit.property.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-send"></i> Send Lease for Signatures</h2>
+    <a href="{% url 'leases_admin:lease_detail' pk=lease.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Lease
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Lease Summary</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Property</dt>
+                    <dd class="col-sm-9">{{ lease.unit.property.name }} - Unit {{ lease.unit.unit_number }}</dd>
+                    <dt class="col-sm-3">Tenant</dt>
+                    <dd class="col-sm-9">{{ lease.tenant.get_full_name|default:lease.tenant.username }}</dd>
+                    <dt class="col-sm-3">Lease Period</dt>
+                    <dd class="col-sm-9">{{ lease.start_date|date:"M j, Y" }} - {{ lease.end_date|date:"M j, Y"|default:"Month-to-Month" }}</dd>
+                    <dt class="col-sm-3">Monthly Rent</dt>
+                    <dd class="col-sm-9">{{ lease.monthly_rent|currency }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Required Signatures</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ lease.tenant.get_full_name|default:lease.tenant.username }}</strong>
+                        <br><small class="text-muted">{{ lease.tenant.email }} (Primary Tenant)</small>
+                    </div>
+                    <span class="badge bg-primary">Will receive signing link</span>
+                </li>
+                {% for occupant in lease.occupants.all %}
+                {% if occupant.is_on_lease and occupant.email %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ occupant.first_name }} {{ occupant.last_name }}</strong>
+                        <br><small class="text-muted">{{ occupant.email }} ({{ occupant.get_relationship_display }}{% if occupant.is_cosigner %} - Co-Signer{% endif %})</small>
+                    </div>
+                    <span class="badge bg-primary">Will receive signing link</span>
+                </li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            <strong>What happens next:</strong>
+            <ul class="mb-0 mt-2">
+                <li>Each signer will receive an email with a unique signing link</li>
+                <li>Links expire after 7 days for security</li>
+                <li>Signers can view the full lease and draw their signature electronically</li>
+                <li>Once all parties sign, the lease will be marked as fully executed</li>
+                <li>A signed copy will be available in the Documents section</li>
+            </ul>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-send-fill"></i> Send for Signatures
+                </button>
+                <a href="{% url 'leases_admin:lease_detail' pk=lease.pk %}" class="btn btn-outline-secondary btn-lg">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-shield-check"></i> Security Notes</h6>
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li class="mb-2">Each signer receives a unique, secure token</li>
+                    <li class="mb-2">IP address and timestamp are recorded</li>
+                    <li class="mb-2">Signatures are stored as images</li>
+                    <li class="mb-2">Typed name confirmation required</li>
+                    <li>Full audit trail maintained</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

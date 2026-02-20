@@ -13,47 +13,78 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Lease: {{ lease.tenant.get_full_name|default:lease.tenant.username }}</h2>
-    <div>
+    <div class="d-flex gap-2">
+        {% if lease.signature_status == "draft" %}
+        <a href="{% url 'leases_admin:lease_send_signature' pk=lease.pk %}" class="btn btn-success">
+            <i class="bi bi-send"></i> Send for Signatures
+        </a>
+        {% endif %}
         <a href="{% url 'leases_admin:lease_edit' pk=lease.pk %}" class="btn btn-outline-secondary">
             <i class="bi bi-pencil"></i> Edit
         </a>
     </div>
 </div>
 
+<!-- Signature Status Banner -->
+{% if lease.signature_status == "pending" %}
+<div class="alert alert-info mb-4">
+    <i class="bi bi-send"></i> <strong>Pending Signatures</strong> - Waiting for all parties to sign.
+    Sent {{ lease.signature_requested_at|timesince }} ago.
+</div>
+{% elif lease.signature_status == "partial" %}
+<div class="alert alert-warning mb-4">
+    <i class="bi bi-hourglass-split"></i> <strong>Partially Signed</strong> - Some signatures collected, waiting for remaining parties.
+</div>
+{% elif lease.signature_status == "executed" %}
+<div class="alert alert-success mb-4">
+    <i class="bi bi-check-circle-fill"></i> <strong>Fully Executed</strong> - All parties have signed.
+    {% if lease.fully_executed_at %}Completed {{ lease.fully_executed_at|date:"M j, Y" }}.{% endif %}
+</div>
+{% endif %}
+
 <div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card">
+    <div class="col-lg-8">
+        <div class="card mb-4">
             <div class="card-header"><h5 class="mb-0">Lease Information</h5></div>
             <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">Tenant</dt>
-                    <dd class="col-sm-8">{{ lease.tenant.get_full_name|default:lease.tenant.username }}</dd>
-                    <dt class="col-sm-4">Property</dt>
-                    <dd class="col-sm-8">{{ lease.unit.property.name }}</dd>
-                    <dt class="col-sm-4">Unit</dt>
-                    <dd class="col-sm-8">{{ lease.unit.unit_number }}</dd>
-                    <dt class="col-sm-4">Type</dt>
-                    <dd class="col-sm-8">{{ lease.get_lease_type_display }}</dd>
-                    <dt class="col-sm-4">Status</dt>
-                    <dd class="col-sm-8">
-                        <span class="badge bg-{% if lease.status == 'active' %}success{% elif lease.status == 'draft' %}secondary{% else %}warning{% endif %}">
-                            {{ lease.get_status_display }}
-                        </span>
-                    </dd>
-                    <dt class="col-sm-4">Start Date</dt>
-                    <dd class="col-sm-8">{{ lease.start_date }}</dd>
-                    <dt class="col-sm-4">End Date</dt>
-                    <dd class="col-sm-8">{{ lease.end_date|default:"N/A" }}</dd>
-                    <dt class="col-sm-4">Monthly Rent</dt>
-                    <dd class="col-sm-8">{{ lease.monthly_rent|currency }}</dd>
-                    <dt class="col-sm-4">Security Deposit</dt>
-                    <dd class="col-sm-8">{{ lease.security_deposit|currency }}</dd>
-                </dl>
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Tenant</dt>
+                            <dd class="col-sm-7">{{ lease.tenant.get_full_name|default:lease.tenant.username }}</dd>
+                            <dt class="col-sm-5">Property</dt>
+                            <dd class="col-sm-7">{{ lease.unit.property.name }}</dd>
+                            <dt class="col-sm-5">Unit</dt>
+                            <dd class="col-sm-7">{{ lease.unit.unit_number }}</dd>
+                            <dt class="col-sm-5">Type</dt>
+                            <dd class="col-sm-7">{{ lease.get_lease_type_display }}</dd>
+                            <dt class="col-sm-5">Status</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-{% if lease.status == 'active' %}success{% elif lease.status == 'draft' %}secondary{% else %}warning{% endif %}">
+                                    {{ lease.get_status_display }}
+                                </span>
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Start Date</dt>
+                            <dd class="col-sm-7">{{ lease.start_date|date:"M j, Y" }}</dd>
+                            <dt class="col-sm-5">End Date</dt>
+                            <dd class="col-sm-7">{{ lease.end_date|date:"M j, Y"|default:"Month-to-Month" }}</dd>
+                            <dt class="col-sm-5">Monthly Rent</dt>
+                            <dd class="col-sm-7 fw-bold">{{ lease.monthly_rent|currency }}</dd>
+                            <dt class="col-sm-5">Security Deposit</dt>
+                            <dd class="col-sm-7">{{ lease.security_deposit|currency }}</dd>
+                            <dt class="col-sm-5">Rent Due Day</dt>
+                            <dd class="col-sm-7">{{ lease.rent_due_day|ordinal }} of month</dd>
+                        </dl>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
+
+        <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Lease Terms</h5>
                 <a href="{% url 'leases_admin:lease_add_term' pk=lease.pk %}" class="btn btn-sm btn-outline-primary">
@@ -71,6 +102,108 @@
                 <p class="text-muted">No lease terms added.</p>
                 {% endfor %}
             </div>
+        </div>
+
+        <!-- Policies -->
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">Policies</h5></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled mb-0">
+                            <li><i class="bi bi-{% if lease.pets_allowed %}check text-success{% else %}x text-danger{% endif %}"></i> Pets {% if lease.pets_allowed %}Allowed (max {{ lease.max_pets }}){% else %}Not Allowed{% endif %}</li>
+                            <li><i class="bi bi-{% if lease.smoking_allowed %}check text-success{% else %}x text-danger{% endif %}"></i> Smoking {% if lease.smoking_allowed %}Allowed{% else %}Not Allowed{% endif %}</li>
+                            <li><i class="bi bi-{% if lease.subletting_allowed %}check text-success{% else %}x text-danger{% endif %}"></i> Subletting {% if lease.subletting_allowed %}Allowed{% else %}Not Allowed{% endif %}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled mb-0">
+                            <li><i class="bi bi-people"></i> Max Occupants: {{ lease.max_occupants }}</li>
+                            <li><i class="bi bi-car-front"></i> Parking: {{ lease.parking_spaces }} spaces</li>
+                            {% if lease.renters_insurance_required %}
+                            <li><i class="bi bi-shield-check text-info"></i> Insurance Required ({{ lease.renters_insurance_minimum|currency }})</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Signatures -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-pen"></i> Signatures</h6>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for sig in signatures %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ sig.signer_name }}</strong>
+                        <br><small class="text-muted">{{ sig.get_signer_type_display }}</small>
+                    </div>
+                    {% if sig.signed_at %}
+                    <span class="badge bg-success">Signed {{ sig.signed_at|date:"M j" }}</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                    {% endif %}
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">No signatures requested yet.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Occupants -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-people"></i> Occupants</h6>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for occ in occupants %}
+                <li class="list-group-item">
+                    <strong>{{ occ.first_name }} {{ occ.last_name }}</strong>
+                    <br><small class="text-muted">{{ occ.get_relationship_display }}{% if occ.is_cosigner %} (Co-Signer){% endif %}</small>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">No additional occupants.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Pets -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-heart"></i> Pets</h6>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for pet in pets %}
+                <li class="list-group-item">
+                    <strong>{{ pet.name }}</strong> ({{ pet.get_pet_type_display }})
+                    <br><small class="text-muted">{{ pet.breed }}{% if pet.is_service_animal %} - Service Animal{% endif %}</small>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">No pets registered.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Fees -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-cash"></i> Fees</h6>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for fee in fees %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>{{ fee.name }}<br><small class="text-muted">{{ fee.get_frequency_display }}</small></span>
+                    <strong>{{ fee.amount|currency }}</strong>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">No additional fees.</li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
 </div>

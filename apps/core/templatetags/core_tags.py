@@ -66,3 +66,21 @@ def get_item(dictionary, key):
     if isinstance(dictionary, dict):
         return dictionary.get(key)
     return None
+
+
+@register.filter
+def get_field(form, field_name):
+    """Get a form field by name."""
+    try:
+        return form[field_name]
+    except (KeyError, TypeError):
+        return None
+
+
+@register.filter
+def add_prefix(field, prefix):
+    """Add a prefix to a form field's name attribute."""
+    if field is None:
+        return ""
+    # Return the field as-is since Django form fields already handle their own rendering
+    return field

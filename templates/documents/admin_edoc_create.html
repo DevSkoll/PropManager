@@ -139,7 +139,7 @@
                         <small class="text-muted text-uppercase fw-bold">{{ category }}</small>
                         {% for var_name, description in vars %}
                         <div class="variable-item" onclick="insertVariable('{{ var_name }}')" title="{{ description }}">
-                            <code>{{ "{{" }}{{ var_name }}{{ "}}" }}</code>
+                            <code>{% templatetag openvariable %}{{ var_name }}{% templatetag closevariable %}</code>
                         </div>
                         {% endfor %}
                     </div>
@@ -211,12 +211,12 @@
     });
 
     function insertVariable(varName) {
-        easyMDE.codemirror.replaceSelection(`{{${varName}}}`);
+        easyMDE.codemirror.replaceSelection('{% templatetag openvariable %}' + varName + '{% templatetag closevariable %}');
         easyMDE.codemirror.focus();
     }
 
     function insertTag(type, role) {
-        easyMDE.codemirror.replaceSelection(`[${type}:${role}]`);
+        easyMDE.codemirror.replaceSelection('[' + type + ':' + role + ']');
         easyMDE.codemirror.focus();
     }
 </script>
