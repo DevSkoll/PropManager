@@ -1,0 +1,44 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Add AI Provider - PropManager Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-plus-circle"></i> Add AI Provider</h2>
+        <small class="text-muted">Select a provider to configure</small>
+    </div>
+    <a href="{% url 'ai_admin:dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to AI Gateway
+    </a>
+</div>
+
+<div class="row g-4">
+    {% for key, info in providers.items %}
+    <div class="col-md-6 col-lg-3">
+        <a href="{% url 'ai_admin:provider_create_type' provider=key %}" class="text-decoration-none">
+            <div class="card h-100 text-center hover-lift">
+                <div class="card-body py-4">
+                    <div class="provider-icon bg-{{ info.color }} bg-opacity-10 text-{{ info.color }} mx-auto mb-3" style="width: 80px; height: 80px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem;">
+                        <i class="bi {{ info.icon }}"></i>
+                    </div>
+                    <h5 class="card-title">{{ info.name }}</h5>
+                    <p class="card-text text-muted small">{{ info.description }}</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+</style>
+{% endblock %}

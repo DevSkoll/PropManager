@@ -13,9 +13,13 @@ paypalrestsdk>=1.13
 squareup>=37.0
 requests>=2.31
 python-dateutil>=2.8
-authorizenet>=2.0
+authorizenet>=1.1
 braintree>=4.0
 plaid-python>=20.0
 bitcoinlib>=0.7
 qrcode>=8.0
 cryptography>=41.0
+# AI Providers
+openai>=1.0
+anthropic>=0.18
+google-generativeai>=0.3

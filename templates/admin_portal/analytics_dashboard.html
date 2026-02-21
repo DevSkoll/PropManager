@@ -1,0 +1,666 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Analytics Dashboard - PropManager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    .kpi-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .trend-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .trend-up { color: #198754; }
+    .trend-down { color: #dc3545; }
+
+    .alert-feed-item {
+        padding: 0.75rem;
+        border-left: 4px solid;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 0 8px 8px 0;
+        text-decoration: none;
+        display: block;
+        transition: background 0.2s;
+    }
+    .alert-feed-item:hover {
+        background: #e9ecef;
+    }
+    .alert-feed-item.danger { border-left-color: #dc3545; }
+    .alert-feed-item.warning { border-left-color: #ffc107; }
+    .alert-feed-item.info { border-left-color: #0dcaf0; }
+
+    .activity-item {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+    }
+    .activity-item:last-child { border-bottom: none; }
+
+    .aging-bucket {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 8px;
+        transition: transform 0.2s;
+    }
+    .aging-bucket:hover {
+        transform: scale(1.02);
+    }
+    .aging-bucket.current { background: rgba(25, 135, 84, 0.1); }
+    .aging-bucket.days-30 { background: rgba(255, 193, 7, 0.2); }
+    .aging-bucket.days-60 { background: rgba(253, 126, 20, 0.2); }
+    .aging-bucket.days-90 { background: rgba(220, 53, 69, 0.2); }
+    .aging-bucket.days-90-plus { background: rgba(220, 53, 69, 0.3); }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+
+    .metric-mini {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+    }
+    .metric-mini:last-child { border-bottom: none; }
+
+    .time-range-btn.active {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0d6efd !important;
+    }
+
+    .progress-bar.bg-orange {
+        background-color: #fd7e14 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Time Range and Property Filter -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="mb-0">Analytics Dashboard</h2>
+        <small class="text-muted">{{ range_label }} ({{ start_date|date:"M d" }} - {{ end_date|date:"M d, Y" }})</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <!-- Time Range Selector -->
+        <div class="btn-group" role="group">
+            <a href="?range=7&property={{ property_filter }}"
+               class="btn btn-outline-secondary btn-sm {% if range == '7' %}active time-range-btn{% endif %}">7D</a>
+            <a href="?range=30&property={{ property_filter }}"
+               class="btn btn-outline-secondary btn-sm {% if range == '30' %}active time-range-btn{% endif %}">30D</a>
+            <a href="?range=90&property={{ property_filter }}"
+               class="btn btn-outline-secondary btn-sm {% if range == '90' %}active time-range-btn{% endif %}">90D</a>
+            <a href="?range=ytd&property={{ property_filter }}"
+               class="btn btn-outline-secondary btn-sm {% if range == 'ytd' %}active time-range-btn{% endif %}">YTD</a>
+        </div>
+
+        <!-- Property Filter -->
+        <select class="form-select form-select-sm" style="width: 180px;"
+                onchange="window.location.href='?range={{ range }}&property=' + this.value">
+            <option value="all" {% if property_filter == 'all' %}selected{% endif %}>All Properties</option>
+            {% for prop in properties %}
+            <option value="{{ prop.pk }}" {% if property_filter == prop.pk|stringformat:"s" %}selected{% endif %}>
+                {{ prop.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- ROW 1: Key Performance Indicators -->
+<div class="row g-4 mb-4">
+    <!-- Total Revenue -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="kpi-label mb-1">Total Revenue</p>
+                        <p class="kpi-value text-success mb-1">{{ total_revenue|currency }}</p>
+                        <span class="trend-badge {% if revenue_trend >= 0 %}trend-up{% else %}trend-down{% endif %}">
+                            <i class="bi {% if revenue_trend >= 0 %}bi-arrow-up{% else %}bi-arrow-down{% endif %}"></i>
+                            {{ revenue_trend }}% vs prior
+                        </span>
+                    </div>
+                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                        <i class="bi bi-currency-dollar text-success fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collection Rate -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="kpi-label mb-1">Collection Rate</p>
+                        <p class="kpi-value {% if collection_rate >= 90 %}text-success{% elif collection_rate >= 75 %}text-warning{% else %}text-danger{% endif %} mb-1">
+                            {{ collection_rate }}%
+                        </p>
+                        <span class="trend-badge {% if collection_trend >= 0 %}trend-up{% else %}trend-down{% endif %}">
+                            <i class="bi {% if collection_trend >= 0 %}bi-arrow-up{% else %}bi-arrow-down{% endif %}"></i>
+                            {{ collection_trend }}% vs prior
+                        </span>
+                    </div>
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                        <i class="bi bi-percent text-primary fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Occupancy Rate -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="kpi-label mb-1">Occupancy Rate</p>
+                        <p class="kpi-value text-info mb-1">{{ occupancy_rate }}%</p>
+                        <small class="text-muted">{{ occupied_units }}/{{ total_units }} units</small>
+                    </div>
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                        <i class="bi bi-building text-info fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outstanding Balance -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="kpi-label mb-1">Outstanding Balance</p>
+                        <p class="kpi-value text-danger mb-1">{{ outstanding_balance|currency }}</p>
+                        <small class="text-muted">{{ overdue_count }} overdue</small>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                        <i class="bi bi-exclamation-triangle text-danger fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 2: Revenue Chart + Alerts -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Revenue & Collections</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Alerts & Actions</h5>
+                {% if alerts %}
+                <span class="badge bg-danger">{{ alerts|length }}</span>
+                {% endif %}
+            </div>
+            <div class="card-body overflow-auto" style="max-height: 350px;">
+                {% for alert in alerts %}
+                <a href="{{ alert.url }}" class="alert-feed-item {{ alert.type }}">
+                    <div class="d-flex align-items-center">
+                        <i class="bi {{ alert.icon }} me-2 text-{{ alert.type }}"></i>
+                        <span class="text-dark">{{ alert.title }}</span>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-check-circle fs-1"></i>
+                    <p class="mb-0 mt-2">No alerts at this time</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 3: Work Orders + Lease Pipeline -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Work Order Analytics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Open by Priority</h6>
+                        <div style="height: 180px;">
+                            <canvas id="woPriorityChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="metric-mini">
+                            <span>Total This Period</span>
+                            <strong>{{ wo_total }}</strong>
+                        </div>
+                        <div class="metric-mini">
+                            <span>Completed</span>
+                            <strong class="text-success">{{ wo_completed }}</strong>
+                        </div>
+                        <div class="metric-mini">
+                            <span>Currently Open</span>
+                            <strong>{{ wo_total_open }}</strong>
+                        </div>
+                        <div class="metric-mini">
+                            <span>Avg Resolution</span>
+                            <strong>{% if wo_avg_resolution %}{{ wo_avg_resolution }} days{% else %}--{% endif %}</strong>
+                        </div>
+                        <div class="metric-mini">
+                            <span>Emergency Open</span>
+                            <strong class="{% if wo_emergency_open > 0 %}text-danger{% endif %}">
+                                {{ wo_emergency_open }}
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="text-muted mb-3">By Category</h6>
+                <div style="height: 160px;">
+                    <canvas id="woCategoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Lease Pipeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <div class="bg-light rounded p-3 text-center">
+                            <h3 class="mb-0 text-primary">{{ pending_signatures }}</h3>
+                            <small class="text-muted">Pending Signatures</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-light rounded p-3 text-center">
+                            <h3 class="mb-0 text-info">{{ month_to_month }}</h3>
+                            <small class="text-muted">Month-to-Month</small>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="text-muted mb-3">Expiring Leases</h6>
+                {% with total_expiring=expiring_30|add:expiring_60|add:expiring_90 %}
+                <div class="d-flex gap-2 mb-2">
+                    {% if expiring_30 > 0 %}
+                    <div class="flex-fill">
+                        <div class="bg-danger text-white rounded p-2 text-center">
+                            <strong>{{ expiring_30 }}</strong>
+                            <small class="d-block">30 days</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if expiring_60 > 0 %}
+                    <div class="flex-fill">
+                        <div class="bg-warning text-dark rounded p-2 text-center">
+                            <strong>{{ expiring_60 }}</strong>
+                            <small class="d-block">31-60 days</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if expiring_90 > 0 %}
+                    <div class="flex-fill">
+                        <div class="bg-info text-white rounded p-2 text-center">
+                            <strong>{{ expiring_90 }}</strong>
+                            <small class="d-block">61-90 days</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if total_expiring == 0 %}
+                    <div class="flex-fill text-center text-muted py-2">
+                        No leases expiring in next 90 days
+                    </div>
+                    {% endif %}
+                </div>
+                {% endwith %}
+
+                <div class="d-flex justify-content-between small text-muted mt-3">
+                    <span>Total Active: <strong>{{ total_active_leases }}</strong></span>
+                    <span>Expiring Soon: <strong>{{ expiring_30|add:expiring_60|add:expiring_90 }}</strong></span>
+                </div>
+
+                <hr>
+                <a href="{% url 'leases_admin:lease_list' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-list me-1"></i>View All Leases
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 4: Tenant Health + Activity Feed -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-heart-pulse me-2"></i>Tenant Health</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-4 text-center">
+                        <div class="bg-success bg-opacity-10 rounded p-3">
+                            <h3 class="mb-0 text-success">{{ on_time_rate }}%</h3>
+                            <small class="text-muted">On-Time Rate</small>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="bg-info bg-opacity-10 rounded p-3">
+                            <h3 class="mb-0 text-info">{% if avg_days_to_payment %}{{ avg_days_to_payment }}{% else %}--{% endif %}</h3>
+                            <small class="text-muted">Avg Days to Pay</small>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="bg-warning bg-opacity-10 rounded p-3">
+                            <h3 class="mb-0 text-warning">{{ avg_streak }}</h3>
+                            <small class="text-muted">Avg Streak (mo)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="text-muted mb-3">Payment Methods</h6>
+                <div style="height: 180px;">
+                    <canvas id="paymentMethodsChart"></canvas>
+                </div>
+
+                <hr>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted">Reward Program Balance</small>
+                        <h5 class="mb-0">{{ reward_balance_total|currency }}</h5>
+                    </div>
+                    <a href="{% url 'rewards_admin:reward_balances' %}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-gift me-1"></i>View Rewards
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Recent Activity</h5>
+            </div>
+            <div class="card-body overflow-auto" style="max-height: 420px;">
+                {% for payment in recent_payments %}
+                <div class="activity-item">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <i class="bi bi-cash-stack text-success me-2"></i>
+                            <strong>{{ payment.amount|currency }}</strong> received
+                        </div>
+                        <small class="text-muted">{{ payment.payment_date|timesince }} ago</small>
+                    </div>
+                    <small class="text-muted">{{ payment.tenant.get_full_name|default:payment.tenant.username }} - {{ payment.invoice.invoice_number }}</small>
+                </div>
+                {% endfor %}
+
+                {% for wo in recent_workorders %}
+                <div class="activity-item">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <i class="bi bi-tools text-warning me-2"></i>
+                            <strong>{{ wo.title|truncatewords:5 }}</strong>
+                        </div>
+                        <small class="text-muted">{{ wo.updated_at|timesince }} ago</small>
+                    </div>
+                    <small class="text-muted">{{ wo.unit }} -
+                        <span class="badge bg-{% if wo.status == 'completed' %}success{% elif wo.status == 'in_progress' %}warning{% elif wo.status == 'assigned' %}primary{% else %}secondary{% endif %}">
+                            {{ wo.get_status_display }}
+                        </span>
+                    </small>
+                </div>
+                {% endfor %}
+
+                {% if not recent_payments and not recent_workorders %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-inbox fs-1"></i>
+                    <p class="mb-0 mt-2">No recent activity</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 5: Aging Receivables -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Aging Receivables</h5>
+                <a href="{% url 'billing_admin:invoice_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-table me-1"></i>Full Report
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col">
+                        <div class="aging-bucket current">
+                            <h5 class="mb-1">{{ aging_buckets.current.total|currency }}</h5>
+                            <small class="text-muted">Current</small>
+                            <div class="mt-1">
+                                <span class="badge bg-success">{{ aging_buckets.current.count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="aging-bucket days-30">
+                            <h5 class="mb-1">{{ aging_buckets.1_30.total|currency }}</h5>
+                            <small class="text-muted">1-30 Days</small>
+                            <div class="mt-1">
+                                <span class="badge bg-warning text-dark">{{ aging_buckets.1_30.count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="aging-bucket days-60">
+                            <h5 class="mb-1">{{ aging_buckets.31_60.total|currency }}</h5>
+                            <small class="text-muted">31-60 Days</small>
+                            <div class="mt-1">
+                                <span class="badge bg-orange text-white">{{ aging_buckets.31_60.count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="aging-bucket days-90">
+                            <h5 class="mb-1">{{ aging_buckets.61_90.total|currency }}</h5>
+                            <small class="text-muted">61-90 Days</small>
+                            <div class="mt-1">
+                                <span class="badge bg-danger">{{ aging_buckets.61_90.count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="aging-bucket days-90-plus">
+                            <h5 class="mb-1">{{ aging_buckets.90_plus.total|currency }}</h5>
+                            <small class="text-muted">90+ Days</small>
+                            <div class="mt-1">
+                                <span class="badge bg-dark">{{ aging_buckets.90_plus.count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if aging_total > 0 %}
+                <div class="mt-4">
+                    <div class="progress" style="height: 25px;">
+                        {% widthratio aging_buckets.current.total aging_total 100 as pct_current %}
+                        {% widthratio aging_buckets.1_30.total aging_total 100 as pct_30 %}
+                        {% widthratio aging_buckets.31_60.total aging_total 100 as pct_60 %}
+                        {% widthratio aging_buckets.61_90.total aging_total 100 as pct_90 %}
+                        {% widthratio aging_buckets.90_plus.total aging_total 100 as pct_90_plus %}
+                        <div class="progress-bar bg-success" style="width: {{ pct_current }}%" title="Current"></div>
+                        <div class="progress-bar bg-warning" style="width: {{ pct_30 }}%" title="1-30 Days"></div>
+                        <div class="progress-bar bg-orange" style="width: {{ pct_60 }}%" title="31-60 Days"></div>
+                        <div class="progress-bar bg-danger" style="width: {{ pct_90 }}%" title="61-90 Days"></div>
+                        <div class="progress-bar bg-dark" style="width: {{ pct_90_plus }}%" title="90+ Days"></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-between mt-3">
+                    <small class="text-muted">Total Outstanding: <strong>{{ aging_total|currency }}</strong></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Chart.js global defaults
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    Chart.defaults.plugins.legend.position = 'bottom';
+
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx) {
+        const revenueData = {{ revenue_chart_data|safe }};
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: revenueData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Work Order Priority Doughnut
+    const woPriorityCtx = document.getElementById('woPriorityChart');
+    if (woPriorityCtx) {
+        const priorityData = {{ wo_priority_chart_data|safe }};
+        if (priorityData.labels && priorityData.labels.length > 0) {
+            new Chart(woPriorityCtx, {
+                type: 'doughnut',
+                data: priorityData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        } else {
+            woPriorityCtx.parentElement.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-check-circle fs-1"></i><p class="mb-0">No open work orders</p></div>';
+        }
+    }
+
+    // Work Order Category Bar
+    const woCategoryCtx = document.getElementById('woCategoryChart');
+    if (woCategoryCtx) {
+        const categoryData = {{ wo_category_chart_data|safe }};
+        if (categoryData.labels && categoryData.labels.length > 0) {
+            new Chart(woCategoryCtx, {
+                type: 'bar',
+                data: categoryData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { beginAtZero: true }
+                    }
+                }
+            });
+        } else {
+            woCategoryCtx.parentElement.innerHTML = '<div class="text-center text-muted py-3"><small>No work orders in this period</small></div>';
+        }
+    }
+
+    // Payment Methods Pie
+    const paymentMethodsCtx = document.getElementById('paymentMethodsChart');
+    if (paymentMethodsCtx) {
+        const methodData = {{ payment_methods_chart_data|safe }};
+        if (methodData.labels && methodData.labels.length > 0) {
+            new Chart(paymentMethodsCtx, {
+                type: 'pie',
+                data: methodData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': $' + context.raw.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            paymentMethodsCtx.parentElement.innerHTML = '<div class="text-center text-muted py-4"><small>No payments in this period</small></div>';
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,251 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}AI Gateway - PropManager Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .provider-card {
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
+    .provider-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .provider-card.configured {
+        border-color: #198754;
+    }
+    .provider-card.active {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    .provider-icon {
+        font-size: 2rem;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+    }
+    .capability-card {
+        border-left: 4px solid #6c757d;
+        transition: all 0.2s ease;
+    }
+    .capability-card.enabled {
+        border-left-color: #198754;
+    }
+    .capability-card .coming-soon {
+        font-size: 0.75rem;
+        background: #e9ecef;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .status-dot.active {
+        background: #198754;
+    }
+    .status-dot.inactive {
+        background: #6c757d;
+    }
+    .test-result {
+        display: none;
+    }
+    .test-result.show {
+        display: inline-block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-robot"></i> AI Gateway</h2>
+        <small class="text-muted">Configure AI providers and capabilities</small>
+    </div>
+    <a href="{% url 'ai_admin:provider_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> Add Provider
+    </a>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center py-3">
+                <div class="fs-2 fw-bold text-primary">{{ active_providers }}</div>
+                <small class="text-muted">Active Providers</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center py-3">
+                <div class="fs-2 fw-bold text-secondary">{{ total_providers }}</div>
+                <small class="text-muted">Total Configured</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Providers Section -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-cloud-fill me-2"></i>Providers</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for provider in provider_cards %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card provider-card h-100 {% if provider.configured %}configured{% endif %} {% if provider.is_active %}active{% endif %}">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="provider-icon bg-{{ provider.color }} bg-opacity-10 text-{{ provider.color }} me-3">
+                                <i class="bi {{ provider.icon }}"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0">{{ provider.name }}</h6>
+                                {% if provider.configured %}
+                                <span class="status-dot {% if provider.is_active %}active{% else %}inactive{% endif %}"></span>
+                                <small class="text-muted">{% if provider.is_active %}Active{% else %}Inactive{% endif %}</small>
+                                {% if provider.is_default %}
+                                <span class="badge bg-primary ms-1">Default</span>
+                                {% endif %}
+                                {% else %}
+                                <small class="text-muted">Not configured</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <p class="text-muted small mb-2">{{ provider.description }}</p>
+
+                        {% if provider.configured %}
+                        <p class="small mb-3">
+                            <strong>Model:</strong> {{ provider.model|default:"—" }}
+                        </p>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary test-btn"
+                                    data-provider-id="{{ provider.configured.pk }}"
+                                    data-url="{% url 'ai_admin:provider_test' pk=provider.configured.pk %}">
+                                <i class="bi bi-lightning"></i> Test
+                            </button>
+                            <a href="{% url 'ai_admin:provider_edit' pk=provider.configured.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                        </div>
+                        <div class="test-result mt-2" id="test-result-{{ provider.configured.pk }}">
+                            <span class="badge test-badge"></span>
+                        </div>
+                        {% else %}
+                        <a href="{% url 'ai_admin:provider_create_type' provider=provider.key %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus-lg"></i> Configure
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Capabilities Section -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-lightning-charge me-2"></i>Capabilities</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for cap in capabilities %}
+            <div class="col-md-4">
+                <div class="card capability-card h-100 {% if cap.is_enabled %}enabled{% endif %}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">
+                                {% if cap.capability == 'messaging' %}
+                                <i class="bi bi-chat-dots me-2"></i>
+                                {% elif cap.capability == 'workorders' %}
+                                <i class="bi bi-tools me-2"></i>
+                                {% elif cap.capability == 'agents' %}
+                                <i class="bi bi-robot me-2"></i>
+                                {% endif %}
+                                {{ cap.get_capability_display }}
+                            </h6>
+                            <span class="coming-soon">Coming Soon</span>
+                        </div>
+                        <p class="text-muted small mb-3">
+                            {% if cap.capability == 'messaging' %}
+                            AI-powered responses for tenant communications.
+                            {% elif cap.capability == 'workorders' %}
+                            Intelligent work order routing and prioritization.
+                            {% elif cap.capability == 'agents' %}
+                            Autonomous AI agents for property management tasks.
+                            {% endif %}
+                        </p>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" disabled {% if cap.is_enabled %}checked{% endif %}>
+                            <label class="form-check-label text-muted">
+                                {% if cap.is_enabled %}Enabled{% else %}Disabled{% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Test connection buttons
+    document.querySelectorAll('.test-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const providerId = this.dataset.providerId;
+            const url = this.dataset.url;
+            const resultDiv = document.getElementById('test-result-' + providerId);
+            const badge = resultDiv.querySelector('.test-badge');
+
+            // Show loading
+            this.disabled = true;
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing...';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultDiv.classList.add('show');
+                if (data.success) {
+                    badge.className = 'badge bg-success';
+                    badge.textContent = data.message;
+                } else {
+                    badge.className = 'badge bg-danger';
+                    badge.textContent = data.message;
+                }
+            })
+            .catch(err => {
+                resultDiv.classList.add('show');
+                badge.className = 'badge bg-danger';
+                badge.textContent = 'Connection failed';
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-lightning"></i> Test';
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

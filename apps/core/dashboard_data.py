@@ -120,6 +120,27 @@ def get_app_tiles():
             gradient="teal",
             keywords=["sign", "esign", "signature", "execute"],
         ),
+        AppTile(
+            id="onboarding",
+            name="Tenant Onboarding",
+            description="Move-in process",
+            icon="bi-person-plus",
+            url="tenant_lifecycle_admin:admin_session_list",
+            category="leases",
+            gradient="teal",
+            badge_func=lambda req: _get_active_onboarding_sessions(),
+            keywords=["onboard", "move-in", "new tenant", "invite"],
+        ),
+        AppTile(
+            id="onboarding_templates",
+            name="Onboarding Templates",
+            description="Configure onboarding",
+            icon="bi-clipboard-check",
+            url="tenant_lifecycle_admin:admin_template_list",
+            category="leases",
+            gradient="teal",
+            keywords=["templates", "configuration", "setup"],
+        ),
         # ===== Billing & Payments =====
         AppTile(
             id="invoices",
@@ -435,6 +456,18 @@ def _get_emergency_workorders():
             .exclude(status__in=["completed", "closed"])
             .count()
         )
+    except Exception:
+        return 0
+
+
+def _get_active_onboarding_sessions():
+    """Get count of active onboarding sessions (in progress)."""
+    try:
+        from apps.tenant_lifecycle.models import OnboardingSession
+
+        return OnboardingSession.objects.filter(
+            status__in=["invited", "started", "in_progress"]
+        ).count()
     except Exception:
         return 0
 

@@ -84,3 +84,32 @@ def add_prefix(field, prefix):
         return ""
     # Return the field as-is since Django form fields already handle their own rendering
     return field
+
+
+@register.filter
+def concat(value, arg):
+    """Concatenate two strings."""
+    return str(value) + str(arg)
+
+
+@register.filter
+def get_form_field(form, field_name):
+    """Get a form field by name, safely handling missing fields."""
+    try:
+        return form[field_name]
+    except (KeyError, TypeError):
+        return ""
+
+
+@register.simple_tag
+def form_field(form, *parts):
+    """
+    Get a form field by constructing the name from parts.
+
+    Usage: {% form_field step_form key "_enabled" %}
+    """
+    field_name = "".join(str(p) for p in parts)
+    try:
+        return form[field_name]
+    except (KeyError, TypeError):
+        return ""
