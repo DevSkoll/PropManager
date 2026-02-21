@@ -37,7 +37,11 @@
                     <dd class="col-sm-7">
                         <span class="badge bg-success">{{ current_lease.get_status_display }}</span>
                         {% if current_lease.signature_status == "executed" %}
-                        <span class="badge bg-info"><i class="bi bi-pen"></i> Signed</span>
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Signed</span>
+                        {% elif current_lease.signature_status == "pending" or current_lease.signature_status == "partial" %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-pen"></i> Signature Required</span>
+                        {% elif current_lease.signature_status == "draft" %}
+                        <span class="badge bg-secondary"><i class="bi bi-file-earmark"></i> Not Sent</span>
                         {% endif %}
                     </dd>
                 </dl>

@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.core.decorators import admin_required, tenant_required
@@ -84,7 +85,12 @@ def tenant_otp_verify(request):
             login(request, user, backend="apps.accounts.backends.PasswordlessOTPBackend")
             request.session.pop("otp_user_id", None)
             request.session.pop("otp_delivery_method", None)
-            next_url = request.GET.get("next", "accounts_tenant:tenant_dashboard")
+            next_url = request.GET.get("next", "")
+            # Validate redirect URL to prevent open redirect attacks
+            if not next_url or not url_has_allowed_host_and_scheme(
+                next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+            ):
+                next_url = "accounts_tenant:tenant_dashboard"
             messages.success(request, f"Welcome back, {user.get_full_name() or user.username}!")
             return redirect(next_url)
         else:

@@ -20,6 +20,25 @@
         </div>
     </div>
 </div>
+
+{% if active_lease.signature_status != "executed" %}
+<div class="alert alert-warning mb-4 d-flex align-items-center" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-3" style="font-size: 1.5rem;"></i>
+    <div class="flex-grow-1">
+        <strong>Action Required:</strong> Your lease has not been signed.
+        {% if active_lease.signature_status == "pending" or active_lease.signature_status == "partial" %}
+        Please sign your lease to complete the agreement.
+        {% else %}
+        Your property manager will send the lease for signature soon.
+        {% endif %}
+    </div>
+    {% if active_lease.signature_status == "pending" or active_lease.signature_status == "partial" %}
+    <a href="{% url 'leases_tenant:lease_detail' %}" class="btn btn-warning ms-3">
+        <i class="bi bi-pen me-1"></i>Sign Lease
+    </a>
+    {% endif %}
+</div>
+{% endif %}
 {% endif %}
 
 <div class="row g-4">

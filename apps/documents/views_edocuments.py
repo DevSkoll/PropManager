@@ -433,10 +433,23 @@ def admin_edoc_assign_signers(request, pk):
 
         form = EDocumentSendForm(initial=initial, edoc=edoc, required_roles=required_roles)
 
+    # Build user data for JavaScript auto-fill
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    all_users = User.objects.filter(is_active=True, role__in=["tenant", "admin", "manager"])
+    user_data = {
+        str(user.pk): {
+            "name": user.get_full_name() or user.username,
+            "email": user.email,
+        }
+        for user in all_users
+    }
+
     context = {
         "edoc": edoc,
         "form": form,
         "required_roles": required_roles,
+        "user_data_json": json.dumps(user_data),
     }
     return render(request, "documents/admin_edoc_assign_signers.html", context)
 

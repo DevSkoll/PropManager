@@ -145,6 +145,18 @@ class LeaseForm(forms.ModelForm):
                     "Please provide at least a first or last name for the prospective tenant."
                 )
 
+        # Validate lease dates
+        start_date = cleaned_data.get("start_date")
+        end_date = cleaned_data.get("end_date")
+        if start_date and end_date and end_date < start_date:
+            self.add_error("end_date", "End date cannot be before start date.")
+
+        # Validate move dates
+        move_in = cleaned_data.get("move_in_date")
+        move_out = cleaned_data.get("move_out_date")
+        if move_in and move_out and move_out < move_in:
+            self.add_error("move_out_date", "Move-out date cannot be before move-in date.")
+
         return cleaned_data
 
 
@@ -171,6 +183,14 @@ class LeaseOccupantForm(forms.ModelForm):
             "move_out_date": forms.DateInput(attrs={"type": "date"}),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        move_in = cleaned_data.get("move_in_date")
+        move_out = cleaned_data.get("move_out_date")
+        if move_in and move_out and move_out < move_in:
+            raise forms.ValidationError("Move-out date cannot be before move-in date.")
+        return cleaned_data
+
 
 class LeasePetForm(forms.ModelForm):
     class Meta:
@@ -184,6 +204,18 @@ class LeasePetForm(forms.ModelForm):
             "notes": forms.Textarea(attrs={"rows": 2}),
         }
 
+    def clean_pet_deposit(self):
+        value = self.cleaned_data.get("pet_deposit")
+        if value is not None and value < 0:
+            raise forms.ValidationError("Pet deposit cannot be negative.")
+        return value
+
+    def clean_monthly_pet_rent(self):
+        value = self.cleaned_data.get("monthly_pet_rent")
+        if value is not None and value < 0:
+            raise forms.ValidationError("Monthly pet rent cannot be negative.")
+        return value
+
 
 class LeaseFeeForm(forms.ModelForm):
     class Meta:
@@ -195,6 +227,12 @@ class LeaseFeeForm(forms.ModelForm):
         widgets = {
             "description": forms.Textarea(attrs={"rows": 2}),
         }
+
+    def clean_amount(self):
+        value = self.cleaned_data.get("amount")
+        if value is not None and value < 0:
+            raise forms.ValidationError("Fee amount cannot be negative.")
+        return value
 
 
 class LeaseSignatureForm(forms.ModelForm):

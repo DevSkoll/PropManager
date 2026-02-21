@@ -190,6 +190,7 @@ def admin_invoice_generate_batch(request):
 
             created_count = 0
             skipped_count = 0
+            failed_leases = []
 
             with transaction.atomic():
                 for lease in active_leases:
@@ -207,14 +208,29 @@ def admin_invoice_generate_batch(request):
                             created_by=request.user,
                         )
                         created_count += 1
-                    except Exception:
+                    except Exception as e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.exception(
+                            "Failed to create invoice for lease %s: %s",
+                            lease.pk, str(e)
+                        )
                         skipped_count += 1
+                        failed_leases.append(f"{lease.tenant.get_full_name() if lease.tenant else 'Unknown'}: {str(e)}")
 
-            messages.success(
-                request,
-                f"Batch generation complete: {created_count} invoices created, "
-                f"{skipped_count} skipped (already exist).",
-            )
+            if failed_leases:
+                messages.warning(
+                    request,
+                    f"Batch generation complete: {created_count} invoices created, "
+                    f"{skipped_count} skipped. {len(failed_leases)} failed: {', '.join(failed_leases[:3])}"
+                    + (" and more..." if len(failed_leases) > 3 else ""),
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Batch generation complete: {created_count} invoices created, "
+                    f"{skipped_count} skipped (already exist).",
+                )
             return redirect("billing_admin:invoice_list")
     else:
         form = BatchInvoiceGenerateForm()

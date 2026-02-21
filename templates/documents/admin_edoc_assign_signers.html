@@ -44,14 +44,15 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="name_{{ role }}" class="form-control"
-                                           value="{{ form.data|default_if_none:'' }}"
-                                           required>
+                                    {% with field_name="name_"|add:role %}
+                                        {{ form|get_field:field_name }}
+                                    {% endwith %}
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Email <span class="text-danger">*</span></label>
-                                    <input type="email" name="email_{{ role }}" class="form-control"
-                                           required>
+                                    {% with field_name="email_"|add:role %}
+                                        {{ form|get_field:field_name }}
+                                    {% endwith %}
                                 </div>
                             </div>
                         </div>
@@ -92,22 +93,37 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // User data for auto-fill (passed from view)
+    const userData = {{ user_data_json|safe }};
+
     // Auto-fill name and email when user is selected
     document.querySelectorAll('select[name^="signer_"]').forEach(function(select) {
         select.addEventListener('change', function() {
             const role = this.name.replace('signer_', '');
-            const option = this.options[this.selectedIndex];
+            const userId = this.value;
 
-            if (option.value) {
-                // Get user data via AJAX or from data attributes
-                // For now, just clear to let user fill manually
+            // Find the name and email inputs for this role
+            const nameInput = document.querySelector('input[name="name_' + role + '"]');
+            const emailInput = document.querySelector('input[name="email_' + role + '"]');
+
+            if (userId && userData[userId]) {
+                // Auto-fill from user data
+                if (nameInput) {
+                    nameInput.value = userData[userId].name;
+                }
+                if (emailInput) {
+                    emailInput.value = userData[userId].email;
+                }
             }
         });
     });
 
-    // Add form-control class
+    // Add Bootstrap form classes
     document.querySelectorAll('select').forEach(function(el) {
         el.classList.add('form-select');
+    });
+    document.querySelectorAll('input[type="text"], input[type="email"]').forEach(function(el) {
+        el.classList.add('form-control');
     });
 });
 </script>

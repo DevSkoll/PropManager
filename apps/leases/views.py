@@ -58,9 +58,13 @@ def admin_lease_create(request):
 def admin_lease_detail(request, pk):
     lease = get_object_or_404(
         Lease.objects.select_related("unit", "unit__property", "tenant")
-        .prefetch_related("terms", "occupants", "pets", "fees", "signatures"),
+        .prefetch_related("terms", "occupants", "pets", "fees", "signatures", "documents", "edocuments"),
         pk=pk
     )
+    # Get linked documents and eDocuments
+    documents = lease.documents.filter(deleted_at__isnull=True).order_by("-created_at")
+    edocuments = lease.edocuments.all().order_by("-created_at")
+
     return render(request, "leases/admin_lease_detail.html", {
         "lease": lease,
         "terms": lease.terms.all(),
@@ -68,6 +72,8 @@ def admin_lease_detail(request, pk):
         "pets": lease.pets.all(),
         "fees": lease.fees.all(),
         "signatures": lease.signatures.all(),
+        "documents": documents,
+        "edocuments": edocuments,
     })
 
 
@@ -183,7 +189,7 @@ def tenant_lease_detail(request, pk=None):
     if pk:
         lease = get_object_or_404(
             Lease.objects.select_related("unit", "unit__property")
-            .prefetch_related("terms", "occupants", "pets", "fees", "documents"),
+            .prefetch_related("terms", "occupants", "pets", "fees", "documents", "signatures"),
             pk=pk,
             tenant=request.user,
         )
@@ -192,17 +198,34 @@ def tenant_lease_detail(request, pk=None):
         lease = Lease.objects.filter(
             tenant=request.user, status__in=["active", "renewed"]
         ).select_related("unit", "unit__property").prefetch_related(
-            "terms", "occupants", "pets", "fees", "documents"
+            "terms", "occupants", "pets", "fees", "documents", "signatures"
         ).first()
 
     if not lease:
         return render(request, "leases/tenant_lease_detail.html", {"lease": None})
 
     # Get documents linked to this lease
-    from apps.documents.models import Document
+    from apps.documents.models import Document, EDocument
     documents = Document.objects.filter(
         lease=lease, deleted_at__isnull=True, is_tenant_visible=True
     ).order_by("-created_at")
+    edocuments = EDocument.objects.filter(
+        lease=lease, status="completed"
+    ).order_by("-completed_at")
+
+    # Check if tenant has a pending signature
+    pending_signature = LeaseSignature.objects.filter(
+        lease=lease,
+        signer_email=request.user.email,
+        signed_at__isnull=True,
+    ).first()
+
+    # Check if tenant has already signed
+    tenant_signature = LeaseSignature.objects.filter(
+        lease=lease,
+        signer_email=request.user.email,
+        signed_at__isnull=False,
+    ).first()
 
     return render(request, "leases/tenant_lease_detail.html", {
         "lease": lease,
@@ -211,12 +234,103 @@ def tenant_lease_detail(request, pk=None):
         "pets": lease.pets.all(),
         "fees": lease.fees.all(),
         "documents": documents,
+        "edocuments": edocuments,
+        "pending_signature": pending_signature,
+        "tenant_signature": tenant_signature,
     })
+
+
+@tenant_required
+@require_POST
+def tenant_sign_lease(request, pk):
+    """Allow tenant to sign their lease from the detail page."""
+    lease = get_object_or_404(Lease, pk=pk, tenant=request.user)
+
+    # Find tenant's pending signature record
+    signature = LeaseSignature.objects.filter(
+        lease=lease,
+        signer_email=request.user.email,
+        signed_at__isnull=True,
+    ).first()
+
+    if not signature:
+        messages.error(request, "No pending signature found for this lease.")
+        return redirect("leases_tenant:lease_detail")
+
+    # Validate form data
+    typed_name = request.POST.get("typed_name", "").strip()
+    signature_data = request.POST.get("signature_data", "")
+    agree_to_terms = request.POST.get("agree_to_terms")
+
+    if not agree_to_terms:
+        messages.error(request, "You must agree to the lease terms.")
+        return redirect("leases_tenant:lease_detail_by_id", pk=pk)
+
+    if not typed_name:
+        messages.error(request, "Please type your full name to confirm.")
+        return redirect("leases_tenant:lease_detail_by_id", pk=pk)
+
+    if typed_name.lower() != signature.signer_name.lower():
+        messages.error(request, f"Typed name must match '{signature.signer_name}'.")
+        return redirect("leases_tenant:lease_detail_by_id", pk=pk)
+
+    if not signature_data:
+        messages.error(request, "Please draw your signature.")
+        return redirect("leases_tenant:lease_detail_by_id", pk=pk)
+
+    # Record signature
+    signature.signature_image = signature_data
+    signature.signed_at = timezone.now()
+    signature.ip_address = get_client_ip(request)
+    signature.user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
+    signature.save()
+
+    # Update lease status
+    update_lease_signature_status(lease)
+
+    messages.success(request, "Your signature has been recorded. Thank you!")
+    return redirect("leases_tenant:lease_detail_by_id", pk=pk)
 
 
 # =============================================================================
 # Admin Signature Workflow Views
 # =============================================================================
+
+def update_lease_signature_status(lease):
+    """Update lease signature_status based on collected signatures."""
+    signatures = lease.signatures.all()
+    total = signatures.count()
+    signed = signatures.filter(signed_at__isnull=False).count()
+
+    if total == 0:
+        return
+
+    if signed == total:
+        lease.signature_status = "executed"
+        lease.fully_executed_at = timezone.now()
+    elif signed > 0:
+        lease.signature_status = "partial"
+
+    lease.save(update_fields=["signature_status", "fully_executed_at"])
+
+
+@admin_required
+@require_POST
+def admin_mark_lease_signed(request, pk):
+    """Manually mark a lease as fully signed (for physical/external signatures)."""
+    lease = get_object_or_404(Lease, pk=pk)
+
+    if lease.signature_status == "executed":
+        messages.info(request, "This lease is already marked as signed.")
+        return redirect("leases_admin:lease_detail", pk=pk)
+
+    lease.signature_status = "executed"
+    lease.fully_executed_at = timezone.now()
+    lease.save(update_fields=["signature_status", "fully_executed_at"])
+
+    messages.success(request, "Lease has been marked as signed.")
+    return redirect("leases_admin:lease_detail", pk=pk)
+
 
 @admin_required
 def admin_send_for_signature(request, pk):
@@ -269,12 +383,43 @@ def admin_send_for_signature(request, pk):
         lease.signature_requested_at = timezone.now()
         lease.save()
 
-        # TODO: Send email notifications to signers with signing links
+        # Send email notifications to signers with signing links
+        from apps.core.services.email import send_email
+        from django.urls import reverse
+
+        email_count = 0
+        for sig in lease.signatures.filter(signed_at__isnull=True):
+            signing_url = request.build_absolute_uri(
+                reverse("leases_signing:signing_page", kwargs={"token": sig.signing_token})
+            )
+            property_name = lease.unit.property.name if lease.unit else "your property"
+            unit_number = lease.unit.unit_number if lease.unit else ""
+
+            subject = f"Lease Signature Required - {property_name}"
+            message = (
+                f"Hello {sig.signer_name},\n\n"
+                f"You have been requested to sign the lease agreement for:\n"
+                f"Property: {property_name}\n"
+                f"Unit: {unit_number}\n\n"
+                f"Please click the link below to review and sign the lease:\n"
+                f"{signing_url}\n\n"
+                f"This link will expire in 7 days.\n\n"
+                f"If you have any questions, please contact your property manager.\n\n"
+                f"Thank you,\nPropManager"
+            )
+
+            if send_email(
+                subject=subject,
+                message=message,
+                recipient_list=[sig.signer_email],
+                source="lease_signing",
+            ):
+                email_count += 1
 
         messages.success(
             request,
             f"Lease sent for signatures to {len(signers)} signer(s). "
-            "Email notifications will be sent with signing links."
+            f"{email_count} email notification(s) sent."
         )
         return redirect("leases_admin:lease_detail", pk=lease.pk)
 
@@ -353,7 +498,29 @@ def submit_signature(request, token):
         lease.signature_status = "executed"
         lease.fully_executed_at = timezone.now()
         lease.save()
-        # TODO: Generate signed PDF and notify all parties
+
+        # Notify all parties that the lease is fully signed
+        from apps.core.services.email import send_email
+        property_name = lease.unit.property.name if lease.unit else "your property"
+        unit_number = lease.unit.unit_number if lease.unit else ""
+
+        for sig in lease.signatures.all():
+            subject = f"Lease Fully Executed - {property_name}"
+            message = (
+                f"Hello {sig.signer_name},\n\n"
+                f"Great news! All signatures have been collected and the lease agreement "
+                f"for {property_name} (Unit {unit_number}) is now fully executed.\n\n"
+                f"Signed on: {lease.fully_executed_at.strftime('%B %d, %Y')}\n\n"
+                f"Please keep this email for your records. A copy of the signed lease "
+                f"will be available in your tenant portal.\n\n"
+                f"Thank you,\nPropManager"
+            )
+            send_email(
+                subject=subject,
+                message=message,
+                recipient_list=[sig.signer_email],
+                source="lease_completion",
+            )
     else:
         # Still waiting on signatures
         lease.signature_status = "partial"
