@@ -1,0 +1,636 @@
+/**
+ * PropManager Admin Navigation & Launcher Styles
+ * AWS-inspired app launcher with search and recent apps
+ */
+
+/* ============================================
+   CSS Variables
+   ============================================ */
+:root {
+    --nav-bg: #1a1a2e;
+    --nav-border: #2d2d44;
+    --nav-hover: #2d2d44;
+    --launcher-bg: #f8f9fa;
+    --launcher-card-bg: #ffffff;
+    --search-bg: rgba(255, 255, 255, 0.1);
+    --search-focus-bg: rgba(255, 255, 255, 0.15);
+
+    /* Gradients for app tiles */
+    --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-blue: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --gradient-teal: linear-gradient(135deg, #38ef7d 0%, #11998e 100%);
+    --gradient-green: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --gradient-orange: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --gradient-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --gradient-indigo: linear-gradient(135deg, #5f72bd 0%, #9b23ea 100%);
+    --gradient-cyan: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-gray: linear-gradient(135deg, #868f96 0%, #596164 100%);
+    --gradient-red: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+/* ============================================
+   Top Navigation Bar
+   ============================================ */
+.admin-topnav {
+    background: var(--nav-bg) !important;
+    border-bottom: 1px solid var(--nav-border);
+    padding: 0.5rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.admin-topnav .navbar-brand {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Launcher Button */
+.launcher-btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: transparent;
+    border: 1px solid transparent;
+}
+
+.launcher-btn:hover,
+.launcher-btn:focus {
+    background: var(--nav-hover);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.launcher-btn i {
+    font-size: 1.25rem;
+}
+
+/* Nav Icon Buttons */
+.nav-icon-btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: transparent;
+    border: 1px solid transparent;
+}
+
+.nav-icon-btn:hover,
+.nav-icon-btn:focus {
+    background: var(--nav-hover);
+}
+
+.nav-user-btn {
+    padding: 0.375rem 0.75rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: transparent;
+    border: 1px solid transparent;
+}
+
+.nav-user-btn:hover,
+.nav-user-btn:focus {
+    background: var(--nav-hover);
+}
+
+/* ============================================
+   Global Search (Top Nav)
+   ============================================ */
+.nav-search-container {
+    position: relative;
+    flex: 1;
+    max-width: 500px;
+    margin: 0 2rem;
+}
+
+.nav-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.nav-search .search-icon {
+    position: absolute;
+    left: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.nav-search .form-control {
+    background: var(--search-bg);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #fff;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.nav-search .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.nav-search .form-control:focus {
+    background: var(--search-focus-bg);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+    outline: none;
+}
+
+.search-shortcut {
+    position: absolute;
+    right: 12px;
+    display: flex;
+    gap: 4px;
+    pointer-events: none;
+}
+
+.search-shortcut kbd {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: inherit;
+}
+
+/* Search Results Dropdown */
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    margin-top: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    display: none;
+    z-index: 1050;
+}
+
+.search-results.show {
+    display: block;
+}
+
+.search-results .search-result-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: #333;
+    transition: background 0.15s ease;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.search-results .search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-results .search-result-item:hover {
+    background: #f8f9fa;
+}
+
+.search-results .search-result-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.search-results .search-result-info {
+    flex: 1;
+}
+
+.search-results .search-result-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.search-results .search-result-category {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.search-results .search-no-results {
+    padding: 24px;
+    text-align: center;
+    color: #6c757d;
+}
+
+/* Search Category Headers */
+.search-category {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.search-category:last-child {
+    border-bottom: none;
+}
+
+.search-category-header {
+    padding: 8px 16px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+}
+
+.search-category-header i {
+    font-size: 0.8rem;
+}
+
+.search-category .search-result-item:last-child {
+    border-bottom: none;
+}
+
+/* Focus state for keyboard navigation */
+.search-results .search-result-item:focus {
+    outline: none;
+    background: #e9ecef;
+}
+
+/* Non-gradient icon fallback */
+.search-results .search-result-icon:not([class*="gradient-"]) {
+    background: #6c757d;
+}
+
+/* ============================================
+   Recent Apps Dropdown
+   ============================================ */
+.recent-apps-dropdown {
+    min-width: 280px;
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.recent-apps-dropdown .dropdown-header {
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+}
+
+.recent-apps-dropdown .recent-app-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    text-decoration: none;
+    color: #333;
+    transition: background 0.15s ease;
+}
+
+.recent-apps-dropdown .recent-app-item:hover {
+    background: #f8f9fa;
+}
+
+.recent-apps-dropdown .recent-app-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.recent-apps-dropdown .recent-app-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.recent-apps-dropdown .recent-app-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-left: auto;
+}
+
+/* ============================================
+   App Launcher Modal
+   ============================================ */
+.launcher-modal {
+    background: var(--launcher-bg);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.launcher-modal .modal-header {
+    background: #fff;
+    padding: 1.5rem;
+}
+
+.launcher-header .modal-title {
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.launcher-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.launcher-search i {
+    position: absolute;
+    left: 16px;
+    color: #6c757d;
+    pointer-events: none;
+}
+
+.launcher-search .form-control {
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.launcher-search .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.launcher-modal .modal-body {
+    padding: 1rem 1.5rem 1.5rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+/* Launcher Sections */
+.launcher-section {
+    margin-bottom: 1.5rem;
+}
+
+.launcher-section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+/* App Grid */
+.launcher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+}
+
+/* App Tile */
+.app-tile {
+    background: var(--launcher-card-bg);
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.app-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.app-tile:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
+.app-tile-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+    color: #fff;
+    font-size: 1.25rem;
+    transition: transform 0.2s ease;
+}
+
+.app-tile:hover .app-tile-icon {
+    transform: scale(1.1);
+}
+
+.app-tile-name {
+    font-weight: 500;
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+.app-tile-desc {
+    font-size: 0.7rem;
+    color: #6c757d;
+    line-height: 1.3;
+}
+
+/* Badge */
+.app-tile-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #dc3545;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+/* Pin Button */
+.app-tile-pin {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: transparent;
+    border: none;
+    color: #adb5bd;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.15s ease;
+}
+
+.app-tile:hover .app-tile-pin {
+    opacity: 1;
+}
+
+.app-tile-pin:hover {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.app-tile-pin.pinned {
+    opacity: 1;
+    color: #667eea;
+}
+
+/* Category Header in Launcher */
+.launcher-category {
+    margin-bottom: 1.5rem;
+}
+
+.launcher-category-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.launcher-category-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    font-size: 0.9rem;
+}
+
+.launcher-category-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Gradient Classes */
+.gradient-purple { background: var(--gradient-purple); }
+.gradient-blue { background: var(--gradient-blue); }
+.gradient-teal { background: var(--gradient-teal); }
+.gradient-green { background: var(--gradient-green); }
+.gradient-orange { background: var(--gradient-orange); }
+.gradient-pink { background: var(--gradient-pink); }
+.gradient-indigo { background: var(--gradient-indigo); }
+.gradient-cyan { background: var(--gradient-cyan); }
+.gradient-gray { background: var(--gradient-gray); }
+.gradient-red { background: var(--gradient-red); }
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+@media (max-width: 992px) {
+    .nav-search-container {
+        display: none;
+    }
+
+    .launcher-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .app-tile {
+        padding: 0.75rem;
+    }
+
+    .app-tile-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+
+    .app-tile-desc {
+        display: none;
+    }
+}
+
+@media (max-width: 576px) {
+    .admin-topnav {
+        padding: 0.5rem;
+    }
+
+    .launcher-modal .modal-body {
+        padding: 1rem;
+    }
+
+    .launcher-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+.launcher-modal .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.launcher-modal .modal-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.launcher-modal .modal-body::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.launcher-modal .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* ============================================
+   Animation
+   ============================================ */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.launcher-modal.show .app-tile {
+    animation: fadeInUp 0.3s ease forwards;
+}
+
+.launcher-modal.show .launcher-category:nth-child(1) .app-tile { animation-delay: 0.05s; }
+.launcher-modal.show .launcher-category:nth-child(2) .app-tile { animation-delay: 0.1s; }
+.launcher-modal.show .launcher-category:nth-child(3) .app-tile { animation-delay: 0.15s; }
+.launcher-modal.show .launcher-category:nth-child(4) .app-tile { animation-delay: 0.2s; }

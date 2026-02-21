@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from apps.core import views_api
 
 app_name = "accounts_admin"
 
@@ -12,4 +13,6 @@ urlpatterns = [
     path("tenants/", views.admin_tenant_list, name="admin_tenant_list"),
     path("settings/", views.admin_settings, name="admin_settings"),
     path("logout/", views.user_logout, name="admin_logout"),
+    # API endpoints
+    path("api/search/", views_api.global_search_api, name="admin_global_search"),
 ]

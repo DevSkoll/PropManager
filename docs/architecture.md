@@ -37,7 +37,7 @@ No accounts needed. Admins generate unique token URLs when assigning contractors
 
 ## System Design
 
-PropManager is a Django monolith with 11 apps, each owning a specific domain. The application serves three distinct user types through separate portals.
+PropManager is a Django monolith with 12 apps, each owning a specific domain. The application serves three distinct user types through separate portals.
 
 ```
                     ┌─────────────────────────────────────────┐
@@ -55,10 +55,11 @@ PropManager is a Django monolith with 11 apps, each owning a specific domain. Th
                     │  └────┬─────┘ └────┬─────┘ └────┬─────┘ │
                     │       │            │            │        │
                     │  ┌────▼────────────▼────────────▼────┐  │
-                    │  │        10 Django Apps              │  │
+                    │  │        12 Django Apps              │  │
                     │  │  accounts · properties · leases    │  │
                     │  │  billing · workorders · comms      │  │
                     │  │  documents · weather · marketing   │  │
+                    │  │  tenant_lifecycle · rewards        │  │
                     │  │  core (services, middleware)       │  │
                     │  └────┬──────────────────────────┬───┘  │
                     │       │                          │       │
@@ -370,3 +371,218 @@ Django-Q2 is used for async task processing with ORM-backed broker:
 **Daily task chain order:** `generate_monthly_invoices` → `apply_late_fees` → `auto_apply_prepayment_credits` → `auto_apply_rewards_to_invoices` → `evaluate_all_streak_rewards` (monthly only)
 
 Start the worker: `python manage.py qcluster`
+
+---
+
+## Tenant Lifecycle (`apps/tenant_lifecycle`)
+
+The tenant lifecycle app handles the complete onboarding process for new tenants.
+
+### Data Model - 8 models
+
+```
+OnboardingTemplate (per property)
+├── name, property, is_active, is_default
+├── steps_config: JSON (enabled steps, order, requirements)
+├── welcome_message, property_rules: Text
+├── invitation_email_subject/body, sms_body
+├── link_expiry_days: Integer (default 14)
+├──→ OnboardingTemplateDocument (1:N) - required documents
+└──→ OnboardingTemplateFee (1:N) - required fees/deposits
+
+OnboardingSession
+├── template, unit, lease (nullable), tenant (created during)
+├── prospective_email, phone, first_name, last_name
+├── status: invited | started | completed | expired | cancelled
+├── current_step, steps_completed (JSON)
+├── access_token: unique 48-char token
+├── token_expires_at, invitation_sent_at, completed_at
+├──→ OnboardingStepLog (1:N) - audit trail per step
+├──→ OnboardingPayment (1:N) - payment tracking
+└──→ OnboardingDocument (1:N) - document tracking
+
+TenantVehicle
+├── tenant, lease, onboarding_session
+├── vehicle_type, make, model, year, color
+├── license_plate, state, parking_space
+
+TenantEmployment
+├── tenant, lease
+├── employment_type, employer_name, job_title
+├── gross_income, income_frequency
+
+TenantInsurance
+├── tenant, lease
+├── provider_name, policy_number, coverage_amount
+├── start_date, end_date, policy_document
+```
+
+### Onboarding Steps
+
+| Step | Description | Default |
+|------|-------------|---------|
+| Account Creation | OTP verification + account setup | Required |
+| Personal Info | Name, DOB, phone, contact preference | Required |
+| Emergency Contacts | Primary + secondary contacts | Required |
+| Occupants | Additional household members | Optional |
+| Pets | Pet registration with details | Optional |
+| Vehicles | Vehicle registration for parking | Optional |
+| Employment | Income/employer verification | Optional |
+| Insurance | Renter's insurance policy | Optional |
+| Documents | eSigning leases and agreements | Required |
+| Payments | Deposits, fees, first month rent | Required |
+| Welcome | Property info, rules, move-in checklist | Required |
+
+### Onboarding Presets
+
+15 pre-configured templates for common scenarios:
+
+**Standard Templates:**
+- Standard Residential
+- Pet-Friendly Property
+- Luxury/High-End
+- Senior Living (55+)
+- Student Housing
+- Low-Income/Section 8
+
+**Specialized Templates:**
+- Corporate Relocation
+- Military Housing (PCS/BAH)
+- Roommate/Shared Living
+- Lease Renewal (Existing Tenant)
+- Month-to-Month Conversion
+- Vacation/Short-Term Rental
+- Affordable Housing (LIHTC)
+- Emergency/Rapid Housing
+- Furnished Corporate
+
+---
+
+## eDocuments (`apps/documents`)
+
+Template-based electronic document system with markdown rendering and e-signatures.
+
+### Data Model
+
+```
+EDocumentTemplate
+├── name, template_type, description
+├── content: Markdown with {{variables}} and [SIGNATURE:Role] tags
+├── property (nullable - null = global)
+├── is_active
+
+EDocument
+├── title, content (frozen markdown)
+├── template (nullable - source template)
+├── property, lease (nullable associations)
+├── status: draft | pending | partial | completed | cancelled
+├──→ EDocumentSigner (1:N) - signers
+└──→ EDocumentSignature (1:N) - collected signatures
+
+EDocumentSigner
+├── document, user (nullable), email, role
+├── signing_order, signing_token, token_expires_at
+├── viewed_at, signed_at
+
+EDocumentSignature
+├── signer, signature_image (base64), typed_name
+├── signed_at, ip_address
+```
+
+### Template Variables
+
+Templates support variable substitution:
+
+| Variable | Description |
+|----------|-------------|
+| `{{tenant_name}}` | Tenant's full name |
+| `{{tenant_email}}` | Tenant's email |
+| `{{property_name}}` | Property name |
+| `{{property_address}}` | Full property address |
+| `{{unit_number}}` | Unit identifier |
+| `{{monthly_rent}}` | Lease rent amount |
+| `{{security_deposit}}` | Security deposit |
+| `{{lease_start_date}}` | Lease start date |
+| `{{lease_end_date}}` | Lease end date |
+| `{{today}}` | Current date |
+
+### Signature Tags
+
+```markdown
+[SIGNATURE:Tenant]
+[SIGNATURE:Landlord]
+[SIGNATURE:Cosigner]
+[SIGNATURE:Witness]
+```
+
+---
+
+## Admin Navigation System
+
+AWS-style app launcher with global search across all entities.
+
+### Components
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ [≡]  PropManager     [Search apps, tenants...]  [🕐][👤] │
+└──────────────────────────────────────────────────────────┘
+  ↓                            ↓                     ↓
+Launcher Modal          Global Search          User Menu
+  - Pinned Apps          - Apps (instant)      - Settings
+  - Recent Apps          - Tenants             - Logout
+  - Categories           - Properties
+    ├─ Dashboard         - Units
+    ├─ Properties        - Leases
+    ├─ Tenants           - Documents
+    ├─ Leases            - Work Orders
+    ├─ Billing           - Invoices
+    ├─ Maintenance
+    ├─ Communications
+    ├─ Documents
+    └─ Settings
+```
+
+### App Tiles
+
+36 app tiles organized into 10 categories with:
+- Gradient icons
+- Badge counts (notifications, action items)
+- Search keywords
+- Pin/recent tracking via localStorage
+
+### Global Search Architecture
+
+**Hybrid Search:**
+- Client-side: App tiles (instant, 50ms)
+- Server-side: Database entities (debounced, 250ms)
+
+**API Endpoint:** `GET /admin-portal/api/search/?q=<query>`
+
+**Priority Order:**
+1. Apps
+2. Tenants
+3. Properties
+4. Units
+5. Leases
+6. Documents
+7. Work Orders
+8. Invoices
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl/Cmd + K` | Focus global search |
+| `Ctrl/Cmd + /` | Open app launcher |
+| `↓` / `↑` | Navigate search results |
+| `Enter` | Select result |
+| `Escape` | Close search/launcher |
+
+### Context Processor
+
+`apps.core.context_processors.app_launcher_context` provides:
+- `app_tiles_json`: Serialized app tiles with resolved URLs
+- `category_info_json`: Category metadata for display
+
+Only loaded for authenticated admin users to minimize overhead.
