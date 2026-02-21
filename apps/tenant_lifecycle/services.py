@@ -772,7 +772,7 @@ Thank you!
                 invoice=invoice,
                 charge_type=fee.fee_type,
                 description=fee.name,
-                amount=amount,
+                unit_price=amount,
                 quantity=1,
             )
 
