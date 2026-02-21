@@ -1,0 +1,25 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Already Complete{% endblock %}
+
+{% block content %}
+<div class="onboarding-card text-center">
+    <div class="onboarding-card-body py-5">
+        <span class="display-3 text-success">
+            <i class="bi bi-check-circle"></i>
+        </span>
+        <h2 class="h4 mt-4 mb-3">You've Already Completed Onboarding!</h2>
+        <p class="text-muted mb-4">
+            Your move-in process was completed on {{ session.completed_at|date:"F d, Y" }}.<br>
+            You can access your tenant portal to manage your account.
+        </p>
+
+        <div class="d-grid gap-2 col-md-6 mx-auto">
+            <a href="{% url 'tenant_dashboard' %}" class="btn btn-onboarding">
+                <i class="bi bi-house-door me-2"></i>
+                Go to Tenant Portal
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

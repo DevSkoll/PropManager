@@ -1,0 +1,121 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Vehicle Registration{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header">
+        <h2 class="h4 mb-1">
+            <i class="bi bi-car-front me-2 text-primary"></i>
+            {{ step_name }}
+        </h2>
+        <p class="text-muted mb-0">Register vehicles for parking</p>
+    </div>
+
+    <div class="onboarding-card-body">
+        {% if vehicles %}
+        <div class="mb-4">
+            <h6 class="text-muted mb-3">Registered Vehicles</h6>
+            {% for vehicle in vehicles %}
+            <div class="item-card d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</strong>
+                    {% if vehicle.is_primary %}
+                    <span class="badge bg-primary ms-2">Primary</span>
+                    {% endif %}
+                    <div class="text-muted small">
+                        {{ vehicle.color }} &bull; {{ vehicle.license_plate }} ({{ vehicle.state }})
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-danger delete-btn"
+                        onclick="deleteVehicle({{ vehicle.pk }})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="border-top pt-4">
+            {% csrf_token %}
+            <h6 class="text-muted mb-3">
+                {% if vehicles %}Add Another Vehicle{% else %}Add Vehicle{% endif %}
+            </h6>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Vehicle Type</label>
+                    {{ form.vehicle_type }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Year</label>
+                    {{ form.year }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Make</label>
+                    {{ form.make }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Model</label>
+                    {{ form.model }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Color</label>
+                    {{ form.color }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">License Plate</label>
+                    {{ form.license_plate }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">State</label>
+                    {{ form.state }}
+                </div>
+            </div>
+
+            <div class="form-check mb-3">
+                {{ form.is_primary }}
+                <label class="form-check-label">This is my primary vehicle</label>
+            </div>
+
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-plus me-1"></i>
+                Add Vehicle
+            </button>
+        </form>
+    </div>
+
+    <div class="onboarding-card-footer d-flex justify-content-between">
+        <span class="text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Skip if you don't have a vehicle
+        </span>
+        <form method="post" action="{% url 'tenant_lifecycle:onboarding_vehicles_complete' token=session.access_token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-onboarding">
+                {% if vehicles %}Continue{% else %}Skip & Continue{% endif %}
+                <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteVehicle(pk) {
+    if (confirm('Remove this vehicle?')) {
+        fetch(`{% url 'tenant_lifecycle:api_delete_vehicle' token=session.access_token pk=0 %}`.replace('/0/', '/' + pk + '/'), {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(() => location.reload());
+    }
+}
+</script>
+{% endblock %}

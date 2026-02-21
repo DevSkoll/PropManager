@@ -19,11 +19,24 @@ from .models import Lease, LeaseSignature, LeaseTerm
 @admin_required
 def admin_lease_list(request):
     leases = Lease.objects.select_related("unit", "unit__property", "tenant").all()
+
+    # Separate pending onboarding leases (no tenant assigned)
+    pending_onboarding = leases.filter(tenant__isnull=True).order_by("-created_at")
+    pending_count = pending_onboarding.count()
+
     status_filter = request.GET.get("status")
-    if status_filter:
-        leases = leases.filter(status=status_filter)
+    if status_filter == "pending_onboarding":
+        leases = pending_onboarding
+    elif status_filter:
+        leases = leases.filter(status=status_filter, tenant__isnull=False)
+    else:
+        # Default: show leases with tenants
+        leases = leases.filter(tenant__isnull=False)
+
     return render(request, "leases/admin_lease_list.html", {
         "leases": leases,
+        "pending_onboarding": pending_onboarding,
+        "pending_count": pending_count,
         "status_filter": status_filter,
         "status_choices": Lease.STATUS_CHOICES,
     })
@@ -82,6 +95,66 @@ def admin_lease_add_term(request, pk):
         messages.success(request, "Term added to lease.")
         return redirect("leases_admin:lease_detail", pk=lease.pk)
     return render(request, "leases/admin_lease_term_form.html", {"form": form, "lease": lease})
+
+
+@admin_required
+def admin_lease_start_onboarding(request, pk):
+    """Create onboarding session for a pending lease (no tenant assigned)."""
+    lease = get_object_or_404(Lease, pk=pk)
+
+    if lease.tenant:
+        messages.error(request, "This lease already has a tenant assigned.")
+        return redirect("leases_admin:lease_detail", pk=pk)
+
+    if not lease.prospective_email:
+        messages.error(
+            request,
+            "Cannot start onboarding: No email address for prospective tenant. "
+            "Please edit the lease and add a prospective email."
+        )
+        return redirect("leases_admin:lease_detail", pk=pk)
+
+    # Check if there's already an active onboarding session for this lease
+    from apps.tenant_lifecycle.models import OnboardingSession
+    existing_session = OnboardingSession.objects.filter(
+        lease=lease,
+        status__in=["pending", "in_progress"],
+    ).first()
+
+    if existing_session:
+        messages.warning(
+            request,
+            "An onboarding session already exists for this lease. "
+            "Redirecting to the existing session."
+        )
+        return redirect("tenant_lifecycle_admin:admin_session_detail", pk=existing_session.pk)
+
+    if request.method == "POST":
+        from apps.tenant_lifecycle.services import OnboardingService
+
+        try:
+            session = OnboardingService.create_session(
+                unit=lease.unit,
+                prospective_email=lease.prospective_email,
+                prospective_first_name=lease.prospective_first_name,
+                prospective_last_name=lease.prospective_last_name,
+                prospective_phone=lease.prospective_phone,
+                lease=lease,
+                created_by=request.user,
+                send_invitation=True,
+            )
+            messages.success(
+                request,
+                f"Onboarding invitation sent to {lease.prospective_email}. "
+                "The tenant will receive an email with instructions to complete onboarding."
+            )
+            return redirect("tenant_lifecycle_admin:admin_session_detail", pk=session.pk)
+        except Exception as e:
+            messages.error(request, f"Failed to create onboarding session: {e}")
+            return redirect("leases_admin:lease_detail", pk=pk)
+
+    # GET - show confirmation page
+    return render(request, "leases/admin_lease_start_onboarding.html", {"lease": lease})
 
 
 # =============================================================================

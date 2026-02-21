@@ -1,0 +1,83 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Onboarding Presets{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Onboarding Presets</h1>
+            <p class="text-muted mb-0">Ready-to-use templates for common property types</p>
+        </div>
+        <a href="{% url 'tenant_lifecycle_admin:admin_template_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>
+            Back to Templates
+        </a>
+    </div>
+
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>How to use presets:</strong> Click on any preset below to view its configuration,
+        then apply it to a property to create a new onboarding template.
+    </div>
+
+    {% for cat_key, cat in categories.items %}
+    <div class="mb-4">
+        <h5 class="text-muted mb-3">{{ cat.name }}</h5>
+        <div class="row g-3">
+            {% for preset in cat.presets %}
+            <div class="col-md-6 col-lg-4">
+                <a href="{% url 'tenant_lifecycle_admin:admin_preset_detail' pk=preset.pk %}" class="text-decoration-none">
+                    <div class="card border-0 shadow-sm h-100 preset-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="preset-icon rounded-3 bg-primary bg-opacity-10 p-3 me-3">
+                                    <i class="{{ preset.icon }} text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title mb-1">{{ preset.name }}</h5>
+                                    <span class="badge bg-secondary">{{ preset.get_category_display }}</span>
+                                </div>
+                            </div>
+                            <p class="card-text text-muted small">{{ preset.description }}</p>
+
+                            <div class="d-flex flex-wrap gap-1 mt-3">
+                                {% if preset.require_id_verification %}
+                                <span class="badge bg-info bg-opacity-10 text-info">ID Required</span>
+                                {% endif %}
+                                {% if preset.require_renters_insurance %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning">Insurance Required</span>
+                                {% endif %}
+                                {% if preset.collect_employment %}
+                                <span class="badge bg-success bg-opacity-10 text-success">Employment</span>
+                                {% endif %}
+                                {% if preset.collect_vehicles %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary">Vehicles</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <small class="text-primary">
+                                <i class="bi bi-arrow-right me-1"></i>
+                                View & Apply
+                            </small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+.preset-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.preset-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
+}
+</style>
+{% endblock %}

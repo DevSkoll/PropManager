@@ -29,6 +29,9 @@ urlpatterns = [
     path("admin-portal/", include("apps.notifications.urls_admin")),
     path("tenant/", include("apps.notifications.urls_tenant")),
     path("admin-portal/", include("apps.core.reports.urls")),
+    path("admin-portal/onboarding/", include(("apps.tenant_lifecycle.urls_admin", "tenant_lifecycle"), namespace="tenant_lifecycle_admin")),
+    path("onboard/", include(("apps.tenant_lifecycle.urls_onboarding", "tenant_lifecycle"), namespace="tenant_lifecycle")),
+    path("admin-portal/ai/", include("apps.ai.urls_admin")),
     path("", RedirectView.as_view(url="/tenant/login/", permanent=False)),
 ]
 

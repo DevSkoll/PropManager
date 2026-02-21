@@ -1,0 +1,23 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Session Cancelled{% endblock %}
+
+{% block content %}
+<div class="onboarding-card text-center">
+    <div class="onboarding-card-body py-5">
+        <span class="display-3 text-danger">
+            <i class="bi bi-x-circle"></i>
+        </span>
+        <h2 class="h4 mt-4 mb-3">This Session Has Been Cancelled</h2>
+        <p class="text-muted mb-4">
+            Your onboarding session is no longer active.<br>
+            Please contact your property manager if you believe this is an error.
+        </p>
+
+        <a href="mailto:" class="btn btn-outline-primary">
+            <i class="bi bi-envelope me-2"></i>
+            Contact Property Manager
+        </a>
+    </div>
+</div>
+{% endblock %}

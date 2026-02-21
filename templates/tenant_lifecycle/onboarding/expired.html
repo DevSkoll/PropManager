@@ -1,0 +1,29 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Link Expired{% endblock %}
+
+{% block content %}
+<div class="onboarding-card text-center">
+    <div class="onboarding-card-body py-5">
+        <span class="display-3 text-warning">
+            <i class="bi bi-clock-history"></i>
+        </span>
+        <h2 class="h4 mt-4 mb-3">This Link Has Expired</h2>
+        <p class="text-muted mb-4">
+            Your onboarding link is no longer valid.<br>
+            Please contact your property manager for a new link.
+        </p>
+
+        <div class="bg-light rounded p-3 mb-4">
+            <small class="text-muted d-block">Session created for:</small>
+            <strong>{{ session.prospective_full_name }}</strong><br>
+            <small class="text-muted">{{ session.unit }}</small>
+        </div>
+
+        <a href="mailto:" class="btn btn-outline-primary">
+            <i class="bi bi-envelope me-2"></i>
+            Contact Property Manager
+        </a>
+    </div>
+</div>
+{% endblock %}

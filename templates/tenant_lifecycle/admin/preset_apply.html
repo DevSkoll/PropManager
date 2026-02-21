@@ -1,0 +1,95 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Apply Preset - {{ preset.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="d-flex align-items-center mb-4">
+                <a href="{% url 'tenant_lifecycle_admin:admin_preset_detail' pk=preset.pk %}" class="btn btn-link text-muted p-0 me-3">
+                    <i class="bi bi-arrow-left fs-5"></i>
+                </a>
+                <div>
+                    <h1 class="h3 mb-1">Apply Preset</h1>
+                    <p class="text-muted mb-0">Create a new template from "{{ preset.name }}"</p>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-4 p-3 bg-light rounded">
+                        <div class="preset-icon rounded-3 bg-primary bg-opacity-10 p-3 me-3">
+                            <i class="{{ preset.icon }} text-primary fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ preset.name }}</h5>
+                            <span class="badge bg-secondary">{{ preset.get_category_display }}</span>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label for="property" class="form-label">Select Property <span class="text-danger">*</span></label>
+                            <select name="property" id="property" class="form-select" required>
+                                <option value="">Choose a property...</option>
+                                {% for property in properties %}
+                                <option value="{{ property.pk }}">{{ property.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                The template will be created for this property.
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="name" class="form-label">Template Name</label>
+                            <input type="text" name="name" id="name" class="form-control"
+                                   value="{{ preset.name }}" placeholder="{{ preset.name }}">
+                            <div class="form-text">
+                                You can customize the template name or leave it as the preset name.
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input type="checkbox" name="is_default" id="is_default" class="form-check-input">
+                                <label for="is_default" class="form-check-label">
+                                    Set as default template for this property
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                The default template is used when creating new onboarding sessions.
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>What happens next:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>A new onboarding template will be created for the selected property</li>
+                                <li>All preset settings, steps, and default fees will be applied</li>
+                                <li>You can further customize the template after creation</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'tenant_lifecycle_admin:admin_preset_detail' pk=preset.pk %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-2"></i>
+                                Create Template
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

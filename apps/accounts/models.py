@@ -51,10 +51,22 @@ class TenantProfile(TimeStampedModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tenant_profile"
     )
+
+    # Personal identification (collected during onboarding)
+    date_of_birth = models.DateField(null=True, blank=True)
+    ssn_last_four = models.CharField(
+        max_length=4, blank=True, default="",
+        help_text="Last 4 digits of SSN for verification purposes."
+    )
+    drivers_license_state = models.CharField(max_length=2, blank=True, default="")
+    drivers_license_number = models.CharField(max_length=50, blank=True, default="")
+
+    # Emergency contact (legacy - now using TenantEmergencyContact)
     emergency_contact_name = models.CharField(max_length=200, blank=True, default="")
     emergency_contact_phone = models.CharField(
         max_length=20, blank=True, default="", validators=[validate_phone_number]
     )
+
     move_in_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True, default="")
 

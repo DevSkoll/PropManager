@@ -1,0 +1,120 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Onboarding Templates{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Onboarding Templates</h1>
+            <p class="text-muted mb-0">Configure move-in processes per property</p>
+        </div>
+        <div>
+            <a href="{% url 'tenant_lifecycle_admin:admin_preset_list' %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-collection me-2"></i>
+                Use Preset
+            </a>
+            <a href="{% url 'tenant_lifecycle_admin:admin_template_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-2"></i>
+                New Template
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <select name="property" class="form-select">
+                        <option value="">All Properties</option>
+                        {% for property in properties %}
+                        <option value="{{ property.pk }}" {% if selected_property == property.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ property.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel me-1"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Templates Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Template Name</th>
+                        <th>Property</th>
+                        <th>Status</th>
+                        <th>Sessions</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for template in templates %}
+                    <tr>
+                        <td>
+                            <strong>{{ template.name }}</strong>
+                            {% if template.is_default %}
+                            <span class="badge bg-primary ms-2">Default</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ template.property.name }}</td>
+                        <td>
+                            {% if template.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ template.session_count }} total</span>
+                            {% if template.active_session_count > 0 %}
+                            <span class="badge bg-warning text-dark ms-1">{{ template.active_session_count }} active</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'tenant_lifecycle_admin:admin_template_detail' pk=template.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'tenant_lifecycle_admin:admin_template_edit' pk=template.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-clipboard-check fs-1 d-block mb-3"></i>
+                            <p class="mb-2">No onboarding templates found.</p>
+                            <a href="{% url 'tenant_lifecycle_admin:admin_preset_list' %}" class="btn btn-outline-primary btn-sm me-2">
+                                <i class="bi bi-collection me-1"></i>
+                                Start from Preset
+                            </a>
+                            <a href="{% url 'tenant_lifecycle_admin:admin_template_create' %}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-lg me-1"></i>
+                                Create Custom
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{% url 'tenant_lifecycle_admin:admin_session_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>
+            Back to Sessions
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,290 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Onboarding Session - {{ session.prospective_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{% url 'tenant_lifecycle_admin:admin_session_list' %}" class="btn btn-link text-muted p-0 me-3">
+            <i class="bi bi-arrow-left fs-5"></i>
+        </a>
+        <div class="flex-grow-1">
+            <h1 class="h3 mb-1">{{ session.prospective_full_name }}</h1>
+            <p class="text-muted mb-0">{{ session.unit }} &bull; {{ session.prospective_email }}</p>
+        </div>
+        <div>
+            {% if session.status == "completed" %}
+            <span class="badge bg-success fs-6">Completed</span>
+            {% elif session.status == "in_progress" or session.status == "started" %}
+            <span class="badge bg-warning text-dark fs-6">In Progress</span>
+            {% elif session.status == "invited" %}
+            <span class="badge bg-info fs-6">Invited</span>
+            {% elif session.status == "expired" %}
+            <span class="badge bg-danger fs-6">Expired</span>
+            {% elif session.status == "cancelled" %}
+            <span class="badge bg-secondary fs-6">Cancelled</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Progress Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Progress</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Overall Progress</span>
+                        <strong>{{ summary.progress_percent }}%</strong>
+                    </div>
+                    <div class="progress mb-4" style="height: 10px;">
+                        <div class="progress-bar bg-success" style="width: {{ summary.progress_percent }}%"></div>
+                    </div>
+
+                    <div class="row">
+                        {% for step in summary.steps %}
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                {% if step.completed %}
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                {% elif session.current_step == step.name %}
+                                <i class="bi bi-circle-fill text-primary me-2"></i>
+                                {% else %}
+                                <i class="bi bi-circle text-muted me-2"></i>
+                                {% endif %}
+                                <span>{{ step.label }}</span>
+                                {% if step.required %}
+                                <span class="badge bg-warning text-dark ms-2">Required</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents -->
+            {% if documents %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent d-flex justify-content-between">
+                    <h5 class="mb-0">Documents</h5>
+                    <span class="badge bg-secondary">{{ summary.documents.signed }}/{{ summary.documents.total }}</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for doc in documents %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if doc.is_signed %}
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            {% else %}
+                            <i class="bi bi-file-earmark me-2 text-muted"></i>
+                            {% endif %}
+                            {{ doc.edocument.title|default:"Document" }}
+                        </div>
+                        <div>
+                            {% if doc.signed_at %}
+                            <small class="text-muted">Signed {{ doc.signed_at|date:"M d, Y" }}</small>
+                            {% elif doc.viewed_at %}
+                            <small class="text-muted">Viewed {{ doc.viewed_at|date:"M d, Y" }}</small>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Payments -->
+            {% if payments %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent d-flex justify-content-between">
+                    <h5 class="mb-0">Payments</h5>
+                    <span class="badge bg-secondary">{{ summary.payments.completed }}/{{ summary.payments.total }}</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for payment in payments %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            {{ payment.description }}
+                        </div>
+                        <div>
+                            {% if payment.status == "completed" %}
+                            <span class="text-success">${{ payment.amount }}</span>
+                            <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                            {% elif payment.status == "failed" %}
+                            <span class="text-danger">${{ payment.amount }}</span>
+                            <i class="bi bi-x-circle-fill text-danger ms-1"></i>
+                            {% else %}
+                            <span class="text-muted">${{ payment.amount }}</span>
+                            <span class="badge bg-warning text-dark ms-1">Pending</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Activity Log -->
+            {% if step_logs %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Recent Activity</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for log in step_logs %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ log.step_name|title }}</span>
+                            <small class="text-muted">{{ log.started_at|date:"M d, Y g:i A" }}</small>
+                        </div>
+                        <small class="text-muted">Attempt {{ log.attempt_number }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Actions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    {% if session.status not in "completed,cancelled" %}
+                    <button type="button" class="btn btn-outline-primary w-100 mb-2" id="copyLinkBtn"
+                            data-link="{{ request.scheme }}://{{ request.get_host }}/onboard/start/{{ session.access_token }}/">
+                        <i class="bi bi-clipboard me-2"></i>
+                        <span id="copyLinkText">Copy Link</span>
+                    </button>
+
+                    <form method="post" action="{% url 'tenant_lifecycle_admin:admin_session_resend_invite' pk=session.pk %}" class="mb-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-send me-2"></i>
+                            Resend Invitation
+                        </button>
+                    </form>
+
+                    <form method="post" action="{% url 'tenant_lifecycle_admin:admin_session_regenerate_link' pk=session.pk %}" class="mb-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-link-45deg me-2"></i>
+                            Generate New Link
+                        </button>
+                    </form>
+
+                    <hr>
+
+                    <form method="post" action="{% url 'tenant_lifecycle_admin:admin_session_cancel' pk=session.pk %}"
+                          onsubmit="return confirm('Are you sure you want to cancel this onboarding session?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Cancel Session
+                        </button>
+                    </form>
+                    {% elif session.status == "cancelled" %}
+                    <form method="post" action="{% url 'tenant_lifecycle_admin:admin_session_delete' pk=session.pk %}"
+                          onsubmit="return confirm('Are you sure you want to permanently delete this session? This cannot be undone.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger w-100">
+                            <i class="bi bi-trash me-2"></i>
+                            Delete Session
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Session Details -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Details</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-5 text-muted">Template</dt>
+                        <dd class="col-7">{{ session.template.name|default:"—" }}</dd>
+
+                        <dt class="col-5 text-muted">Created</dt>
+                        <dd class="col-7">{{ session.created_at|date:"M d, Y" }}</dd>
+
+                        <dt class="col-5 text-muted">Created By</dt>
+                        <dd class="col-7">{{ session.created_by.get_full_name|default:"—" }}</dd>
+
+                        <dt class="col-5 text-muted">First Access</dt>
+                        <dd class="col-7">{{ session.first_accessed_at|date:"M d, Y"|default:"—" }}</dd>
+
+                        <dt class="col-5 text-muted">Completed</dt>
+                        <dd class="col-7">{{ session.completed_at|date:"M d, Y"|default:"—" }}</dd>
+
+                        <dt class="col-5 text-muted">Link Expires</dt>
+                        <dd class="col-7">
+                            {% if session.is_expired %}
+                            <span class="text-danger">Expired</span>
+                            {% else %}
+                            {{ session.token_expires_at|date:"M d, Y" }}
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            {% if session.notes %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Notes</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ session.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const copyBtn = document.getElementById('copyLinkBtn');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+            const link = this.dataset.link;
+            const textSpan = document.getElementById('copyLinkText');
+            const icon = this.querySelector('i');
+
+            navigator.clipboard.writeText(link).then(function() {
+                // Show success feedback
+                textSpan.textContent = 'Copied!';
+                icon.className = 'bi bi-check-lg me-2';
+                copyBtn.classList.remove('btn-outline-primary');
+                copyBtn.classList.add('btn-success');
+
+                // Reset after 2 seconds
+                setTimeout(function() {
+                    textSpan.textContent = 'Copy Link';
+                    icon.className = 'bi bi-clipboard me-2';
+                    copyBtn.classList.remove('btn-success');
+                    copyBtn.classList.add('btn-outline-primary');
+                }, 2000);
+            }).catch(function(err) {
+                textSpan.textContent = 'Failed to copy';
+                setTimeout(function() {
+                    textSpan.textContent = 'Copy Link';
+                }, 2000);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

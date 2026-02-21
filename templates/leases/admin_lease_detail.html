@@ -7,14 +7,18 @@
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{% url 'leases_admin:lease_list' %}">Leases</a></li>
-        <li class="breadcrumb-item active">{{ lease.tenant }}</li>
+        <li class="breadcrumb-item active">{{ lease.display_tenant_name }}</li>
     </ol>
 </nav>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Lease: {{ lease.tenant.get_full_name|default:lease.tenant.username }}</h2>
+    <h2>Lease: {{ lease.display_tenant_name }}</h2>
     <div class="d-flex gap-2">
-        {% if lease.signature_status == "draft" %}
+        {% if lease.is_pending_onboarding %}
+        <a href="{% url 'leases_admin:lease_start_onboarding' pk=lease.pk %}" class="btn btn-success">
+            <i class="bi bi-person-plus"></i> Start Onboarding
+        </a>
+        {% elif lease.signature_status == "draft" %}
         <a href="{% url 'leases_admin:lease_send_signature' pk=lease.pk %}" class="btn btn-success">
             <i class="bi bi-send"></i> Send for Signatures
         </a>
@@ -25,6 +29,27 @@
     </div>
 </div>
 
+{% if lease.is_pending_onboarding %}
+<!-- Pending Onboarding Banner -->
+<div class="alert alert-warning mb-4">
+    <div class="d-flex align-items-center">
+        <div class="flex-shrink-0">
+            <i class="bi bi-hourglass-split fs-3 me-3"></i>
+        </div>
+        <div class="flex-grow-1">
+            <h5 class="alert-heading mb-1">Pending Onboarding</h5>
+            <p class="mb-2">
+                This lease is awaiting tenant onboarding. The prospective tenant
+                <strong>{{ lease.prospective_first_name }} {{ lease.prospective_last_name }}</strong>
+                ({{ lease.prospective_email }}) has not completed their onboarding process yet.
+            </p>
+            <a href="{% url 'leases_admin:lease_start_onboarding' pk=lease.pk %}" class="btn btn-warning">
+                <i class="bi bi-person-plus me-1"></i> Start Onboarding Process
+            </a>
+        </div>
+    </div>
+</div>
+{% else %}
 <!-- Signature Status Banner -->
 {% if lease.signature_status == "pending" %}
 <div class="alert alert-info mb-4">
@@ -41,6 +66,7 @@
     {% if lease.fully_executed_at %}Completed {{ lease.fully_executed_at|date:"M j, Y" }}.{% endif %}
 </div>
 {% endif %}
+{% endif %}
 
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
@@ -51,7 +77,26 @@
                     <div class="col-md-6">
                         <dl class="row mb-0">
                             <dt class="col-sm-5">Tenant</dt>
-                            <dd class="col-sm-7">{{ lease.tenant.get_full_name|default:lease.tenant.username }}</dd>
+                            <dd class="col-sm-7">
+                                {% if lease.tenant %}
+                                {{ lease.tenant.get_full_name|default:lease.tenant.username }}
+                                {% else %}
+                                <span class="text-warning">
+                                    <i class="bi bi-hourglass-split me-1"></i>
+                                    Pending Onboarding
+                                </span>
+                                {% endif %}
+                            </dd>
+                            {% if lease.is_pending_onboarding %}
+                            <dt class="col-sm-5">Prospective</dt>
+                            <dd class="col-sm-7">
+                                {{ lease.prospective_first_name }} {{ lease.prospective_last_name }}
+                                <br><small class="text-muted">{{ lease.prospective_email }}</small>
+                                {% if lease.prospective_phone %}
+                                <br><small class="text-muted">{{ lease.prospective_phone }}</small>
+                                {% endif %}
+                            </dd>
+                            {% endif %}
                             <dt class="col-sm-5">Property</dt>
                             <dd class="col-sm-7">{{ lease.unit.property.name }}</dd>
                             <dt class="col-sm-5">Unit</dt>

@@ -1,0 +1,106 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Welcome Home!{% endblock %}
+
+{% block content %}
+<div class="onboarding-card text-center">
+    <div class="onboarding-card-header" style="background: var(--success-gradient); color: white;">
+        <div class="py-3">
+            <span class="display-3">
+                <i class="bi bi-house-check"></i>
+            </span>
+            <h2 class="h3 mt-3 mb-2">Congratulations!</h2>
+            <p class="mb-0 opacity-90">Your move-in process is complete</p>
+        </div>
+    </div>
+
+    <div class="onboarding-card-body">
+        <div class="bg-light rounded p-4 mb-4">
+            <h5 class="mb-3">Your New Home</h5>
+            <p class="mb-1"><strong>{{ session.unit }}</strong></p>
+            {% if session.unit.property %}
+            <p class="text-muted mb-0">{{ session.unit.property.name }}</p>
+            {% endif %}
+        </div>
+
+        <div class="row text-start mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <span class="bg-success text-white rounded-circle p-2 me-3">
+                        <i class="bi bi-check-lg"></i>
+                    </span>
+                    <div>
+                        <strong>Account Created</strong>
+                        <small class="text-muted d-block">{{ session.tenant.email }}</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <span class="bg-success text-white rounded-circle p-2 me-3">
+                        <i class="bi bi-check-lg"></i>
+                    </span>
+                    <div>
+                        <strong>Documents Signed</strong>
+                        <small class="text-muted d-block">All required documents complete</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <span class="bg-success text-white rounded-circle p-2 me-3">
+                        <i class="bi bi-check-lg"></i>
+                    </span>
+                    <div>
+                        <strong>Payments Processed</strong>
+                        <small class="text-muted d-block">Move-in fees completed</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <span class="bg-success text-white rounded-circle p-2 me-3">
+                        <i class="bi bi-check-lg"></i>
+                    </span>
+                    <div>
+                        <strong>Ready to Move In</strong>
+                        <small class="text-muted d-block">Welcome to your new home!</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <h5 class="mb-3">What's Next?</h5>
+        <p class="text-muted">
+            You can now access your <strong>Tenant Portal</strong> to:
+        </p>
+        <ul class="list-unstyled text-start mb-4">
+            <li class="mb-2">
+                <i class="bi bi-credit-card text-primary me-2"></i>
+                Pay rent online
+            </li>
+            <li class="mb-2">
+                <i class="bi bi-tools text-primary me-2"></i>
+                Submit maintenance requests
+            </li>
+            <li class="mb-2">
+                <i class="bi bi-file-text text-primary me-2"></i>
+                View your lease documents
+            </li>
+            <li class="mb-2">
+                <i class="bi bi-chat-dots text-primary me-2"></i>
+                Message your property manager
+            </li>
+        </ul>
+
+        <div class="d-grid gap-2">
+            <a href="{% url 'tenant_dashboard' %}" class="btn btn-onboarding btn-lg">
+                <i class="bi bi-house-door me-2"></i>
+                Go to Tenant Portal
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

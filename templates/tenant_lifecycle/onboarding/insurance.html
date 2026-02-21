@@ -1,0 +1,113 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Renter's Insurance{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header">
+        <h2 class="h4 mb-1">
+            <i class="bi bi-shield-check me-2 text-primary"></i>
+            {{ step_name }}
+        </h2>
+        <p class="text-muted mb-0">
+            {% if is_required %}
+            Renter's insurance is required for this property
+            {% else %}
+            Provide your renter's insurance information
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="onboarding-card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Insurance Provider</label>
+                    {{ form.provider_name }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Policy Number</label>
+                    {{ form.policy_number }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Personal Property Coverage</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        {{ form.coverage_amount }}
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Liability Coverage</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        {{ form.liability_coverage }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Policy Start Date</label>
+                    {{ form.start_date }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Policy End Date</label>
+                    {{ form.end_date }}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Policy Document</label>
+                {{ form.policy_document }}
+                <small class="text-muted d-block mt-1">
+                    Upload a copy of your insurance declaration page (PDF, JPG, PNG)
+                </small>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-onboarding btn-lg">
+                    Submit Insurance Information
+                    <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </form>
+
+        {% if waiver_form and not is_required %}
+        <hr class="my-4">
+
+        <div class="text-center">
+            <p class="text-muted mb-3">Don't have renter's insurance?</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="waive" value="1">
+
+                <div class="bg-light rounded p-3 text-start mb-3">
+                    <div class="form-check mb-2">
+                        {{ waiver_form.waive_insurance }}
+                        <label class="form-check-label">
+                            I understand the risks of not having renter's insurance
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        {{ waiver_form.acknowledgment }}
+                        <label class="form-check-label">
+                            I acknowledge that I am responsible for my personal belongings
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-outline-secondary">
+                    Skip This Step
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

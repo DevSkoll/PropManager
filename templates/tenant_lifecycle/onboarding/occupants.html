@@ -1,0 +1,111 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Household Members{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header">
+        <h2 class="h4 mb-1">
+            <i class="bi bi-people me-2 text-primary"></i>
+            {{ step_name }}
+        </h2>
+        <p class="text-muted mb-0">Add anyone else who will be living with you</p>
+    </div>
+
+    <div class="onboarding-card-body">
+        {% if occupants %}
+        <div class="mb-4">
+            <h6 class="text-muted mb-3">Current Occupants</h6>
+            {% for occupant in occupants %}
+            <div class="item-card d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>{{ occupant.full_name }}</strong>
+                    <small class="text-muted ms-2">{{ occupant.get_relationship_display }}</small>
+                    <div class="text-muted small">
+                        {% if occupant.date_of_birth %}
+                        DOB: {{ occupant.date_of_birth|date:"M d, Y" }}
+                        {% endif %}
+                        {% if occupant.is_on_lease %}
+                        &bull; On Lease
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-danger delete-btn"
+                        onclick="deleteOccupant({{ occupant.pk }})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="border-top pt-4">
+            {% csrf_token %}
+            <h6 class="text-muted mb-3">
+                {% if occupants %}Add Another Occupant{% else %}Add Occupant{% endif %}
+            </h6>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">First Name</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Last Name</label>
+                    {{ form.last_name }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Relationship</label>
+                    {{ form.relationship }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Date of Birth</label>
+                    {{ form.date_of_birth }}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    {{ form.is_on_lease }}
+                    <label class="form-check-label">Include on lease document</label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-plus me-1"></i>
+                Add Occupant
+            </button>
+        </form>
+    </div>
+
+    <div class="onboarding-card-footer d-flex justify-content-between">
+        <span class="text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            You can skip this step if no additional occupants
+        </span>
+        <form method="post" action="{% url 'tenant_lifecycle:onboarding_occupants_complete' token=session.access_token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-onboarding">
+                {% if occupants %}Continue{% else %}Skip & Continue{% endif %}
+                <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteOccupant(pk) {
+    if (confirm('Remove this occupant?')) {
+        fetch(`{% url 'tenant_lifecycle:api_delete_occupant' token=session.access_token pk=0 %}`.replace('/0/', '/' + pk + '/'), {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(() => location.reload());
+    }
+}
+</script>
+{% endblock %}

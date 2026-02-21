@@ -1,0 +1,73 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}ID Verification{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header">
+        <h2 class="h4 mb-1">
+            <i class="bi bi-person-badge me-2 text-primary"></i>
+            {{ step_name }}
+        </h2>
+        <p class="text-muted mb-0">Upload a photo of your government-issued ID</p>
+    </div>
+
+    <div class="onboarding-card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">ID Type</label>
+                    {{ form.id_type }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Last 4 Characters</label>
+                    {{ form.id_number }}
+                    <small class="text-muted">For security, we only store partial ID numbers</small>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Issuing State/Country</label>
+                    {{ form.issuing_state }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Expiration Date</label>
+                    {{ form.expiration_date }}
+                </div>
+            </div>
+
+            <hr class="my-4">
+            <h6 class="text-muted mb-3">Upload ID Photos</h6>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Front of ID <span class="text-danger">*</span></label>
+                    {{ form.front_image }}
+                    <small class="text-muted">Clear photo of the front of your ID</small>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Back of ID</label>
+                    {{ form.back_image }}
+                    <small class="text-muted">Required for driver's licenses</small>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-lock me-2"></i>
+                <strong>Privacy Notice:</strong> Your ID images are encrypted and stored securely.
+                They are only used for identity verification purposes.
+            </div>
+
+            <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-onboarding btn-lg">
+                    Submit for Verification
+                    <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}{{ template.name }} - Onboarding Template{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'tenant_lifecycle_admin:admin_template_list' %}" class="btn btn-link text-muted p-0 me-3">
+                <i class="bi bi-arrow-left fs-5"></i>
+            </a>
+            <div>
+                <h1 class="h3 mb-1">{{ template.name }}</h1>
+                <p class="text-muted mb-0">{{ template.property.name }}</p>
+            </div>
+        </div>
+        <div>
+            {% if template.is_default %}
+            <span class="badge bg-primary me-2">Default</span>
+            {% endif %}
+            {% if template.is_active %}
+            <span class="badge bg-success">Active</span>
+            {% else %}
+            <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Steps Configuration -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Onboarding Steps</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for step in enabled_steps %}
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary me-2">{{ step.order }}</span>
+                                <span>{{ step.name|title }}</span>
+                                {% if step.required %}
+                                <span class="badge bg-warning text-dark ms-2">Required</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Required Documents</h5>
+                    <a href="{% url 'tenant_lifecycle_admin:admin_template_documents' pk=template.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i> Manage
+                    </a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for doc in documents %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ doc.edocument_template.name }}</span>
+                        {% if doc.is_required %}
+                        <span class="badge bg-warning text-dark">Required</span>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item text-muted">
+                        No documents configured
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Fees -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Required Fees</h5>
+                    <a href="{% url 'tenant_lifecycle_admin:admin_template_fees' pk=template.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i> Manage
+                    </a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for fee in fees %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <span>{{ fee.name }}</span>
+                            {% if fee.is_refundable %}
+                            <small class="text-muted">(Refundable)</small>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if fee.use_lease_value %}
+                            <span class="text-muted">From lease: {{ fee.lease_field }}</span>
+                            {% else %}
+                            <strong>${{ fee.amount }}</strong>
+                            {% endif %}
+                            {% if fee.is_required %}
+                            <span class="badge bg-warning text-dark ms-2">Required</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item text-muted">
+                        No fees configured
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Recent Sessions -->
+            {% if recent_sessions %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Recent Sessions Using This Template</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for session in recent_sessions %}
+                    <a href="{% url 'tenant_lifecycle_admin:admin_session_detail' pk=session.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ session.prospective_full_name }}</strong>
+                            <small class="text-muted ms-2">{{ session.unit }}</small>
+                        </div>
+                        <div>
+                            {% if session.status == "completed" %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif session.status == "in_progress" %}
+                            <span class="badge bg-warning text-dark">In Progress</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ session.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Actions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'tenant_lifecycle_admin:admin_template_edit' pk=template.pk %}" class="btn btn-primary w-100 mb-2">
+                        <i class="bi bi-pencil me-2"></i>
+                        Edit Template
+                    </a>
+                    <a href="{% url 'tenant_lifecycle_admin:admin_session_create' %}?template={{ template.pk }}" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-person-plus me-2"></i>
+                        Create Session
+                    </a>
+                </div>
+            </div>
+
+            <!-- Settings Summary -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Settings</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-7 text-muted">Link Expiry</dt>
+                        <dd class="col-5">{{ template.link_expiry_days }} days</dd>
+
+                        <dt class="col-7 text-muted">Collect Vehicles</dt>
+                        <dd class="col-5">{% if template.collect_vehicles %}Yes{% else %}No{% endif %}</dd>
+
+                        <dt class="col-7 text-muted">Collect Employment</dt>
+                        <dd class="col-5">{% if template.collect_employment %}Yes{% else %}No{% endif %}</dd>
+
+                        <dt class="col-7 text-muted">Require Insurance</dt>
+                        <dd class="col-5">{% if template.require_renters_insurance %}Yes{% else %}No{% endif %}</dd>
+
+                        <dt class="col-7 text-muted">Require ID</dt>
+                        <dd class="col-5">{% if template.require_id_verification %}Yes{% else %}No{% endif %}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Enter Verification Code{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header text-center">
+        <div class="mb-3">
+            <span class="display-4">
+                <i class="bi bi-shield-lock text-primary"></i>
+            </span>
+        </div>
+        <h2 class="h4 mb-2">Enter Verification Code</h2>
+        <p class="text-muted mb-0">Check your email for the 6-digit code</p>
+    </div>
+
+    <div class="onboarding-card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-4">
+                {{ form.otp_code }}
+                {% if form.otp_code.errors %}
+                <div class="text-danger mt-2">
+                    {% for error in form.otp_code.errors %}
+                    <small>{{ error }}</small>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-onboarding btn-lg">
+                    Verify Code
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center mt-4">
+            <p class="text-muted small mb-2">Didn't receive the code?</p>
+            <a href="{% url 'tenant_lifecycle:onboarding_verify' token=session.access_token %}" class="btn btn-link">
+                <i class="bi bi-arrow-repeat me-1"></i>
+                Resend Code
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-focus and format OTP input
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.querySelector('input[name="otp_code"]');
+    if (input) {
+        input.focus();
+        input.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,250 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}{{ preset.name }} - Onboarding Preset{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{% url 'tenant_lifecycle_admin:admin_preset_list' %}" class="btn btn-link text-muted p-0 me-3">
+            <i class="bi bi-arrow-left fs-5"></i>
+        </a>
+        <div class="flex-grow-1">
+            <h1 class="h3 mb-1">
+                <i class="{{ preset.icon }} me-2 text-primary"></i>
+                {{ preset.name }}
+            </h1>
+            <p class="text-muted mb-0">{{ preset.get_category_display }} Preset</p>
+        </div>
+        <a href="{% url 'tenant_lifecycle_admin:admin_preset_apply' pk=preset.pk %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i>
+            Apply to Property
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Description -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">About This Preset</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ preset.description }}</p>
+                </div>
+            </div>
+
+            <!-- Steps Configuration -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Onboarding Steps</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Step</th>
+                                <th style="width: 100px;">Required</th>
+                                <th style="width: 100px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for step in enabled_steps %}
+                            <tr>
+                                <td class="text-muted">{{ step.order }}</td>
+                                <td>
+                                    <strong>{{ step.name|title }}</strong>
+                                </td>
+                                <td>
+                                    {% if step.required %}
+                                    <span class="badge bg-danger">Required</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Optional</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if step.enabled %}
+                                    <span class="text-success"><i class="bi bi-check-circle-fill"></i> Enabled</span>
+                                    {% else %}
+                                    <span class="text-muted"><i class="bi bi-dash-circle"></i> Disabled</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Welcome Message -->
+            {% if preset.welcome_message %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Welcome Message</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ preset.welcome_message }}</pre>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Property Rules -->
+            {% if preset.property_rules %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Property Rules</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ preset.property_rules }}</pre>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Move-In Checklist -->
+            {% if preset.move_in_checklist %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Move-In Checklist</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        {% for item in preset.move_in_checklist %}
+                        <li class="mb-2">
+                            <i class="bi bi-check2-square text-success me-2"></i>
+                            {{ item }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Default Fees -->
+            {% if preset.default_fees %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Default Fees</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fee</th>
+                                <th>Amount</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fee in preset.default_fees %}
+                            <tr>
+                                <td>
+                                    <strong>{{ fee.name }}</strong>
+                                    {% if fee.description %}
+                                    <br><small class="text-muted">{{ fee.description }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if fee.use_lease_value %}
+                                    <em class="text-muted">From lease ({{ fee.lease_field }})</em>
+                                    {% elif fee.amount %}
+                                    ${{ fee.amount }}
+                                    {% else %}
+                                    <em class="text-muted">Variable</em>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if fee.is_refundable %}
+                                    <span class="badge bg-success">Refundable</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Non-Refundable</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Quick Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Link Expiry</span>
+                        <span>{{ preset.link_expiry_days }} days</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Collect Vehicles</span>
+                        {% if preset.collect_vehicles %}
+                        <span class="text-success"><i class="bi bi-check-lg"></i> Yes</span>
+                        {% else %}
+                        <span class="text-muted"><i class="bi bi-x-lg"></i> No</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Collect Employment</span>
+                        {% if preset.collect_employment %}
+                        <span class="text-success"><i class="bi bi-check-lg"></i> Yes</span>
+                        {% else %}
+                        <span class="text-muted"><i class="bi bi-x-lg"></i> No</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Require Insurance</span>
+                        {% if preset.require_renters_insurance %}
+                        <span class="text-warning"><i class="bi bi-check-lg"></i> Required</span>
+                        {% else %}
+                        <span class="text-muted"><i class="bi bi-x-lg"></i> Optional</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Require ID Verification</span>
+                        {% if preset.require_id_verification %}
+                        <span class="text-warning"><i class="bi bi-check-lg"></i> Required</span>
+                        {% else %}
+                        <span class="text-muted"><i class="bi bi-x-lg"></i> Optional</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invitation Preview -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Invitation Email Preview</h5>
+                </div>
+                <div class="card-body">
+                    <p class="fw-bold mb-2">{{ preset.invitation_email_subject }}</p>
+                    <pre class="small bg-light p-2 rounded mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ preset.invitation_email_body }}</pre>
+                </div>
+            </div>
+
+            {% if preset.invitation_sms_body %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">SMS Preview</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-0">{{ preset.invitation_sms_body }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Apply Button -->
+            <div class="d-grid">
+                <a href="{% url 'tenant_lifecycle_admin:admin_preset_apply' pk=preset.pk %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-lg me-2"></i>
+                    Apply to Property
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

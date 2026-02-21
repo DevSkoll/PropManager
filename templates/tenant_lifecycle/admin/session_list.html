@@ -1,0 +1,192 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}Onboarding Sessions{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Tenant Onboarding</h1>
+            <p class="text-muted mb-0">Manage tenant move-in processes</p>
+        </div>
+        <a href="{% url 'tenant_lifecycle_admin:admin_session_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i>
+            Invite New Tenant
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-primary bg-opacity-10 rounded p-3 me-3">
+                            <i class="bi bi-envelope text-primary fs-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ stats.invited }}</h3>
+                            <small class="text-muted">Invited</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-warning bg-opacity-10 rounded p-3 me-3">
+                            <i class="bi bi-hourglass-split text-warning fs-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ stats.in_progress }}</h3>
+                            <small class="text-muted">In Progress</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-success bg-opacity-10 rounded p-3 me-3">
+                            <i class="bi bi-check-circle text-success fs-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ stats.completed }}</h3>
+                            <small class="text-muted">Completed</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-danger bg-opacity-10 rounded p-3 me-3">
+                            <i class="bi bi-clock-history text-danger fs-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ stats.expired }}</h3>
+                            <small class="text-muted">Expired</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="invited" {% if selected_status == "invited" %}selected{% endif %}>Invited</option>
+                        <option value="started" {% if selected_status == "started" %}selected{% endif %}>Started</option>
+                        <option value="in_progress" {% if selected_status == "in_progress" %}selected{% endif %}>In Progress</option>
+                        <option value="completed" {% if selected_status == "completed" %}selected{% endif %}>Completed</option>
+                        <option value="expired" {% if selected_status == "expired" %}selected{% endif %}>Expired</option>
+                        <option value="cancelled" {% if selected_status == "cancelled" %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select name="property" class="form-select">
+                        <option value="">All Properties</option>
+                        {% for property in properties %}
+                        <option value="{{ property.pk }}" {% if selected_property == property.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ property.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel me-1"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sessions Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tenant</th>
+                        <th>Unit</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in sessions %}
+                    <tr>
+                        <td>
+                            <strong>{{ session.prospective_full_name }}</strong><br>
+                            <small class="text-muted">{{ session.prospective_email }}</small>
+                        </td>
+                        <td>
+                            {{ session.unit }}<br>
+                            <small class="text-muted">{{ session.unit.property.name }}</small>
+                        </td>
+                        <td>
+                            {% if session.status == "completed" %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif session.status == "in_progress" or session.status == "started" %}
+                            <span class="badge bg-warning text-dark">In Progress</span>
+                            {% elif session.status == "invited" %}
+                            <span class="badge bg-info">Invited</span>
+                            {% elif session.status == "expired" %}
+                            <span class="badge bg-danger">Expired</span>
+                            {% elif session.status == "cancelled" %}
+                            <span class="badge bg-secondary">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="progress" style="height: 6px; width: 100px;">
+                                <div class="progress-bar bg-success" style="width: {{ session.get_progress_percent }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ session.get_progress_percent }}%</small>
+                        </td>
+                        <td>
+                            {{ session.created_at|date:"M d, Y" }}<br>
+                            <small class="text-muted">{{ session.created_at|date:"g:i A" }}</small>
+                        </td>
+                        <td>
+                            <a href="{% url 'tenant_lifecycle_admin:admin_session_detail' pk=session.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            No onboarding sessions found.
+                            <a href="{% url 'tenant_lifecycle_admin:admin_session_create' %}">Invite a new tenant</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="mt-4">
+        <a href="{% url 'tenant_lifecycle_admin:admin_template_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-gear me-2"></i>
+            Manage Templates
+        </a>
+    </div>
+</div>
+{% endblock %}

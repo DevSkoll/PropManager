@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "apps.marketing",
     "apps.notifications",
     "apps.tenant_lifecycle",
+    "apps.ai",
 ]
 
 MIDDLEWARE = [

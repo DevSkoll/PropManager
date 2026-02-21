@@ -11,9 +11,25 @@
     </a>
 </div>
 
+{% if pending_count > 0 %}
+<div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-hourglass-split me-2 fs-5"></i>
+    <div class="flex-grow-1">
+        <strong>{{ pending_count }} Pending Onboarding</strong> -
+        {{ pending_count }} lease{{ pending_count|pluralize }} awaiting tenant onboarding.
+    </div>
+    <a href="?status=pending_onboarding" class="btn btn-warning btn-sm">
+        <i class="bi bi-eye me-1"></i> View Pending
+    </a>
+</div>
+{% endif %}
+
 <div class="mb-3">
     <div class="btn-group" role="group">
         <a href="{% url 'leases_admin:lease_list' %}" class="btn btn-sm btn-{% if not status_filter %}primary{% else %}outline-primary{% endif %}">All</a>
+        <a href="?status=pending_onboarding" class="btn btn-sm btn-{% if status_filter == 'pending_onboarding' %}warning{% else %}outline-warning{% endif %}">
+            Pending Onboarding{% if pending_count > 0 %} ({{ pending_count }}){% endif %}
+        </a>
         {% for value, label in status_choices %}
         <a href="?status={{ value }}" class="btn btn-sm btn-{% if status_filter == value %}primary{% else %}outline-primary{% endif %}">{{ label }}</a>
         {% endfor %}
@@ -38,21 +54,38 @@
             <tbody>
                 {% for lease in leases %}
                 <tr>
-                    <td>{{ lease.tenant.get_full_name|default:lease.tenant.username }}</td>
+                    <td>
+                        {{ lease.display_tenant_name }}
+                        {% if lease.is_pending_onboarding %}
+                        <br><small class="text-muted">{{ lease.prospective_email }}</small>
+                        {% endif %}
+                    </td>
                     <td>{{ lease.unit.property.name }} - {{ lease.unit.unit_number }}</td>
                     <td>{{ lease.get_lease_type_display }}</td>
                     <td>{{ lease.start_date }}</td>
                     <td>{{ lease.end_date|default:"-" }}</td>
                     <td>{{ lease.monthly_rent|currency }}</td>
                     <td>
+                        {% if lease.is_pending_onboarding %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="bi bi-hourglass-split me-1"></i>
+                            Pending Onboarding
+                        </span>
+                        {% else %}
                         <span class="badge bg-{% if lease.status == 'active' %}success{% elif lease.status == 'draft' %}secondary{% elif lease.status == 'expired' %}warning{% elif lease.status == 'terminated' %}danger{% else %}info{% endif %}">
                             {{ lease.get_status_display }}
                         </span>
+                        {% endif %}
                     </td>
                     <td>
                         <a href="{% url 'leases_admin:lease_detail' pk=lease.pk %}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-eye"></i>
                         </a>
+                        {% if lease.is_pending_onboarding %}
+                        <a href="{% url 'leases_admin:lease_start_onboarding' pk=lease.pk %}" class="btn btn-sm btn-outline-success" title="Start Onboarding">
+                            <i class="bi bi-person-plus"></i>
+                        </a>
+                        {% endif %}
                         <a href="{% url 'leases_admin:lease_edit' pk=lease.pk %}" class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-pencil"></i>
                         </a>
@@ -60,7 +93,13 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">No leases found.</td>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        {% if status_filter == 'pending_onboarding' %}
+                        No leases pending onboarding.
+                        {% else %}
+                        No leases found.
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

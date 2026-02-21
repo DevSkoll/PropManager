@@ -12,20 +12,347 @@
 </nav>
 
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-10">
         <div class="card">
             <div class="card-header"><h4 class="mb-0">{{ title }}</h4></div>
             <div class="card-body">
-                <form method="post">
+                <form method="post" id="lease-form">
                     {% csrf_token %}
-                    {{ form|crispy }}
-                    <div class="mt-3">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save</button>
-                        <a href="{% url 'leases_admin:lease_list' %}" class="btn btn-outline-secondary">Cancel</a>
+
+                    <!-- Tenant Selection Mode -->
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="bi bi-person-fill me-2"></i>Tenant Selection</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tenant_mode" id="tenant_mode_existing" value="existing" {% if form.initial.tenant_mode == 'existing' or not form.initial.tenant_mode %}checked{% endif %}>
+                                        <label class="form-check-label" for="tenant_mode_existing">
+                                            <strong>Select Existing Tenant</strong>
+                                            <br><small class="text-muted">Choose a tenant already in the system</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tenant_mode" id="tenant_mode_new" value="new" {% if form.initial.tenant_mode == 'new' %}checked{% endif %}>
+                                        <label class="form-check-label" for="tenant_mode_new">
+                                            <strong>New Tenant (Onboarding Required)</strong>
+                                            <br><small class="text-muted">Tenant will complete onboarding to activate lease</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Existing Tenant Select -->
+                            <div id="existing-tenant-section" class="mt-4">
+                                <label for="id_tenant" class="form-label">Select Tenant <span class="text-danger">*</span></label>
+                                {{ form.tenant }}
+                                {% if form.tenant.errors %}
+                                <div class="invalid-feedback d-block">{{ form.tenant.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- New Tenant Fields -->
+                            <div id="new-tenant-section" class="mt-4" style="display: none;">
+                                <div class="alert alert-info mb-4">
+                                    <h6 class="alert-heading">
+                                        <i class="bi bi-info-circle me-2"></i>New Tenant Onboarding Flow
+                                    </h6>
+                                    <p class="mb-2">After creating this lease, you'll be able to start the onboarding process which will:</p>
+                                    <ol class="mb-0 small">
+                                        <li>Send an invitation email to the prospective tenant</li>
+                                        <li>Have them create their account and verify their identity</li>
+                                        <li>Collect personal info, emergency contacts, occupants, pets, vehicles</li>
+                                        <li>Have them review and sign required documents</li>
+                                        <li>Acknowledge move-in fees (invoices generated automatically)</li>
+                                    </ol>
+                                </div>
+
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-person-plus me-2"></i>Prospective Tenant Information
+                                </h6>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="id_prospective_first_name" class="form-label">
+                                            First Name <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.prospective_first_name }}
+                                        <small class="text-muted">Required - at least first or last name needed</small>
+                                        {% if form.prospective_first_name.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.prospective_first_name.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="id_prospective_last_name" class="form-label">Last Name</label>
+                                        {{ form.prospective_last_name }}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="id_prospective_email" class="form-label">
+                                            Email <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.prospective_email }}
+                                        <small class="text-muted">Required - used to send onboarding invitation</small>
+                                        {% if form.prospective_email.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.prospective_email.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="id_prospective_phone" class="form-label">Phone</label>
+                                        {{ form.prospective_phone }}
+                                        <small class="text-muted">Optional - for SMS notifications</small>
+                                    </div>
+                                </div>
+
+                                <div class="card bg-light border-0 mt-3">
+                                    <div class="card-body py-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clipboard-check me-1"></i>
+                                            <strong>Collected during onboarding:</strong>
+                                            Date of birth, ID verification, SSN (last 4), driver's license,
+                                            emergency contacts, additional occupants, pets, vehicles,
+                                            employment info, renter's insurance, and document signatures.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Property & Unit -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-building me-2"></i>Property & Unit</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_unit" class="form-label">Unit <span class="text-danger">*</span></label>
+                                    {{ form.unit }}
+                                    {% if form.unit.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.unit.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_status" class="form-label">Status</label>
+                                    {{ form.status }}
+                                    <small class="text-muted" id="status-help">Draft until onboarding completes</small>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_lease_type" class="form-label">Lease Type</label>
+                                    {{ form.lease_type }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lease Dates -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-calendar me-2"></i>Lease Dates</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                                    {{ form.start_date }}
+                                    {% if form.start_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.start_date.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_end_date" class="form-label">End Date</label>
+                                    {{ form.end_date }}
+                                    <small class="text-muted">Leave blank for month-to-month</small>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_move_in_date" class="form-label">Move-In Date</label>
+                                    {{ form.move_in_date }}
+                                    <small class="text-muted" id="move-in-help">Can be set during onboarding</small>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_move_out_date" class="form-label">Move-Out Date</label>
+                                    {{ form.move_out_date }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rent Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-cash me-2"></i>Rent Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_monthly_rent" class="form-label">Monthly Rent <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        {{ form.monthly_rent }}
+                                    </div>
+                                    {% if form.monthly_rent.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.monthly_rent.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_security_deposit" class="form-label">Security Deposit</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        {{ form.security_deposit }}
+                                    </div>
+                                </div>
+                                <div class="col-md-2 mb-3">
+                                    <label for="id_rent_due_day" class="form-label">Due Day</label>
+                                    {{ form.rent_due_day }}
+                                    <small class="text-muted">Day of month</small>
+                                </div>
+                                <div class="col-md-2 mb-3">
+                                    <label for="id_grace_period_days" class="form-label">Grace Days</label>
+                                    {{ form.grace_period_days }}
+                                </div>
+                                <div class="col-md-2 mb-3">
+                                    <label for="id_late_fee_amount" class="form-label">Late Fee</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        {{ form.late_fee_amount }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Occupancy & Policies -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Occupancy & Policies</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_max_occupants" class="form-label">Max Occupants</label>
+                                    {{ form.max_occupants }}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_parking_spaces" class="form-label">Parking Spaces</label>
+                                    {{ form.parking_spaces }}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="form-check mt-4">
+                                        {{ form.pets_allowed }}
+                                        <label class="form-check-label" for="id_pets_allowed">Pets Allowed</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="id_max_pets" class="form-label">Max Pets</label>
+                                    {{ form.max_pets }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        {{ form.smoking_allowed }}
+                                        <label class="form-check-label" for="id_smoking_allowed">Smoking Allowed</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        {{ form.subletting_allowed }}
+                                        <label class="form-check-label" for="id_subletting_allowed">Subletting Allowed</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        {{ form.renters_insurance_required }}
+                                        <label class="form-check-label" for="id_renters_insurance_required">Insurance Required</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        {{ form.auto_renewal }}
+                                        <label class="form-check-label" for="id_auto_renewal">Auto Renewal</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-sticky me-2"></i>Internal Notes</h6>
+                        </div>
+                        <div class="card-body">
+                            {{ form.notes }}
+                            <small class="text-muted">These notes are for internal use and not visible to the tenant</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-lg me-1"></i> Save Lease
+                        </button>
+                        <a href="{% url 'leases_admin:lease_list' %}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                    </div>
+
+                    <div id="new-tenant-next-steps" class="alert alert-success mt-4" style="display: none;">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-arrow-right-circle me-2"></i>Next Steps After Saving
+                        </h6>
+                        <p class="mb-0">
+                            After saving this lease, you'll be taken to the lease detail page where you can click
+                            <strong>"Start Onboarding"</strong> to send an invitation to the prospective tenant.
+                        </p>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const existingRadio = document.getElementById('tenant_mode_existing');
+    const newRadio = document.getElementById('tenant_mode_new');
+    const existingSection = document.getElementById('existing-tenant-section');
+    const newSection = document.getElementById('new-tenant-section');
+    const tenantSelect = document.getElementById('id_tenant');
+    const nextStepsAlert = document.getElementById('new-tenant-next-steps');
+    const statusHelp = document.getElementById('status-help');
+    const moveInHelp = document.getElementById('move-in-help');
+
+    function toggleSections() {
+        if (existingRadio.checked) {
+            existingSection.style.display = 'block';
+            newSection.style.display = 'none';
+            nextStepsAlert.style.display = 'none';
+            if (tenantSelect) tenantSelect.required = true;
+            statusHelp.textContent = '';
+            moveInHelp.textContent = '';
+        } else {
+            existingSection.style.display = 'none';
+            newSection.style.display = 'block';
+            nextStepsAlert.style.display = 'block';
+            if (tenantSelect) tenantSelect.required = false;
+            statusHelp.textContent = 'Draft until onboarding completes';
+            moveInHelp.textContent = 'Can be set during onboarding';
+        }
+    }
+
+    // Initial state
+    toggleSections();
+
+    // Event listeners
+    existingRadio.addEventListener('change', toggleSections);
+    newRadio.addEventListener('change', toggleSections);
+});
+</script>
 {% endblock %}

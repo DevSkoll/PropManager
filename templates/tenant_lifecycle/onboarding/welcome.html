@@ -1,0 +1,102 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Welcome!{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header text-center" style="background: var(--success-gradient); color: white;">
+        <div class="py-3">
+            <span class="display-4">
+                <i class="bi bi-house-heart"></i>
+            </span>
+            <h2 class="h3 mt-3 mb-2">{{ step_name }}</h2>
+            <p class="mb-0 opacity-90">Almost there! Here's some important information</p>
+        </div>
+    </div>
+
+    <div class="onboarding-card-body">
+        {% if welcome_message %}
+        <div class="mb-4">
+            <h5 class="mb-3">
+                <i class="bi bi-chat-quote me-2 text-primary"></i>
+                A Message From Your Property Manager
+            </h5>
+            <div class="bg-light rounded p-3">
+                {{ welcome_message|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if property_rules %}
+        <div class="mb-4">
+            <h5 class="mb-3">
+                <i class="bi bi-list-check me-2 text-primary"></i>
+                Property Rules & Guidelines
+            </h5>
+            <div class="bg-light rounded p-3">
+                {{ property_rules|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if checklist %}
+        <div class="mb-4">
+            <h5 class="mb-3">
+                <i class="bi bi-clipboard-check me-2 text-primary"></i>
+                Move-In Checklist
+            </h5>
+            <div class="list-group">
+                {% for item in checklist %}
+                <label class="list-group-item d-flex align-items-center">
+                    <input class="form-check-input me-3" type="checkbox">
+                    {{ item }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if property %}
+        <div class="mb-4">
+            <h5 class="mb-3">
+                <i class="bi bi-geo-alt me-2 text-primary"></i>
+                Property Information
+            </h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <strong>Address</strong>
+                    <p class="mb-0 text-muted">
+                        {{ property.address }}<br>
+                        {{ property.city }}, {{ property.state }} {{ property.zip_code }}
+                    </p>
+                </div>
+                {% if property.manager_name %}
+                <div class="col-md-6 mb-3">
+                    <strong>Property Manager</strong>
+                    <p class="mb-0 text-muted">
+                        {{ property.manager_name }}<br>
+                        {{ property.manager_email }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Important:</strong> Please save this information for your records. You can also access it anytime through your tenant portal.
+        </div>
+    </div>
+
+    <div class="onboarding-card-footer text-center">
+        <form method="post" action="{% url 'tenant_lifecycle:onboarding_welcome_complete' token=session.access_token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-onboarding btn-lg">
+                <i class="bi bi-check-circle me-2"></i>
+                Complete Onboarding
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

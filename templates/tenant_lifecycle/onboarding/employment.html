@@ -1,0 +1,91 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Employment Information{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header">
+        <h2 class="h4 mb-1">
+            <i class="bi bi-briefcase me-2 text-primary"></i>
+            {{ step_name }}
+        </h2>
+        <p class="text-muted mb-0">Tell us about your employment and income</p>
+    </div>
+
+    <div class="onboarding-card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-4">
+                <label class="form-label">Employment Status</label>
+                {{ form.employment_type }}
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Employer Name</label>
+                    {{ form.employer_name }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Job Title</label>
+                    {{ form.job_title }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Employer Phone</label>
+                    {{ form.employer_phone }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Start Date</label>
+                    {{ form.start_date }}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Employer Address</label>
+                {{ form.employer_address }}
+            </div>
+
+            <hr class="my-4">
+            <h6 class="text-muted mb-3">Income Information</h6>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Gross Income</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        {{ form.gross_income }}
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Pay Frequency</label>
+                    {{ form.income_frequency }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Additional Income (Optional)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        {{ form.additional_income }}
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Source of Additional Income</label>
+                    {{ form.additional_income_source }}
+                </div>
+            </div>
+
+            <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-onboarding btn-lg">
+                    Continue
+                    <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

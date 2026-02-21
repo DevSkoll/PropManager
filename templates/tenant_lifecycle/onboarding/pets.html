@@ -1,0 +1,122 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Pet Registration{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header">
+        <h2 class="h4 mb-1">
+            <i class="bi bi-heart me-2 text-primary"></i>
+            {{ step_name }}
+        </h2>
+        <p class="text-muted mb-0">Register any pets that will be living with you</p>
+    </div>
+
+    <div class="onboarding-card-body">
+        {% if pets %}
+        <div class="mb-4">
+            <h6 class="text-muted mb-3">Registered Pets</h6>
+            {% for pet in pets %}
+            <div class="item-card d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>{{ pet.name }}</strong>
+                    <small class="text-muted ms-2">{{ pet.get_pet_type_display }}</small>
+                    <div class="text-muted small">
+                        {{ pet.breed }} &bull; {{ pet.color }}
+                        {% if pet.weight_lbs %}&bull; {{ pet.weight_lbs }} lbs{% endif %}
+                        {% if pet.is_service_animal %}
+                        <span class="badge bg-info">Service Animal</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-danger delete-btn"
+                        onclick="deletePet({{ pet.pk }})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="border-top pt-4">
+            {% csrf_token %}
+            <h6 class="text-muted mb-3">
+                {% if pets %}Add Another Pet{% else %}Add Pet{% endif %}
+            </h6>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Pet Name</label>
+                    {{ form.name }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Type</label>
+                    {{ form.pet_type }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Breed</label>
+                    {{ form.breed }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Color</label>
+                    {{ form.color }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Weight (lbs)</label>
+                    {{ form.weight_lbs }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="form-check">
+                        {{ form.is_service_animal }}
+                        <label class="form-check-label">This is a service animal</label>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-check">
+                        {{ form.vaccination_current }}
+                        <label class="form-check-label">Vaccinations are current</label>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-plus me-1"></i>
+                Add Pet
+            </button>
+        </form>
+    </div>
+
+    <div class="onboarding-card-footer d-flex justify-content-between">
+        <span class="text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Skip if you don't have pets
+        </span>
+        <form method="post" action="{% url 'tenant_lifecycle:onboarding_pets_complete' token=session.access_token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-onboarding">
+                {% if pets %}Continue{% else %}Skip & Continue{% endif %}
+                <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deletePet(pk) {
+    if (confirm('Remove this pet?')) {
+        fetch(`{% url 'tenant_lifecycle:api_delete_pet' token=session.access_token pk=0 %}`.replace('/0/', '/' + pk + '/'), {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(() => location.reload());
+    }
+}
+</script>
+{% endblock %}

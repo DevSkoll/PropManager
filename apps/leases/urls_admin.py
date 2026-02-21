@@ -11,4 +11,5 @@ urlpatterns = [
     path("leases/<uuid:pk>/edit/", views.admin_lease_edit, name="lease_edit"),
     path("leases/<uuid:pk>/terms/add/", views.admin_lease_add_term, name="lease_add_term"),
     path("leases/<uuid:pk>/send-for-signature/", views.admin_send_for_signature, name="lease_send_signature"),
+    path("leases/<uuid:pk>/start-onboarding/", views.admin_lease_start_onboarding, name="lease_start_onboarding"),
 ]

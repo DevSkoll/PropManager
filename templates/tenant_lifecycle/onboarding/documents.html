@@ -1,0 +1,83 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Document Signing{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header">
+        <h2 class="h4 mb-1">
+            <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+            {{ step_name }}
+        </h2>
+        <p class="text-muted mb-0">Review and sign your lease documents</p>
+    </div>
+
+    <div class="onboarding-card-body">
+        {% if documents %}
+        <div class="list-group list-group-flush">
+            {% for doc in documents %}
+            <div class="list-group-item px-0 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">
+                            {% if doc.is_signed %}
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            {% else %}
+                            <i class="bi bi-file-earmark me-2 text-muted"></i>
+                            {% endif %}
+                            {{ doc.edocument.title }}
+                        </h6>
+                        <small class="text-muted">
+                            {% if doc.is_required %}
+                            <span class="badge bg-warning text-dark">Required</span>
+                            {% endif %}
+                            {% if doc.signed_at %}
+                            Signed {{ doc.signed_at|date:"M d, Y" }}
+                            {% elif doc.viewed_at %}
+                            Viewed {{ doc.viewed_at|date:"M d, Y" }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div>
+                        {% if doc.is_signed %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check me-1"></i>Signed
+                        </span>
+                        {% else %}
+                        <a href="{% url 'tenant_lifecycle:onboarding_sign_document' token=session.access_token doc_pk=doc.pk %}"
+                           class="btn btn-primary btn-sm">
+                            <i class="bi bi-pen me-1"></i>
+                            Review & Sign
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-file-earmark-check display-4 text-muted"></i>
+            <p class="text-muted mt-3">No documents require your signature at this time.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="onboarding-card-footer d-flex justify-content-between">
+        <span></span>
+        {% if all_signed %}
+        <form method="post" action="{% url 'tenant_lifecycle:onboarding_documents_complete' token=session.access_token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-onboarding">
+                Continue
+                <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+        </form>
+        {% else %}
+        <button class="btn btn-secondary" disabled>
+            Sign all required documents to continue
+        </button>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

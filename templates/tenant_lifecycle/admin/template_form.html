@@ -1,0 +1,197 @@
+{% extends "admin_portal/base.html" %}
+{% load core_tags %}
+
+{% block title %}{% if is_create %}Create{% else %}Edit{% endif %} Onboarding Template{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex align-items-center mb-4">
+                <a href="{% url 'tenant_lifecycle_admin:admin_template_list' %}" class="btn btn-link text-muted p-0 me-3">
+                    <i class="bi bi-arrow-left fs-5"></i>
+                </a>
+                <div>
+                    <h1 class="h3 mb-1">{% if is_create %}Create{% else %}Edit{% endif %} Onboarding Template</h1>
+                    <p class="text-muted mb-0">Configure the move-in process for a property</p>
+                </div>
+            </div>
+
+            {% if is_create %}
+            <div class="alert alert-info mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-lightbulb fs-4 me-3"></i>
+                    <div class="flex-grow-1">
+                        <strong>Start with a preset?</strong>
+                        <p class="mb-0 small">Use one of our pre-configured templates for common property types to save time.</p>
+                    </div>
+                    <a href="{% url 'tenant_lifecycle_admin:admin_preset_list' %}" class="btn btn-outline-primary btn-sm ms-3">
+                        <i class="bi bi-collection me-1"></i>
+                        Browse Presets
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- Basic Settings -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">Basic Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Template Name <span class="text-danger">*</span></label>
+                                {{ form.name }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Property <span class="text-danger">*</span></label>
+                                {{ form.property }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <div class="form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label">Active</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="form-check">
+                                    {{ form.is_default }}
+                                    <label class="form-check-label">Default for Property</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Link Expiry (Days)</label>
+                                {{ form.link_expiry_days }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step Configuration -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">Onboarding Steps</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">Configure which steps are included in this onboarding flow.</p>
+
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Step</th>
+                                    <th style="width: 100px;">Enabled</th>
+                                    <th style="width: 100px;">Required</th>
+                                    <th style="width: 80px;">Order</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for key, label in step_form.STEP_CHOICES %}
+                                <tr>
+                                    <td>{{ label }}</td>
+                                    <td>{% form_field step_form key "_enabled" %}</td>
+                                    <td>{% form_field step_form key "_required" %}</td>
+                                    <td>{% form_field step_form key "_order" %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Data Collection -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">Data Collection Options</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    {{ form.collect_vehicles }}
+                                    <label class="form-check-label">Collect Vehicle Info</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    {{ form.collect_employment }}
+                                    <label class="form-check-label">Collect Employment Info</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    {{ form.require_renters_insurance }}
+                                    <label class="form-check-label">Require Renter's Insurance</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    {{ form.require_id_verification }}
+                                    <label class="form-check-label">Require ID Verification</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Welcome Content -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">Welcome Content</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Welcome Message</label>
+                            {{ form.welcome_message }}
+                            <small class="text-muted">Displayed to tenant at the end of onboarding</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Property Rules</label>
+                            {{ form.property_rules }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invitation Messaging -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">Invitation Messages</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Email Subject</label>
+                            {{ form.invitation_email_subject }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email Body</label>
+                            {{ form.invitation_email_body }}
+                            <small class="text-muted">Use {% templatetag openvariable %}link{% templatetag closevariable %} to insert the onboarding URL</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">SMS Message</label>
+                            {{ form.invitation_sms_body }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'tenant_lifecycle_admin:admin_template_list' %}" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-2"></i>
+                        {% if is_create %}Create Template{% else %}Save Changes{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "tenant_lifecycle/onboarding/base.html" %}
+
+{% block title %}Create Your Account{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <div class="onboarding-card-header">
+        <h2 class="h4 mb-1">
+            <i class="bi bi-person-plus me-2 text-primary"></i>
+            Create Your Account
+        </h2>
+        <p class="text-muted mb-0">Set up your tenant portal access</p>
+    </div>
+
+    <div class="onboarding-card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">First Name</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                    <div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Last Name</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                    <div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Phone Number</label>
+                {{ form.phone_number }}
+                <small class="text-muted">For important notifications about your lease</small>
+                {% if form.phone_number.errors %}
+                <div class="text-danger small mt-1">{{ form.phone_number.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Preferred Contact Method</label>
+                {{ form.preferred_contact }}
+                {% if form.preferred_contact.errors %}
+                <div class="text-danger small mt-1">{{ form.preferred_contact.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-onboarding btn-lg">
+                    Create Account & Continue
+                    <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

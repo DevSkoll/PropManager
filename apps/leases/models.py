@@ -40,9 +40,30 @@ class Lease(TimeStampedModel, AuditMixin):
         on_delete=models.PROTECT,
         related_name="leases",
         limit_choices_to={"role": "tenant"},
+        null=True,
+        blank=True,
+        help_text="Assigned tenant. Leave blank for new tenant onboarding.",
     )
     status = models.CharField(
         max_length=15, choices=STATUS_CHOICES, default="draft", db_index=True
+    )
+
+    # Prospective tenant info (for leases awaiting onboarding)
+    prospective_first_name = models.CharField(
+        max_length=50, blank=True, default="",
+        help_text="First name of prospective tenant (before onboarding)."
+    )
+    prospective_last_name = models.CharField(
+        max_length=50, blank=True, default="",
+        help_text="Last name of prospective tenant (before onboarding)."
+    )
+    prospective_email = models.EmailField(
+        blank=True, default="",
+        help_text="Email for prospective tenant (used to send onboarding invitation)."
+    )
+    prospective_phone = models.CharField(
+        max_length=20, blank=True, default="",
+        help_text="Phone number of prospective tenant."
     )
     lease_type = models.CharField(
         max_length=15, choices=LEASE_TYPE_CHOICES, default="fixed"
@@ -121,7 +142,31 @@ class Lease(TimeStampedModel, AuditMixin):
         ordering = ["-start_date"]
 
     def __str__(self):
-        return f"Lease: {self.tenant} @ {self.unit} ({self.status})"
+        tenant_display = self.display_tenant_name
+        return f"Lease: {tenant_display} @ {self.unit} ({self.status})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        if self.status == "active" and not self.tenant:
+            raise ValidationError({
+                "status": "Cannot activate a lease without an assigned tenant."
+            })
+
+    @property
+    def is_pending_onboarding(self):
+        """True if lease has no tenant assigned (awaiting onboarding)."""
+        return self.tenant is None
+
+    @property
+    def display_tenant_name(self):
+        """Returns tenant name or prospective tenant name with pending indicator."""
+        if self.tenant:
+            return self.tenant.get_full_name() or self.tenant.username
+        if self.prospective_first_name or self.prospective_last_name:
+            name = f"{self.prospective_first_name} {self.prospective_last_name}".strip()
+            return f"{name} (Pending)"
+        return "New Tenant (Pending)"
 
     @property
     def is_active(self):
