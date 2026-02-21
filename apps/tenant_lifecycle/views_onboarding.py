@@ -504,6 +504,10 @@ def onboarding_insurance(request, token):
                 insurance.onboarding_session = session
                 insurance.save()
 
+                # Create Document record for tenant's Documents section
+                from .document_service import create_document_from_insurance
+                create_document_from_insurance(insurance, created_by=session.tenant)
+
                 session.mark_step_complete("insurance")
                 return redirect("tenant_lifecycle:onboarding_router", token=token)
     else:
@@ -540,6 +544,10 @@ def onboarding_id_verification(request, token):
             verification.onboarding_session = session
             verification.status = "pending"
             verification.save()
+
+            # Create Document records for tenant's Documents section
+            from .document_service import create_documents_from_id_verification
+            create_documents_from_id_verification(verification, created_by=session.tenant)
 
             session.mark_step_complete("id_verification")
             return redirect("tenant_lifecycle:onboarding_router", token=token)

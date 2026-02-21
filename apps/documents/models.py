@@ -313,8 +313,24 @@ class EDocument(TimeStampedModel, AuditMixin):
             # Generate PDF asynchronously (or sync if no task queue)
             self._generate_pdf()
 
+            # Create Document record in tenant's Documents section
+            self._create_document_record()
+
             return True
         return False
+
+    def _create_document_record(self):
+        """Create a Document record from the completed eDocument."""
+        if not self.final_pdf:
+            return
+        try:
+            from apps.tenant_lifecycle.document_service import create_document_from_edocument
+            create_document_from_edocument(self, created_by=self.created_by)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Failed to create Document record for eDocument %s", self.pk
+            )
 
     def _generate_pdf(self):
         """Generate PDF for the completed document."""
