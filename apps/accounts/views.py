@@ -738,6 +738,7 @@ def admin_tenant_restore(request, pk):
 @admin_required
 def admin_settings(request):
     """Admin settings overview page."""
+    from apps.ai.models import AICapability, AIProvider
     from apps.billing.models import ApiToken, PaymentGatewayConfig
     from apps.notifications.models import EmailConfig, SMSConfig
 
@@ -747,6 +748,9 @@ def admin_settings(request):
     staff_count = User.objects.filter(role__in=("admin", "staff"), is_active=True).count()
     email_active = EmailConfig.objects.filter(is_active=True).exists()
     sms_active = SMSConfig.objects.filter(is_active=True).exists()
+    ai_provider_count = AIProvider.objects.count()
+    ai_active_providers = AIProvider.objects.filter(is_active=True).count()
+    ai_capabilities_enabled = AICapability.objects.filter(is_enabled=True).count()
 
     return render(request, "admin_portal/settings.html", {
         "gateway_count": gateway_count,
@@ -755,6 +759,9 @@ def admin_settings(request):
         "staff_count": staff_count,
         "email_active": email_active,
         "sms_active": sms_active,
+        "ai_provider_count": ai_provider_count,
+        "ai_active_providers": ai_active_providers,
+        "ai_capabilities_enabled": ai_capabilities_enabled,
     })
 
 

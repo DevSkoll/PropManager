@@ -420,6 +420,27 @@ def get_app_tiles():
             gradient="red",
             keywords=["config", "preferences", "profile"],
         ),
+        # ===== AI & Automation =====
+        AppTile(
+            id="ai_gateway",
+            name="AI Gateway",
+            description="Manage AI providers",
+            icon="bi-robot",
+            url="ai_admin:dashboard",
+            category="ai",
+            gradient="purple",
+            keywords=["ai", "llm", "openai", "anthropic", "claude", "gpt"],
+        ),
+        AppTile(
+            id="ai_providers",
+            name="Add AI Provider",
+            description="Configure new AI",
+            icon="bi-plus-circle",
+            url="ai_admin:provider_create",
+            category="ai",
+            gradient="purple",
+            keywords=["add", "new", "provider", "configure"],
+        ),
     ]
 
 
@@ -485,4 +506,5 @@ CATEGORY_INFO = {
     "documents": {"name": "Documents", "icon": "bi-folder", "order": 8},
     "reports": {"name": "Reports", "icon": "bi-file-bar-graph", "order": 9},
     "operations": {"name": "Operations", "icon": "bi-sliders", "order": 10},
+    "ai": {"name": "AI & Automation", "icon": "bi-robot", "order": 11},
 }

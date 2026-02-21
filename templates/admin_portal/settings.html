@@ -107,5 +107,25 @@
             </div>
         </div>
     </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-robot"></i> AI Gateway</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Configure AI providers for smart features like message responses and work order handling.</p>
+                <p>
+                    <strong>{{ ai_active_providers }}</strong> active of <strong>{{ ai_provider_count }}</strong> provider{{ ai_provider_count|pluralize }}
+                    {% if ai_capabilities_enabled %}
+                        &nbsp; <span class="badge bg-success">{{ ai_capabilities_enabled }} capability{{ ai_capabilities_enabled|pluralize }} enabled</span>
+                    {% endif %}
+                </p>
+                <a href="{% url 'ai_admin:dashboard' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-gear"></i> Manage AI
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
