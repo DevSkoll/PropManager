@@ -178,9 +178,31 @@ propmanager/
 
 See the [`docs/`](docs/) directory for detailed documentation:
 
+### Getting Started
+- [Documentation Index](docs/index.md) — Complete documentation hub
+- [Quick Start](docs/development/getting-started.md) — Local development setup
+- [Deployment Guide](docs/deployment.md) — Production setup, Nginx, SSL, systemd
+
+### User Guides
+- [Admin Portal Guide](docs/guides/admin-guide.md) — Complete admin features walkthrough
+- [Tenant Portal Guide](docs/guides/tenant-guide.md) — Tenant features and self-service
+- [Contractor Guide](docs/guides/contractor-guide.md) — Token-based work order access
+
+### Technical Documentation
 - [Architecture Overview](docs/architecture.md) — System design, 45 models across 11 apps, authentication flows
 - [API & Services](docs/services.md) — Payment gateways, Bitcoin wallet, SMS, email, weather, rewards
-- [Deployment Guide](docs/deployment.md) — Production setup, environment variables, PostgreSQL, Django-Q2
+- [API Reference](docs/reference/api.md) — URL endpoints and views
+- [Management Commands](docs/reference/commands.md) — Custom Django commands
+
+### Development
+- [Contributing](CONTRIBUTING.md) — How to contribute to PropManager
+- [Development Workflow](docs/development/workflow.md) — Git branching, commits, PRs
+- [Background Tasks](docs/development/tasks.md) — Django-Q2 task queue guide
+- [Troubleshooting](docs/troubleshooting.md) — Common issues and solutions
+
+### Other
+- [Changelog](CHANGELOG.md) — Version history and release notes
+- [Security Policy](SECURITY.md) — Vulnerability reporting and security features
 
 ## Configuration
 

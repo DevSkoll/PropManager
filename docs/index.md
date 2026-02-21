@@ -27,6 +27,7 @@ Guides for using PropManager portals.
 |-------|-------------|
 | [Admin Guide](guides/admin-guide.md) | Complete guide to the admin portal - properties, tenants, leases, billing, and more |
 | [Tenant Guide](guides/tenant-guide.md) | How tenants use the portal - payments, work orders, documents |
+| [Onboarding Guide](guides/onboarding-guide.md) | New tenant onboarding workflow - from lease creation to move-in |
 | [Contractor Guide](guides/contractor-guide.md) | Token-based access for contractors to view and update work orders |
 
 ### Technical Documentation
