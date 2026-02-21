@@ -2,13 +2,22 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from apps.core.decorators import admin_required, tenant_required
 
 from .forms import AdminLoginForm, OTPVerifyForm, TenantLoginForm, TenantProfileForm
 from .models import OTPToken
+from .services import (
+    archive_tenant,
+    can_delete_tenant,
+    delete_tenant,
+    get_delete_blockers,
+    get_delete_summary,
+    restore_tenant,
+)
 
 User = get_user_model()
 
@@ -553,9 +562,18 @@ def admin_analytics_dashboard(request):
 
 @admin_required
 def admin_tenant_list(request):
-    """List all tenant accounts with search and filter."""
+    """List all tenant accounts with search, status tabs, and filter."""
     tenants = User.objects.filter(role="tenant").order_by("last_name", "first_name")
 
+    # Status filter: active (default), archived, all
+    status_filter = request.GET.get("status", "active")
+    if status_filter == "active":
+        tenants = tenants.filter(is_active=True)
+    elif status_filter == "archived":
+        tenants = tenants.filter(is_active=False)
+    # "all" shows everything
+
+    # Search filter
     search = request.GET.get("search", "").strip()
     if search:
         tenants = tenants.filter(
@@ -564,12 +582,6 @@ def admin_tenant_list(request):
             | Q(email__icontains=search)
             | Q(phone_number__icontains=search)
         )
-
-    status_filter = request.GET.get("status", "")
-    if status_filter == "active":
-        tenants = tenants.filter(is_active=True)
-    elif status_filter == "inactive":
-        tenants = tenants.filter(is_active=False)
 
     # Annotate with active lease info
     from apps.leases.models import Lease
@@ -586,14 +598,135 @@ def admin_tenant_list(request):
         tenant_data.append({
             "user": tenant,
             "active_lease": active_lease_map.get(tenant.pk),
+            "can_delete": can_delete_tenant(tenant),
         })
+
+    # Counts for tabs
+    active_count = User.objects.filter(role="tenant", is_active=True).count()
+    archived_count = User.objects.filter(role="tenant", is_active=False).count()
 
     return render(request, "admin_portal/tenant_list.html", {
         "tenant_data": tenant_data,
         "search": search,
         "status_filter": status_filter,
         "total_count": len(tenant_data),
+        "active_count": active_count,
+        "archived_count": archived_count,
     })
+
+
+@admin_required
+def admin_tenant_detail_modal(request, pk):
+    """Return tenant detail content for modal (AJAX)."""
+    tenant = get_object_or_404(User, pk=pk, role="tenant")
+
+    # Gather all related data
+    from apps.leases.models import Lease
+
+    leases = Lease.objects.filter(tenant=tenant).select_related(
+        "unit", "unit__property"
+    ).order_by("-start_date")
+    active_lease = leases.filter(status__in=["active", "renewed"]).first()
+
+    # Invoices and payments
+    invoices = []
+    payments = []
+    if hasattr(tenant, "invoices"):
+        invoices = tenant.invoices.order_by("-created_at")[:10]
+    if hasattr(tenant, "payments"):
+        payments = tenant.payments.order_by("-created_at")[:10]
+
+    # Work orders
+    work_orders = []
+    if hasattr(tenant, "reported_work_orders"):
+        work_orders = tenant.reported_work_orders.select_related(
+            "unit", "unit__property"
+        ).order_by("-created_at")[:5]
+
+    # Onboarding sessions
+    onboarding_sessions = []
+    if hasattr(tenant, "onboarding_sessions"):
+        onboarding_sessions = tenant.onboarding_sessions.select_related(
+            "unit", "template"
+        ).order_by("-created_at")
+
+    # Emergency contacts
+    emergency_contacts = []
+    if hasattr(tenant, "emergency_contacts"):
+        emergency_contacts = tenant.emergency_contacts.all()
+
+    # Vehicles
+    vehicles = []
+    if hasattr(tenant, "vehicles"):
+        vehicles = tenant.vehicles.all()
+
+    context = {
+        "tenant": tenant,
+        "profile": getattr(tenant, "tenant_profile", None),
+        "leases": leases,
+        "active_lease": active_lease,
+        "invoices": invoices,
+        "payments": payments,
+        "work_orders": work_orders,
+        "onboarding_sessions": onboarding_sessions,
+        "emergency_contacts": emergency_contacts,
+        "vehicles": vehicles,
+        # Deletion eligibility
+        "can_delete": can_delete_tenant(tenant),
+        "delete_blockers": get_delete_blockers(tenant),
+        "delete_summary": get_delete_summary(tenant),
+    }
+    return render(request, "admin_portal/_tenant_detail_modal.html", context)
+
+
+@admin_required
+@require_POST
+def admin_tenant_delete(request, pk):
+    """Delete a tenant (only if eligible)."""
+    tenant = get_object_or_404(User, pk=pk, role="tenant")
+
+    if not can_delete_tenant(tenant):
+        blockers = get_delete_blockers(tenant)
+        messages.error(
+            request,
+            f"Cannot delete tenant: {', '.join(blockers)}. Consider archiving instead."
+        )
+        return redirect("accounts_admin:admin_tenant_list")
+
+    name = tenant.get_full_name() or tenant.email
+    delete_tenant(tenant, deleted_by=request.user)
+    messages.success(request, f"Tenant '{name}' deleted successfully.")
+    return redirect("accounts_admin:admin_tenant_list")
+
+
+@admin_required
+@require_POST
+def admin_tenant_archive(request, pk):
+    """Archive a tenant."""
+    tenant = get_object_or_404(User, pk=pk, role="tenant")
+
+    if tenant.is_archived:
+        messages.info(request, f"Tenant '{tenant.get_full_name()}' is already archived.")
+        return redirect("accounts_admin:admin_tenant_list")
+
+    archive_tenant(tenant)
+    messages.success(request, f"Tenant '{tenant.get_full_name() or tenant.email}' archived.")
+    return redirect("accounts_admin:admin_tenant_list")
+
+
+@admin_required
+@require_POST
+def admin_tenant_restore(request, pk):
+    """Restore an archived tenant."""
+    tenant = get_object_or_404(User, pk=pk, role="tenant")
+
+    if not tenant.is_archived:
+        messages.info(request, f"Tenant '{tenant.get_full_name()}' is already active.")
+        return redirect("accounts_admin:admin_tenant_list")
+
+    restore_tenant(tenant)
+    messages.success(request, f"Tenant '{tenant.get_full_name() or tenant.email}' restored.")
+    return redirect("accounts_admin:admin_tenant_list")
 
 
 @admin_required

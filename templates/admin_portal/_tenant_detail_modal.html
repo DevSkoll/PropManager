@@ -1,0 +1,312 @@
+{% load core_tags %}
+
+<div class="modal-header">
+    <div>
+        <h5 class="modal-title mb-1">{{ tenant.get_full_name|default:tenant.email }}</h5>
+        <small class="text-muted">
+            {{ tenant.email }}
+            {% if tenant.phone_number %} &bull; {{ tenant.phone_number }}{% endif %}
+            &bull;
+            {% if tenant.is_active %}
+                <span class="badge bg-success">Active</span>
+            {% else %}
+                <span class="badge bg-secondary">Archived</span>
+            {% endif %}
+        </small>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview" type="button">Overview</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-leases" type="button">
+                Leases {% if leases %}<span class="badge bg-secondary">{{ leases|length }}</span>{% endif %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-billing" type="button">Billing</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-activity" type="button">Activity</button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+            <div class="row">
+                <!-- Profile Info -->
+                <div class="col-md-6">
+                    <h6 class="text-uppercase text-muted mb-2"><i class="bi bi-person"></i> Profile</h6>
+                    <dl class="row mb-0">
+                        {% if profile %}
+                            {% if profile.date_of_birth %}
+                            <dt class="col-sm-5">Date of Birth</dt>
+                            <dd class="col-sm-7">{{ profile.date_of_birth|date:"M d, Y" }}</dd>
+                            {% endif %}
+                            {% if profile.move_in_date %}
+                            <dt class="col-sm-5">Move-in Date</dt>
+                            <dd class="col-sm-7">{{ profile.move_in_date|date:"M d, Y" }}</dd>
+                            {% endif %}
+                            {% if profile.drivers_license_number %}
+                            <dt class="col-sm-5">Driver's License</dt>
+                            <dd class="col-sm-7">{{ profile.drivers_license_state }} - {{ profile.drivers_license_number }}</dd>
+                            {% endif %}
+                        {% else %}
+                            <dd class="col-12 text-muted">No profile data</dd>
+                        {% endif %}
+                        <dt class="col-sm-5">Email Verified</dt>
+                        <dd class="col-sm-7">
+                            {% if tenant.is_email_verified %}<i class="bi bi-check-circle text-success"></i> Yes
+                            {% else %}<i class="bi bi-x-circle text-muted"></i> No{% endif %}
+                        </dd>
+                        <dt class="col-sm-5">Phone Verified</dt>
+                        <dd class="col-sm-7">
+                            {% if tenant.is_phone_verified %}<i class="bi bi-check-circle text-success"></i> Yes
+                            {% else %}<i class="bi bi-x-circle text-muted"></i> No{% endif %}
+                        </dd>
+                        <dt class="col-sm-5">Contact Pref</dt>
+                        <dd class="col-sm-7">{{ tenant.get_preferred_contact_display }}</dd>
+                    </dl>
+                </div>
+
+                <!-- Current Lease -->
+                <div class="col-md-6">
+                    <h6 class="text-uppercase text-muted mb-2"><i class="bi bi-house"></i> Current Lease</h6>
+                    {% if active_lease %}
+                        <p class="mb-1 fw-semibold">{{ active_lease.unit.property.name }} - Unit {{ active_lease.unit.unit_number }}</p>
+                        <p class="mb-1">Rent: ${{ active_lease.rent_amount }}/mo</p>
+                        <p class="mb-1">{{ active_lease.start_date|date:"M d, Y" }} - {{ active_lease.end_date|date:"M d, Y" }}</p>
+                        <span class="badge bg-{{ active_lease.status|status_color }}">{{ active_lease.get_status_display }}</span>
+                    {% else %}
+                        <p class="text-muted">No active lease</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="row">
+                <!-- Emergency Contacts -->
+                <div class="col-md-6">
+                    <h6 class="text-uppercase text-muted mb-2"><i class="bi bi-telephone"></i> Emergency Contacts</h6>
+                    {% if emergency_contacts %}
+                        {% for contact in emergency_contacts %}
+                        <div class="mb-2">
+                            <strong>{{ contact.name }}</strong> ({{ contact.relationship }})<br>
+                            <small class="text-muted">{{ contact.phone }}{% if contact.email %} &bull; {{ contact.email }}{% endif %}</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">No emergency contacts</p>
+                    {% endif %}
+                </div>
+
+                <!-- Vehicles -->
+                <div class="col-md-6">
+                    <h6 class="text-uppercase text-muted mb-2"><i class="bi bi-car-front"></i> Vehicles</h6>
+                    {% if vehicles %}
+                        {% for vehicle in vehicles %}
+                        <div class="mb-2">
+                            <strong>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</strong><br>
+                            <small class="text-muted">{{ vehicle.color }} &bull; {{ vehicle.license_plate }} ({{ vehicle.license_state }})</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">No vehicles registered</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Leases Tab -->
+        <div class="tab-pane fade" id="tab-leases" role="tabpanel">
+            {% if leases %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Property / Unit</th>
+                                <th>Dates</th>
+                                <th>Rent</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lease in leases %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'leases_admin:lease_detail' pk=lease.pk %}">
+                                        {{ lease.unit.property.name }} - {{ lease.unit.unit_number }}
+                                    </a>
+                                </td>
+                                <td>{{ lease.start_date|date:"M d, Y" }} - {{ lease.end_date|date:"M d, Y" }}</td>
+                                <td>${{ lease.rent_amount }}</td>
+                                <td><span class="badge bg-{{ lease.status|status_color }}">{{ lease.get_status_display }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted text-center py-3">No lease history</p>
+            {% endif %}
+        </div>
+
+        <!-- Billing Tab -->
+        <div class="tab-pane fade" id="tab-billing" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-uppercase text-muted mb-2">Recent Invoices</h6>
+                    {% if invoices %}
+                        {% for invoice in invoices %}
+                        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                            <div>
+                                <a href="{% url 'billing_admin:invoice_detail' pk=invoice.pk %}">Invoice #{{ invoice.invoice_number }}</a>
+                                <br><small class="text-muted">{{ invoice.issue_date|date:"M d, Y" }}</small>
+                            </div>
+                            <div class="text-end">
+                                <strong>${{ invoice.total_amount }}</strong><br>
+                                <span class="badge bg-{{ invoice.status|status_color }}">{{ invoice.get_status_display }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No invoices</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-uppercase text-muted mb-2">Recent Payments</h6>
+                    {% if payments %}
+                        {% for payment in payments %}
+                        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                            <div>
+                                {{ payment.payment_date|date:"M d, Y" }}<br>
+                                <small class="text-muted">{{ payment.get_payment_method_display }}</small>
+                            </div>
+                            <div class="text-end">
+                                <strong class="text-success">${{ payment.amount }}</strong><br>
+                                <span class="badge bg-{{ payment.status|status_color }}">{{ payment.get_status_display }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No payments</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Tab -->
+        <div class="tab-pane fade" id="tab-activity" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-uppercase text-muted mb-2">Work Orders</h6>
+                    {% if work_orders %}
+                        {% for wo in work_orders %}
+                        <div class="border-bottom py-2">
+                            <a href="{% url 'workorders_admin:workorder_detail' pk=wo.pk %}">{{ wo.title }}</a>
+                            <span class="badge bg-{{ wo.status|status_color }}">{{ wo.get_status_display }}</span>
+                            <br><small class="text-muted">{{ wo.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No work orders</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-uppercase text-muted mb-2">Onboarding</h6>
+                    {% if onboarding_sessions %}
+                        {% for session in onboarding_sessions %}
+                        <div class="border-bottom py-2">
+                            <span class="badge bg-{{ session.status|status_color }}">{{ session.get_status_display }}</span>
+                            {{ session.unit.property.name }} - {{ session.unit.unit_number }}
+                            <br><small class="text-muted">{{ session.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No onboarding sessions</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    {% if tenant.is_archived %}
+        <!-- Restore button for archived tenants -->
+        <form action="{% url 'accounts_admin:admin_tenant_restore' pk=tenant.pk %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-arrow-counterclockwise"></i> Restore Tenant
+            </button>
+        </form>
+    {% else %}
+        <!-- Archive button for active tenants -->
+        <form action="{% url 'accounts_admin:admin_tenant_archive' pk=tenant.pk %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning" onclick="return confirm('Archive this tenant? They will be hidden from the active list and unable to log in.');">
+                <i class="bi bi-archive"></i> Archive
+            </button>
+        </form>
+    {% endif %}
+
+    <!-- Delete button -->
+    {% if can_delete %}
+        <button type="button" class="btn btn-danger" data-bs-toggle="collapse" data-bs-target="#deleteConfirm">
+            <i class="bi bi-trash"></i> Delete
+        </button>
+    {% else %}
+        <button type="button" class="btn btn-outline-danger" disabled title="Cannot delete: {{ delete_blockers|join:', ' }}">
+            <i class="bi bi-trash"></i> Delete
+        </button>
+    {% endif %}
+
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+</div>
+
+<!-- Delete Confirmation (collapsible) -->
+{% if can_delete %}
+<div class="collapse border-top" id="deleteConfirm">
+    <div class="p-3 bg-danger bg-opacity-10">
+        <h6 class="text-danger mb-2"><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h6>
+        <p class="mb-2">This will permanently delete:</p>
+        <ul class="mb-3">
+            <li>User account and profile</li>
+            {% if delete_summary.emergency_contacts %}<li>{{ delete_summary.emergency_contacts }} emergency contact(s)</li>{% endif %}
+            {% if delete_summary.vehicles %}<li>{{ delete_summary.vehicles }} vehicle(s)</li>{% endif %}
+            {% if delete_summary.employment_records %}<li>{{ delete_summary.employment_records }} employment record(s)</li>{% endif %}
+            {% if delete_summary.insurance_policies %}<li>{{ delete_summary.insurance_policies }} insurance polic(y/ies)</li>{% endif %}
+            {% if delete_summary.id_verifications %}<li>{{ delete_summary.id_verifications }} ID verification(s)</li>{% endif %}
+            {% if delete_summary.onboarding_sessions %}<li>{{ delete_summary.onboarding_sessions }} onboarding session(s)</li>{% endif %}
+            {% if delete_summary.notifications %}<li>{{ delete_summary.notifications }} notification(s)</li>{% endif %}
+        </ul>
+        <p class="mb-3 text-danger fw-bold">This action cannot be undone.</p>
+        <form action="{% url 'accounts_admin:admin_tenant_delete' pk=tenant.pk %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Delete Permanently
+            </button>
+            <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#deleteConfirm">Cancel</button>
+        </form>
+    </div>
+</div>
+{% else %}
+<!-- Cannot Delete Message -->
+<div class="border-top p-3 bg-warning bg-opacity-10">
+    <h6 class="text-warning mb-2"><i class="bi bi-shield-exclamation"></i> Cannot Delete This Tenant</h6>
+    <p class="mb-2">This tenant has linked data that prevents deletion:</p>
+    <ul class="mb-2">
+        {% for blocker in delete_blockers %}
+        <li>{{ blocker }}</li>
+        {% endfor %}
+    </ul>
+    <p class="mb-0 text-muted">Consider archiving this tenant instead to preserve historical data while hiding them from active lists.</p>
+</div>
+{% endif %}

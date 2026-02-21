@@ -46,6 +46,11 @@ class User(AbstractUser):
     def is_admin_user(self):
         return self.role in ("admin", "staff")
 
+    @property
+    def is_archived(self):
+        """Returns True if user is archived (deactivated)."""
+        return not self.is_active
+
 
 class TenantProfile(TimeStampedModel):
     user = models.OneToOneField(
