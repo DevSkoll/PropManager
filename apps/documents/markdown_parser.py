@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-# Regex patterns for signature tags
+# Regex patterns for signature and fillable tags
 SIGNATURE_TAG_PATTERN = re.compile(
-    r'\[(?P<type>SIGNATURE|INITIALS):(?P<role>[A-Za-z0-9_]+)\]',
+    r'\[(?P<type>SIGNATURE|INITIALS|FILLABLE):(?P<role>[A-Za-z0-9_]+)\]',
     re.IGNORECASE
 )
 
@@ -29,8 +29,8 @@ VALID_ROLES = {
 
 @dataclass
 class SignatureTag:
-    """Represents a parsed signature tag from the document."""
-    tag_type: Literal["signature", "initials"]
+    """Represents a parsed signature or fillable tag from the document."""
+    tag_type: Literal["signature", "initials", "fillable"]
     role: str
     position: int  # Character position in the document
     order: int  # Order of appearance (1-indexed)
@@ -183,23 +183,48 @@ def render_signature_placeholder(tag: SignatureTag, signed: bool = False, image:
 '''
 
 
+def render_fillable_placeholder(tag: SignatureTag, filled_value: str = None) -> str:
+    """
+    Render a fillable tag as HTML text input or filled value.
+
+    Args:
+        tag: The fillable tag to render
+        filled_value: The filled text value if already completed
+
+    Returns:
+        HTML string for the fillable field
+    """
+    role_display = tag.role.replace("_", " ").title()
+    field_id = f"fillable-{tag.role}-{tag.order}"
+
+    if filled_value:
+        return f'''<span class="fillable-field filled" data-role="{tag.role}" data-order="{tag.order}">{filled_value}</span>'''
+    else:
+        return f'''<span class="fillable-field pending" data-role="{tag.role}" data-order="{tag.order}">
+    <input type="text" id="{field_id}" name="{field_id}" class="fillable-input" placeholder="{role_display} fills in" required>
+</span>'''
+
+
 def replace_tags_with_html(
     content: str,
     signed_blocks: dict[int, str] | None = None,
+    filled_blocks: dict[int, str] | None = None,
     current_role: str | None = None,
 ) -> str:
     """
-    Replace signature tags with HTML blocks.
+    Replace signature and fillable tags with HTML blocks.
 
     Args:
-        content: Markdown content with signature tags
+        content: Markdown content with signature/fillable tags
         signed_blocks: Dict mapping block order to base64 image (for signed blocks)
+        filled_blocks: Dict mapping block order to text content (for filled blocks)
         current_role: If provided, only show interactive placeholders for this role
 
     Returns:
         Content with tags replaced by HTML
     """
     signed_blocks = signed_blocks or {}
+    filled_blocks = filled_blocks or {}
 
     def replacer(match):
         tag_type = match.group("type").lower()
@@ -220,30 +245,51 @@ def replace_tags_with_html(
             original_text=match.group(0),
         )
 
-        is_signed = order in signed_blocks
-        image = signed_blocks.get(order, "")
-
-        return render_signature_placeholder(tag, signed=is_signed, image=image)
+        if tag_type == "fillable":
+            filled_value = filled_blocks.get(order)
+            return render_fillable_placeholder(tag, filled_value=filled_value)
+        else:
+            is_signed = order in signed_blocks
+            image = signed_blocks.get(order, "")
+            return render_signature_placeholder(tag, signed=is_signed, image=image)
 
     return SIGNATURE_TAG_PATTERN.sub(replacer, content)
 
 
 def count_blocks_by_role(content: str) -> dict[str, dict[str, int]]:
     """
-    Count signature and initials blocks per role.
+    Count signature, initials, and fillable blocks per role.
 
     Args:
         content: Markdown content
 
     Returns:
-        Dict mapping role to {"signature": count, "initials": count}
+        Dict mapping role to {"signature": count, "initials": count, "fillable": count}
     """
     parsed = parse_signature_tags(content)
     counts = {}
 
     for tag in parsed.tags:
         if tag.role not in counts:
-            counts[tag.role] = {"signature": 0, "initials": 0}
+            counts[tag.role] = {"signature": 0, "initials": 0, "fillable": 0}
         counts[tag.role][tag.tag_type] += 1
 
     return counts
+
+
+def get_fillable_blocks(content: str, role: str = None) -> list[SignatureTag]:
+    """
+    Get all fillable blocks, optionally filtered by role.
+
+    Args:
+        content: Markdown content
+        role: Optional role to filter by
+
+    Returns:
+        List of SignatureTag for fillable fields
+    """
+    parsed = parse_signature_tags(content)
+    fillables = [tag for tag in parsed.tags if tag.tag_type == "fillable"]
+    if role:
+        fillables = [tag for tag in fillables if tag.role == role.lower()]
+    return fillables

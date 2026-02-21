@@ -65,6 +65,31 @@
     .signer-status .pending {
         color: #6c757d;
     }
+    /* Fillable field styles */
+    .fillable-field {
+        display: inline-block;
+        vertical-align: baseline;
+    }
+    .fillable-field.pending .fillable-input {
+        border: 1px dashed #007bff;
+        border-radius: 4px;
+        padding: 2px 8px;
+        background: #f0f7ff;
+        min-width: 120px;
+        font-size: inherit;
+    }
+    .fillable-field.pending .fillable-input:focus {
+        outline: none;
+        border-color: #0056b3;
+        box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.2);
+        background: #fff;
+    }
+    .fillable-field.filled {
+        border-bottom: 1px solid #333;
+        padding: 0 4px;
+        font-weight: 500;
+        background: #e8f4e8;
+    }
 </style>
 {% endblock %}
 
@@ -298,6 +323,24 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Validate fillable fields (check all required inputs in document)
+        const fillableInputs = document.querySelectorAll('.fillable-input[required]');
+        let allFilled = true;
+        fillableInputs.forEach(function(input) {
+            if (!input.value.trim()) {
+                allFilled = false;
+                input.style.borderColor = '#dc3545';
+            } else {
+                input.style.borderColor = '';
+            }
+        });
+
+        if (!allFilled) {
+            errorAlert.textContent = 'Please fill in all required fields in the document.';
+            errorAlert.classList.remove('d-none');
+            return;
+        }
+
         // Convert canvas to base64
         signatureData.value = canvas.toDataURL('image/png');
 
@@ -307,6 +350,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const formData = new FormData(form);
+
+            // Collect fillable field values from document content
+            const fillableInputs = document.querySelectorAll('.fillable-input');
+            fillableInputs.forEach(function(input) {
+                formData.append(input.name, input.value);
+            });
+
             const response = await fetch(form.action, {
                 method: 'POST',
                 body: formData,

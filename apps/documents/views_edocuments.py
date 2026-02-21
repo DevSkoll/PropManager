@@ -29,6 +29,7 @@ from .markdown_parser import (
 )
 from .models import (
     EDocument,
+    EDocumentFillableBlock,
     EDocumentSignatureBlock,
     EDocumentSigner,
     EDocumentTemplate,
@@ -286,6 +287,7 @@ def admin_edoc_detail(request, pk):
 
     signers = edoc.signers.all()
     blocks = edoc.signature_blocks.select_related("signer").all()
+    fillable_blocks = edoc.fillable_blocks.all()
 
     # Render content with variables
     if edoc.lease:
@@ -305,12 +307,24 @@ def admin_edoc_detail(request, pk):
         block.block_order: block.image
         for block in blocks if block.is_signed
     }
-    rendered_html = replace_tags_with_html(rendered_html, signed_blocks=signed_blocks)
+
+    # Get filled blocks for display
+    filled_blocks = {
+        block.block_order: block.content
+        for block in fillable_blocks if block.is_filled
+    }
+
+    rendered_html = replace_tags_with_html(
+        rendered_html,
+        signed_blocks=signed_blocks,
+        filled_blocks=filled_blocks,
+    )
 
     context = {
         "edoc": edoc,
         "signers": signers,
         "blocks": blocks,
+        "fillable_blocks": fillable_blocks,
         "rendered_html": rendered_html,
         "progress": edoc.signature_progress,
     }
@@ -341,8 +355,9 @@ def admin_edoc_edit(request, pk):
                 else:
                     edoc.save()
 
-                    # Recreate signature blocks
+                    # Recreate signature and fillable blocks
                     edoc.signature_blocks.all().delete()
+                    edoc.fillable_blocks.all().delete()
                     edoc.signers.all().delete()
                     _create_signature_blocks(edoc)
 
@@ -520,14 +535,31 @@ def admin_edoc_sign_as_landlord(request, pk):
         messages.info(request, "Landlord signature already captured.")
         return redirect("documents_admin:edoc_detail", pk=pk)
 
+    # Get landlord fillable blocks
+    landlord_fillables = edoc.fillable_blocks.filter(role="landlord", filled_at__isnull=True)
+
     if request.method == "POST":
         signature_data = request.POST.get("signature_data")
         if signature_data:
             with transaction.atomic():
+                # Process fillable fields for landlord
+                client_ip = _get_client_ip(request)
+                now = timezone.now()
+
+                for fillable in landlord_fillables:
+                    field_name = f"fillable-landlord-{fillable.block_order}"
+                    content = request.POST.get(field_name, "").strip()
+                    if content:
+                        fillable.content = content
+                        fillable.filled_at = now
+                        fillable.filled_by = request.user
+                        fillable.ip_address = client_ip
+                        fillable.save()
+
                 # Update signer
                 signer.signature_image = signature_data
-                signer.signed_at = timezone.now()
-                signer.ip_address = _get_client_ip(request)
+                signer.signed_at = now
+                signer.ip_address = client_ip
                 signer.user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
                 signer.user = request.user
                 signer.save()
@@ -535,8 +567,8 @@ def admin_edoc_sign_as_landlord(request, pk):
                 # Update all signature blocks for this signer
                 signer.blocks.update(
                     image=signature_data,
-                    signed_at=timezone.now(),
-                    ip_address=signer.ip_address,
+                    signed_at=now,
+                    ip_address=client_ip,
                 )
 
                 # Check if document is complete
@@ -571,10 +603,29 @@ def admin_edoc_sign_as_landlord(request, pk):
 
     rendered_html = markdown.markdown(rendered_content, extensions=["tables", "fenced_code"])
 
+    # Get already filled blocks
+    filled_blocks = {
+        block.block_order: block.content
+        for block in edoc.fillable_blocks.filter(filled_at__isnull=False)
+    }
+
+    # Get signed blocks
+    signed_blocks = {
+        block.block_order: block.image
+        for block in edoc.signature_blocks.filter(signed_at__isnull=False)
+    }
+
+    rendered_html = replace_tags_with_html(
+        rendered_html,
+        signed_blocks=signed_blocks,
+        filled_blocks=filled_blocks,
+    )
+
     context = {
         "edoc": edoc,
         "signer": signer,
         "blocks": blocks,
+        "fillable_blocks": landlord_fillables,
         "rendered_html": rendered_html,
     }
     return render(request, "documents/admin_edoc_sign.html", context)
@@ -586,7 +637,7 @@ def admin_edoc_sign_as_landlord(request, pk):
 
 
 def _create_signature_blocks(edoc: EDocument) -> None:
-    """Create signature blocks from parsed content."""
+    """Create signature and fillable blocks from parsed content."""
     parsed = parse_signature_tags(edoc.content)
 
     # Group tags by role
@@ -598,22 +649,34 @@ def _create_signature_blocks(edoc: EDocument) -> None:
 
     # Create signers and blocks
     for role, tags in role_tags.items():
-        # Create or get signer placeholder
-        signer, _ = EDocumentSigner.objects.get_or_create(
-            document=edoc,
-            role=role,
-            defaults={
-                "name": role.title(),
-                "email": "",
-            }
-        )
+        # Create or get signer placeholder (for signature/initials tags)
+        signature_tags = [t for t in tags if t.tag_type in ("signature", "initials")]
+        fillable_tags = [t for t in tags if t.tag_type == "fillable"]
 
-        # Create signature blocks
-        for tag in tags:
-            EDocumentSignatureBlock.objects.create(
+        if signature_tags:
+            signer, _ = EDocumentSigner.objects.get_or_create(
                 document=edoc,
-                signer=signer,
-                block_type=tag.tag_type,
+                role=role,
+                defaults={
+                    "name": role.title(),
+                    "email": "",
+                }
+            )
+
+            # Create signature blocks
+            for tag in signature_tags:
+                EDocumentSignatureBlock.objects.create(
+                    document=edoc,
+                    signer=signer,
+                    block_type=tag.tag_type,
+                    block_order=tag.order,
+                )
+
+        # Create fillable blocks
+        for tag in fillable_tags:
+            EDocumentFillableBlock.objects.create(
+                document=edoc,
+                role=role,
                 block_order=tag.order,
             )
 

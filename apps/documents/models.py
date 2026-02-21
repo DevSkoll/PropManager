@@ -429,3 +429,53 @@ class EDocumentSignatureBlock(TimeStampedModel):
     @property
     def is_signed(self):
         return self.signed_at is not None
+
+
+class EDocumentFillableBlock(TimeStampedModel):
+    """Fillable text field within a document for dynamic content."""
+
+    ROLE_CHOICES = [
+        ("landlord", "Landlord"),
+        ("tenant", "Tenant"),
+        ("tenant2", "Tenant 2"),
+        ("tenant3", "Tenant 3"),
+        ("tenant4", "Tenant 4"),
+        ("cosigner", "Co-Signer"),
+    ]
+
+    document = models.ForeignKey(
+        EDocument, on_delete=models.CASCADE, related_name="fillable_blocks"
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    block_order = models.PositiveIntegerField(
+        help_text="Order of appearance in document (parsed from markdown)"
+    )
+
+    # Filled content
+    content = models.TextField(
+        blank=True, default="", help_text="Text content filled in by signer"
+    )
+    filled_at = models.DateTimeField(null=True, blank=True)
+    filled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="edocument_fillable_blocks",
+    )
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["block_order"]
+        unique_together = [("document", "block_order")]
+        verbose_name = "eDocument Fillable Block"
+        verbose_name_plural = "eDocument Fillable Blocks"
+
+    def __str__(self):
+        status = "Filled" if self.filled_at else "Pending"
+        preview = self.content[:30] + "..." if len(self.content) > 30 else self.content
+        return f"Fillable #{self.block_order} ({self.get_role_display()}) - {status}: {preview}"
+
+    @property
+    def is_filled(self):
+        return self.filled_at is not None

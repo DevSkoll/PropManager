@@ -16,7 +16,7 @@ from django.views.decorators.http import require_POST
 from apps.core.decorators import tenant_required
 
 from .markdown_parser import parse_signature_tags, replace_tags_with_html
-from .models import EDocument, EDocumentSigner
+from .models import EDocument, EDocumentFillableBlock, EDocumentSigner
 from .variables import TemplateVariableResolver
 
 
@@ -138,10 +138,23 @@ def tenant_edoc_detail(request, pk):
         for block in all_blocks if block.is_signed
     }
 
-    # Replace signature tags with HTML (signed ones show image, pending show placeholder)
+    # Get filled blocks for display
+    filled_blocks = {
+        block.block_order: block.content
+        for block in edoc.fillable_blocks.filter(filled_at__isnull=False)
+    }
+
+    # Get fillable blocks for this user's role
+    user_fillables = edoc.fillable_blocks.filter(
+        role=signer.role,
+        filled_at__isnull=True
+    ).order_by("block_order")
+
+    # Replace tags with HTML (signed/filled ones show content, pending show inputs)
     rendered_html = replace_tags_with_html(
         rendered_html,
         signed_blocks=signed_blocks,
+        filled_blocks=filled_blocks,
         current_role=signer.role,
     )
 
@@ -152,6 +165,7 @@ def tenant_edoc_detail(request, pk):
         "edoc": edoc,
         "signer": signer,
         "user_blocks": user_blocks,
+        "user_fillables": user_fillables,
         "rendered_html": rendered_html,
         "all_signers": edoc.signers.all(),
         "progress": edoc.signature_progress,
@@ -181,7 +195,18 @@ def _render_edoc_readonly(request, edoc, signer):
         block.block_order: block.image
         for block in edoc.signature_blocks.filter(signed_at__isnull=False)
     }
-    rendered_html = replace_tags_with_html(rendered_html, signed_blocks=signed_blocks)
+
+    # Get all filled blocks
+    filled_blocks = {
+        block.block_order: block.content
+        for block in edoc.fillable_blocks.filter(filled_at__isnull=False)
+    }
+
+    rendered_html = replace_tags_with_html(
+        rendered_html,
+        signed_blocks=signed_blocks,
+        filled_blocks=filled_blocks,
+    )
 
     context = {
         "edoc": edoc,
@@ -196,7 +221,7 @@ def _render_edoc_readonly(request, edoc, signer):
 @tenant_required
 @require_POST
 def tenant_edoc_sign(request, pk):
-    """Process signature submission from tenant."""
+    """Process signature and fillable field submission from tenant."""
     edoc = get_object_or_404(EDocument, pk=pk)
     _verify_tenant_edoc_access(request.user, edoc)
 
@@ -226,6 +251,21 @@ def tenant_edoc_sign(request, pk):
 
     try:
         with transaction.atomic():
+            # Process fillable fields for this signer's role
+            user_fillables = edoc.fillable_blocks.filter(
+                role=signer.role,
+                filled_at__isnull=True
+            )
+            for fillable in user_fillables:
+                field_name = f"fillable-{signer.role}-{fillable.block_order}"
+                content = request.POST.get(field_name, "").strip()
+                if content:
+                    fillable.content = content
+                    fillable.filled_at = now
+                    fillable.filled_by = request.user
+                    fillable.ip_address = client_ip
+                    fillable.save()
+
             # Update signer record
             signer.signature_image = signature_data
             signer.signed_at = now
