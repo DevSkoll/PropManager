@@ -38,6 +38,10 @@ SECRET_KEY = get_secret("django_secret_key", env("SECRET_KEY", default="insecure
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
+# Site URL - the public URL where the app is accessible
+# Used for generating links in emails, signing workflows, etc.
+SITE_URL = env("SITE_URL", default="http://localhost:8000")
+
 AUTH_USER_MODEL = "accounts.User"
 
 INSTALLED_APPS = [

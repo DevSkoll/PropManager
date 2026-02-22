@@ -12,7 +12,6 @@ Handles all business logic for the tenant onboarding process including:
 import logging
 from decimal import Decimal
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.urls import reverse
@@ -20,6 +19,7 @@ from django.utils import timezone
 
 from apps.core.services.email import send_email
 from apps.core.services.sms import sms_service
+from apps.core.url_utils import get_absolute_url
 
 from .models import (
     OnboardingDocument,
@@ -31,12 +31,6 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
-
-
-def _get_absolute_url(path):
-    """Build absolute URL from path."""
-    site_url = getattr(settings, "SITE_URL", "http://localhost:8000")
-    return f"{site_url.rstrip('/')}{path}"
 
 
 class OnboardingService:
@@ -147,7 +141,7 @@ class OnboardingService:
             "tenant_lifecycle:onboarding_start",
             kwargs={"token": session.access_token}
         )
-        onboarding_url = _get_absolute_url(onboarding_path)
+        onboarding_url = get_absolute_url(onboarding_path)
 
         # Send email
         if method in ("email", "both"):
@@ -819,7 +813,7 @@ Thank you!
         # Admin notification
         if session.created_by and session.created_by.email:
             try:
-                admin_url = _get_absolute_url(
+                admin_url = get_absolute_url(
                     reverse("tenant_lifecycle_admin:admin_session_detail", kwargs={"pk": session.pk})
                 )
                 send_email(

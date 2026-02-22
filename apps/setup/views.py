@@ -147,7 +147,10 @@ class WelcomeStepView(BaseSetupStepView):
     template_name = "setup/step_welcome.html"
 
     def get(self, request):
+        from django.conf import settings
+
         context = self.get_context_data()
+        context["site_url"] = settings.SITE_URL
         return render(request, self.template_name, context)
 
     def post(self, request):

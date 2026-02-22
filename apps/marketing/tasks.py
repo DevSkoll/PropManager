@@ -18,6 +18,11 @@ from .models import Campaign, CampaignLink, CampaignRecipient
 logger = logging.getLogger(__name__)
 
 
+def _get_site_url():
+    """Get the configured SITE_URL."""
+    return settings.SITE_URL.rstrip("/")
+
+
 # ---------------------------------------------------------------------------
 # Segment Resolution
 # ---------------------------------------------------------------------------
@@ -118,7 +123,7 @@ def _process_links_for_tracking(campaign):
     url_pattern = re.compile(r'href=["\']((https?://[^"\']+))["\']')
     urls_found = set(url_pattern.findall(body_html))
 
-    base_url = getattr(settings, "SITE_URL", "http://localhost:8000")
+    base_url = _get_site_url()
 
     link_map = {}  # original_url -> tracking_token
     for full_match, url in urls_found:
@@ -168,7 +173,7 @@ def send_campaign_email(recipient_id):
         return False
 
     campaign = recipient.campaign
-    base_url = getattr(settings, "SITE_URL", "http://localhost:8000")
+    base_url = _get_site_url()
 
     # Build the HTML body with tracking pixel and link tracking
     body_html = campaign.body_html or ""

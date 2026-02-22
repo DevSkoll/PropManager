@@ -9,19 +9,13 @@ Handles sending email/SMS notifications for the document signing workflow:
 
 import logging
 
-from django.conf import settings
 from django.urls import reverse
 
 from apps.core.services.email import send_email
 from apps.core.services.sms import sms_service
+from apps.core.url_utils import get_absolute_url
 
 logger = logging.getLogger(__name__)
-
-
-def _get_absolute_url(path):
-    """Build absolute URL from path."""
-    site_url = getattr(settings, "SITE_URL", "http://localhost:8000")
-    return f"{site_url.rstrip('/')}{path}"
 
 
 def _get_signing_url(signer):
@@ -36,7 +30,7 @@ def _get_signing_url(signer):
             "documents_tenant:edoc_detail",
             kwargs={"pk": signer.document.pk}
         )
-        return _get_absolute_url(path)
+        return get_absolute_url(path)
     else:
         # External signer - no account
         # TODO: Implement token-based public signing URL
@@ -108,7 +102,7 @@ def _build_signature_received_html(edoc, signer_who_signed):
         status = "Signed" if s.is_signed else "Pending"
         signers_status.append(f"{s.name} ({s.get_role_display()}): {status}")
 
-    admin_url = _get_absolute_url(
+    admin_url = get_absolute_url(
         reverse("documents_admin:edoc_detail", kwargs={"pk": edoc.pk})
     )
 
@@ -168,7 +162,7 @@ def _build_completed_html(edoc):
         signed_date = s.signed_at.strftime("%B %d, %Y at %I:%M %p") if s.signed_at else "N/A"
         signers_info.append(f"{s.name} ({s.get_role_display()}): Signed on {signed_date}")
 
-    admin_url = _get_absolute_url(
+    admin_url = get_absolute_url(
         reverse("documents_admin:edoc_detail", kwargs={"pk": edoc.pk})
     )
 
