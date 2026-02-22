@@ -194,7 +194,7 @@ class AdminAccountStepView(BaseSetupStepView):
             AdminProfile.objects.get_or_create(user=user)
 
             # Log in the new admin
-            login(request, user)
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
 
             self.mark_complete()
             messages.success(request, f"Admin account '{user.username}' created successfully!")
@@ -693,19 +693,11 @@ class ReviewCompleteStepView(BaseSetupStepView):
         user = request.user if request.user.is_authenticated else None
         config.finalize(user)
 
-        # Ensure user is logged in
-        if not request.user.is_authenticated:
-            from apps.accounts.models import User
-
-            admin_user = User.objects.filter(role="admin", is_superuser=True).first()
-            if admin_user:
-                login(request, admin_user)
-
         messages.success(
             request,
-            "Setup complete! Welcome to PropManager. Your property management system is ready to use.",
+            "Setup complete! Please log in with your admin credentials to start using PropManager.",
         )
-        return redirect("accounts_admin:admin_dashboard")
+        return redirect("accounts_admin:admin_login")
 
     def _build_summary(self):
         """Build a summary of all configurations."""

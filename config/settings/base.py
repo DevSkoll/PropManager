@@ -8,6 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
+    CSRF_TRUSTED_ORIGINS=(list, []),
 )
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
@@ -41,6 +42,12 @@ ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 # Site URL - the public URL where the app is accessible
 # Used for generating links in emails, signing workflows, etc.
 SITE_URL = env("SITE_URL", default="http://localhost:8000")
+
+# Build CSRF_TRUSTED_ORIGINS from SITE_URL and optional env var
+_csrf_origins = env("CSRF_TRUSTED_ORIGINS", default=[])
+if SITE_URL and SITE_URL not in _csrf_origins:
+    _csrf_origins.insert(0, SITE_URL)
+CSRF_TRUSTED_ORIGINS = _csrf_origins
 
 AUTH_USER_MODEL = "accounts.User"
 

@@ -1,0 +1,69 @@
+# ============================================
+# PropManager Development Override - Custom Ports
+# ============================================
+services:
+  db:
+    ports:
+      - "5433:5432"  # Use different host port
+    environment:
+      POSTGRES_PASSWORD: devpassword
+
+  redis:
+    ports:
+      - "6380:6379"  # Use different host port
+
+  web:
+    build:
+      target: development
+    container_name: propmanager-web-dev
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - /app/.git
+      - /app/staticfiles
+      - /app/node_modules
+      - dev_static:/app/staticfiles
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgres://propmanager:devpassword@db:5432/propmanager
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,192.168.50.10,propdemo.arctek.us
+      - SITE_URL=https://propdemo.arctek.us
+      - DEV_OTP_CODE=123456
+      - SECRET_KEY=dev-secret-key-not-for-production-use-only
+    env_file: []
+    ports:
+      - "8001:8000"
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    healthcheck:
+      disable: true
+    user: root
+
+  worker:
+    build:
+      target: development
+    container_name: propmanager-worker-dev
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - /app/.git
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgres://propmanager:devpassword@db:5432/propmanager
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-not-for-production-use-only
+    env_file: []
+    command: ["python", "manage.py", "qcluster"]
+    user: root
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+volumes:
+  dev_static:
+    name: propmanager-dev-static
