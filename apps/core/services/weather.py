@@ -11,7 +11,10 @@ OPENWEATHERMAP_GEO_URL = "https://api.openweathermap.org/geo/1.0"
 
 class WeatherService:
     def __init__(self):
-        self.api_key = settings.OPENWEATHERMAP_API_KEY
+        # Try database settings first, then fall back to environment variable
+        from apps.core.models import SystemSettings
+        db_key = SystemSettings.get_openweathermap_api_key()
+        self.api_key = db_key or settings.OPENWEATHERMAP_API_KEY
 
     def geocode_zip(self, zip_code, country_code="US"):
         """Convert a ZIP code to latitude/longitude.

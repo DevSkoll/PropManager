@@ -1,4 +1,9 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+
+def is_admin_or_staff(user):
+    return user.is_authenticated and user.role in ("admin", "staff")
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -791,3 +796,29 @@ def _send_otp(otp, user):
             message=message,
             recipient_list=[user.email],
         )
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def admin_system_settings(request):
+    """System-wide settings (API keys, integrations, etc.)."""
+    from apps.core.models import SystemSettings
+    from apps.accounts.forms_settings import SystemSettingsForm
+    
+    settings = SystemSettings.get_settings()
+    
+    if request.method == "POST":
+        form = SystemSettingsForm(request.POST, instance=settings)
+        if form.is_valid():
+            settings = form.save(commit=False)
+            settings.updated_by = request.user
+            settings.save()
+            messages.success(request, "System settings updated successfully!")
+            return redirect("accounts_admin:admin_system_settings")
+    else:
+        form = SystemSettingsForm(instance=settings)
+    
+    return render(request, "admin_portal/system_settings.html", {
+        "form": form,
+        "settings": settings,
+    })

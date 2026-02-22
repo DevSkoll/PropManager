@@ -1,0 +1,59 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4"><i class="bi bi-sliders"></i> System Settings</h1>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">External Integrations</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.openweathermap_api_key.id_for_label }}" class="form-label">
+                                {{ form.openweathermap_api_key.label }}
+                            </label>
+                            {{ form.openweathermap_api_key }}
+                            {% if form.openweathermap_api_key.help_text %}
+                                <div class="form-text">{{ form.openweathermap_api_key.help_text }}</div>
+                            {% endif %}
+                            {% if form.openweathermap_api_key.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.openweathermap_api_key.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Get your free API key at <a href="https://openweathermap.org/api" target="_blank">OpenWeatherMap</a> (1,000 calls/day free tier)
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Settings
+                            </button>
+                            <a href="{% url 'accounts_admin:admin_settings' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Settings
+                            </a>
+                        </div>
+                    </form>
+                </div>
+                
+                {% if settings.updated_at %}
+                <div class="card-footer text-muted">
+                    Last updated: {{ settings.updated_at|date:"M d, Y g:i A" }}
+                    {% if settings.updated_by %}
+                        by {{ settings.updated_by.get_full_name|default:settings.updated_by.username }}
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
