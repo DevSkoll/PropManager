@@ -8,8 +8,10 @@ Welcome to the PropManager documentation! This guide covers everything you need 
 
 | I want to... | Go to... |
 |--------------|----------|
+| **Quick orientation** (AI/Developers) | **[WARP.md](../WARP.md)** |
 | Set up PropManager locally | [Getting Started](development/getting-started.md) |
 | Deploy to production | [Deployment Guide](deployment.md) |
+| Deploy with Docker | [Docker Production](deployment.md#docker-production) |
 | Learn the admin portal | [Admin Guide](guides/admin-guide.md) |
 | Use the tenant portal | [Tenant Guide](guides/tenant-guide.md) |
 | Fix an issue | [Troubleshooting](troubleshooting.md) |
@@ -18,6 +20,16 @@ Welcome to the PropManager documentation! This guide covers everything you need 
 ---
 
 ## Documentation Overview
+
+### AI/Developer Quick Start
+
+**NEW:** For AI assistants (Claude, GPT, etc.) and developers new to the project, start with **[WARP.md](../WARP.md)**. This comprehensive context file provides:
+- Quick project orientation
+- Architecture overview
+- Common patterns and conventions
+- Key file locations
+- Docker deployment guides
+- Troubleshooting quick reference
 
 ### User Guides
 

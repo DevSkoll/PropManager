@@ -1,23 +1,359 @@
 # Deployment Guide
 
-## Production Environment Setup
+This guide covers production deployment of PropManager using **Docker** (recommended) or **traditional** (systemd + Gunicorn) methods.
+
+---
+
+## Deployment Methods
+
+| Method | Best For | Complexity | Features |
+|--------|----------|------------|----------|
+| [Docker Production](#docker-production) | Modern deployments, cloud hosting | Low | Isolated, reproducible, easy updates |
+| [Traditional Deployment](#traditional-deployment) | VPS, dedicated servers | Medium | Full control, systemd integration |
+
+---
+
+## Docker Production
+
+**Recommended** for most deployments. Uses Docker Compose to orchestrate all services.
+
+### 1. System Requirements
+
+- Docker 20.10+
+- Docker Compose 2.0+
+- 2GB RAM minimum (4GB recommended)
+- 10GB disk space minimum
+- SSL certificate (for HTTPS)
+
+### 2. Clone and Configure
+
+```bash
+# Clone repository
+git clone <repository-url> /opt/PropManager
+cd /opt/PropManager
+
+# Copy environment template
+cp .env.docker.example .env.docker
+
+# CRITICAL: Edit .env.docker with production values
+nano .env.docker
+```
+
+**Required environment variables:**
+
+```bash
+# Site configuration
+SITE_URL=https://yourdomain.com
+ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
+DEBUG=False
+
+# Security
+SECRET_KEY=<generate-with-command-below>
+POSTGRES_PASSWORD=<strong-random-password>
+
+# Email (SMTP)
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your@email.com
+EMAIL_HOST_PASSWORD=your-app-password
+DEFAULT_FROM_EMAIL=noreply@yourdomain.com
+
+# Optional: Payment gateways, Twilio, Weather API, etc.
+# See .env.docker.example for complete list
+```
+
+**Generate SECRET_KEY:**
+
+```bash
+docker run --rm python:3.12-slim python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+### 3. SSL Certificates
+
+**Option A: Let's Encrypt (Recommended)**
+
+```bash
+# Install certbot
+sudo apt install certbot
+
+# Generate certificates
+sudo certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
+
+# Copy to docker/nginx/ssl/
+sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem docker/nginx/ssl/
+sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem docker/nginx/ssl/
+
+# Set permissions
+sudo chmod 644 docker/nginx/ssl/*.pem
+```
+
+**Option B: Existing Certificates**
+
+Place your SSL certificates in `docker/nginx/ssl/`:
+- `fullchain.pem` - Certificate + intermediate chain
+- `privkey.pem` - Private key
+
+**Option C: Self-Signed (Development Only)**
+
+```bash
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout docker/nginx/ssl/privkey.pem \
+  -out docker/nginx/ssl/fullchain.pem \
+  -subj "/CN=yourdomain.com"
+```
+
+### 4. Deploy Application
+
+```bash
+# Start all services with nginx
+docker compose -f docker-compose.yml -f docker-compose.nginx.yml up -d --build
+
+# Wait for services to start (check with: docker compose ps)
+
+# Run migrations
+docker compose exec web python manage.py migrate
+
+# Collect static files
+docker compose exec web python manage.py collectstatic --no-input
+
+# Access setup wizard
+# Visit https://yourdomain.com/setup/ to complete configuration
+```
+
+### 5. Verify Deployment
+
+```bash
+# Check service status
+docker compose ps
+
+# All services should show "running":
+# - propmanager-db
+# - propmanager-redis
+# - propmanager-web
+# - propmanager-worker
+# - propmanager-nginx
+
+# View logs
+docker compose logs -f web
+
+# Check task queue
+docker compose exec web python manage.py qinfo
+```
+
+### 6. Setup Wizard
+
+1. Visit `https://yourdomain.com/setup/`
+2. Complete the 8-step wizard:
+   - Welcome
+   - Admin Account (create your admin user)
+   - Database (auto-verified)
+   - Communications (email/SMS)
+   - Payment Gateway (configure at least one)
+   - Integrations (AI, Weather, Rewards - optional)
+   - Data Import (CSV or demo data - optional)
+   - Review & Complete
+3. Access admin portal at `https://yourdomain.com/admin-portal/`
+
+### 7. SSL Auto-Renewal (Let's Encrypt)
+
+```bash
+# Add renewal hook to copy new certificates
+sudo nano /etc/letsencrypt/renewal-hooks/deploy/propmanager.sh
+```
+
+Contents:
+
+```bash
+#!/bin/bash
+cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem /opt/PropManager/docker/nginx/ssl/
+cp /etc/letsencrypt/live/yourdomain.com/privkey.pem /opt/PropManager/docker/nginx/ssl/
+chmod 644 /opt/PropManager/docker/nginx/ssl/*.pem
+docker compose -f /opt/PropManager/docker-compose.yml -f /opt/PropManager/docker-compose.nginx.yml restart nginx
+```
+
+```bash
+sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/propmanager.sh
+
+# Test renewal
+sudo certbot renew --dry-run
+```
+
+### 8. Backups
+
+**Database Backup:**
+
+```bash
+# Backup script: /opt/PropManager/backup.sh
+#!/bin/bash
+BACKUP_DIR="/backups/propmanager"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+mkdir -p $BACKUP_DIR
+
+# PostgreSQL backup
+docker compose exec -T db pg_dump -U propmanager propmanager | gzip > $BACKUP_DIR/db_$DATE.sql.gz
+
+# Media files backup
+tar -czf $BACKUP_DIR/media_$DATE.tar.gz media/
+
+# Keep last 30 days
+find $BACKUP_DIR -name "*.gz" -mtime +30 -delete
+
+echo "Backup completed: $DATE"
+```
+
+```bash
+chmod +x /opt/PropManager/backup.sh
+
+# Add to cron (daily at 2am)
+crontab -e
+# Add: 0 2 * * * /opt/PropManager/backup.sh >> /var/log/propmanager_backup.log 2>&1
+```
+
+**Restore from Backup:**
+
+```bash
+# Stop services
+docker compose down
+
+# Restore database
+gunzip -c /backups/propmanager/db_20260221_020000.sql.gz | \
+  docker compose exec -T db psql -U propmanager propmanager
+
+# Restore media files
+tar -xzf /backups/propmanager/media_20260221_020000.tar.gz
+
+# Restart services
+docker compose -f docker-compose.yml -f docker-compose.nginx.yml up -d
+```
+
+### 9. Monitoring
+
+**View Logs:**
+
+```bash
+# Web application
+docker compose logs -f web
+
+# Background worker
+docker compose logs -f worker
+
+# Nginx access/error logs
+docker compose logs -f nginx
+
+# Database
+docker compose logs -f db
+
+# All services
+docker compose logs -f
+```
+
+**Health Checks:**
+
+```bash
+# Application health
+curl https://yourdomain.com/health/
+
+# Liveness check
+curl https://yourdomain.com/live/
+
+# Readiness check
+curl https://yourdomain.com/ready/
+```
+
+**Resource Usage:**
+
+```bash
+# Container stats
+docker stats
+
+# Disk usage
+docker system df
+```
+
+### 10. Updating
+
+```bash
+cd /opt/PropManager
+git pull origin master
+
+# Rebuild and restart
+docker compose -f docker-compose.yml -f docker-compose.nginx.yml up -d --build
+
+# Run migrations
+docker compose exec web python manage.py migrate
+
+# Collect static files
+docker compose exec web python manage.py collectstatic --no-input
+
+# Verify
+docker compose ps
+```
+
+### 11. Troubleshooting
+
+**Services won't start:**
+
+```bash
+# Check logs
+docker compose logs
+
+# Check specific service
+docker compose logs db
+docker compose logs web
+
+# Restart specific service
+docker compose restart web
+```
+
+**Database connection errors:**
+
+```bash
+# Verify DATABASE_URL in .env.docker
+# Default: postgres://propmanager:<POSTGRES_PASSWORD>@db:5432/propmanager
+
+# Check PostgreSQL is ready
+docker compose exec db pg_isready -U propmanager
+```
+
+**Permission errors:**
+
+```bash
+# Fix media directory permissions
+sudo chown -R 1000:1000 media/
+
+# Fix static files
+sudo chown -R 1000:1000 staticfiles/
+```
+
+**Out of disk space:**
+
+```bash
+# Clean up Docker
+docker system prune -a
+
+# Clean old images
+docker image prune -a
+
+# Check disk usage
+df -h
+du -sh media/ staticfiles/
+```
+
+---
+
+## Traditional Deployment
+
+For deployments without Docker, using systemd and Gunicorn.
 
 ### 1. System Requirements
 
 - Python 3.10+
 - PostgreSQL 14+
 - Nginx (recommended reverse proxy)
-- Supervisor or systemd (for process management)
-
-### 2. Clone and Install
-
-```bash
-git clone <repository-url> /opt/propmanager
-cd /opt/propmanager/propmanager
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements/base.txt
-```
+- systemd (for process management)
 
 ### 3. Environment Configuration
 
