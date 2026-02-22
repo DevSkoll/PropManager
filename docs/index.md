@@ -27,6 +27,8 @@ Guides for using PropManager portals.
 |-------|-------------|
 | [Admin Guide](guides/admin-guide.md) | Complete guide to the admin portal - properties, tenants, leases, billing, and more |
 | [Tenant Guide](guides/tenant-guide.md) | How tenants use the portal - payments, work orders, documents |
+| [Tenant Management](guides/tenant-management.md) | Managing tenants - detail modal, archive/restore, deletion with safeguards |
+| [Lease Documents](guides/lease-documents.md) | Linking and managing documents with leases - upload, link, auto-linking |
 | [Onboarding Guide](guides/onboarding-guide.md) | New tenant onboarding workflow - from lease creation to move-in |
 | [Contractor Guide](guides/contractor-guide.md) | Token-based access for contractors to view and update work orders |
 
@@ -68,7 +70,9 @@ Detailed technical reference material.
 
 - **Multi-Property Management** - Manage multiple properties and units from one dashboard
 - **Tenant Portal** - Self-service portal for tenants with OTP authentication
-- **Lease Management** - Full lease lifecycle with electronic signatures
+- **Tenant Management** - Complete tenant lifecycle with archive/restore, detail modal, and safe deletion
+- **Lease Management** - Full lease lifecycle with electronic signatures and document linking
+- **Lease Documents** - Upload and link documents to leases with automatic onboarding integration
 - **Billing System** - Automated invoicing with configurable late fees
 - **Payment Processing** - 7 payment gateway integrations
 - **Tenant Onboarding** - Automated wizard for new tenant setup with 15 configurable presets
@@ -92,10 +96,11 @@ Detailed technical reference material.
 - **Work Orders** - Maintenance request system with contractor access
 - **Rewards Program** - Streak and prepayment incentives
 - **Weather Notifications** - Automated severe weather alerts
-- **Document Management** - Lease storage and signed documents
+- **Document Management** - Lease storage, signed documents, and automatic onboarding document integration
 - **Multi-Channel Notifications** - Email, SMS, in-app, webhooks
 - **AWS-Style Navigation** - App launcher with search, pinned apps, and recent history
 - **Onboarding Presets** - 15 pre-configured templates (standard, corporate, military, student, etc.)
+- **Tenant Archive/Restore** - Soft-delete tenants without data loss for compliance and reporting
 
 ---
 

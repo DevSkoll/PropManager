@@ -9,6 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Tenant Management
+- **Tenant Detail Modal** - Click-to-view tenant information from list
+  - Overview tab with profile data and current lease
+  - Leases tab with complete lease history
+  - Billing tab with recent invoices and payments
+  - Activity tab with work orders and onboarding sessions
+  - Emergency contacts and vehicle information display
+- **Tenant Archive/Restore** - Soft-delete tenants without data loss
+  - Archive button deactivates tenant account
+  - Restore button reactivates archived tenants
+  - Archived tenants hidden from active lists
+  - Separate archived tenant view with filter tabs
+- **Tenant Deletion** - Permanent tenant removal with safeguards
+  - Delete only tenants without active leases or billing
+  - Confirmation modal shows all related data to be deleted
+  - Cascading deletion of personal records (contacts, vehicles, insurance, etc.)
+  - Delete blockers prevent accidental data loss
+
+#### Onboarding Document Integration
+- **Automatic Document Linking** - Onboarding uploads saved to tenant Documents
+  - Insurance policy documents auto-saved to "Onboarding" folder
+  - ID verification images (front/back) saved as Documents
+  - Signed eDocuments auto-linked to lease and saved to Documents
+  - Idempotent document creation prevents duplicates
+  - All onboarding documents visible in tenant's Documents section
+
+#### Lease-Document Linking
+- **Admin Document Management** - Link documents and eDocuments to leases
+  - Documents section on admin lease detail page
+  - View all linked documents with download and unlink options
+  - Separate display for signed eDocuments vs uploaded documents
+  - Link existing documents modal with checkbox selection
+  - Upload new documents directly from lease page
+  - Automatic association of uploaded docs with lease/unit/tenant
+- **Tenant Document Access** - View lease-related documents
+  - Documents section on tenant lease detail page
+  - Download signed eDocuments (lease agreements, etc.)
+  - Download uploaded documents (insurance, ID, etc.)
+  - Filtered to show only tenant-visible documents
+
+### Fixed
+- **Invoice Line Items** - Fixed InvoiceLineItem creation in onboarding
+  - Changed `amount` parameter to `unit_price` to match model calculation
+  - InvoiceLineItem now correctly calculates `amount = quantity * unit_price`
+- **Template URL Namespace** - Fixed NoReverseMatch errors
+  - Updated onboarding completion templates to use `accounts_tenant:tenant_dashboard`
+  - Fixed tenant dashboard URL references throughout templates
+
 #### Tenant Onboarding System
 - **New Tenant Lease Flow** - Create leases for prospective tenants without accounts
   - Lease form with "New Tenant" mode (existing/new toggle)

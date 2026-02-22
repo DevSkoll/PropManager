@@ -1,0 +1,140 @@
+# ============================================
+# PropManager Production Docker Compose
+# Core services: PostgreSQL, Redis, Web, Worker
+# ============================================
+# Usage:
+#   Production (no Nginx): docker compose up -d
+#   Production (with Nginx): docker compose -f docker-compose.yml -f docker-compose.nginx.yml up -d
+#   Development: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ============================================
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  db:
+    image: postgres:16-alpine
+    container_name: propmanager-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: propmanager
+      POSTGRES_USER: propmanager
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U propmanager -d propmanager"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - propmanager-network
+
+  # ============================================
+  # Redis Cache & Message Broker
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: propmanager-redis
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - propmanager-network
+
+  # ============================================
+  # Django Web Application
+  # ============================================
+  web:
+    build:
+      context: .
+      target: production
+      dockerfile: Dockerfile
+    container_name: propmanager-web
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DATABASE_URL=postgres://propmanager:${POSTGRES_PASSWORD:-changeme}@db:5432/propmanager
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - DEBUG=False
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - propmanager-network
+
+  # ============================================
+  # Django-Q2 Background Worker
+  # ============================================
+  worker:
+    build:
+      context: .
+      target: production
+      dockerfile: Dockerfile
+    container_name: propmanager-worker
+    command: ["python", "manage.py", "qcluster"]
+    volumes:
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DATABASE_URL=postgres://propmanager:${POSTGRES_PASSWORD:-changeme}@db:5432/propmanager
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - propmanager-network
+
+# ============================================
+# Named Volumes for Data Persistence
+# ============================================
+volumes:
+  postgres_data:
+    name: propmanager-postgres-data
+  redis_data:
+    name: propmanager-redis-data
+  static_volume:
+    name: propmanager-static
+  media_volume:
+    name: propmanager-media
+  logs_volume:
+    name: propmanager-logs
+
+# ============================================
+# Network Configuration
+# ============================================
+networks:
+  propmanager-network:
+    name: propmanager-network
+    driver: bridge

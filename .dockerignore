@@ -1,0 +1,86 @@
+# ============================================
+# PropManager Docker Ignore
+# Files excluded from Docker build context
+# ============================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Environment files (except example)
+.env.*
+!.env.docker.example
+!.env.example
+
+# Database
+*.sqlite3
+db.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!requirements/*.txt
+docs/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+coverage.xml
+*.cover
+
+# Build artifacts
+staticfiles/
+media/
+logs/
+*.log
+
+# Docker
+docker/nginx/ssl/*.pem
+docker/nginx/ssl/*.key
+docker/nginx/ssl/*.crt
+secrets/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node (if any frontend build)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Local development
+.claude/
+*.bak
+*.tmp

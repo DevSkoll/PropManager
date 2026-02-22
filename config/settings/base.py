@@ -11,7 +11,30 @@ env = environ.Env(
 )
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
-SECRET_KEY = env("SECRET_KEY", default="insecure-dev-key-change-in-production")
+
+# ============================================
+# Docker Secrets Support
+# ============================================
+def get_secret(secret_name, default=None):
+    """
+    Read secret from Docker secrets or fall back to environment variable.
+
+    Docker secrets are mounted at /run/secrets/<secret_name> in containers.
+    This allows secure secret management in Docker Swarm deployments.
+    """
+    secret_path = f"/run/secrets/{secret_name}"
+    if os.path.exists(secret_path):
+        with open(secret_path) as f:
+            return f.read().strip()
+    # Fall back to environment variable (uppercase with underscores)
+    env_key = secret_name.upper().replace("-", "_")
+    return os.environ.get(env_key, default)
+
+
+# ============================================
+# Core Django Settings
+# ============================================
+SECRET_KEY = get_secret("django_secret_key", env("SECRET_KEY", default="insecure-dev-key-change-in-production"))
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
@@ -45,6 +68,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.tenant_lifecycle",
     "apps.ai",
+    "apps.setup",
 ]
 
 MIDDLEWARE = [
@@ -57,6 +81,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
+    "apps.setup.middleware.SetupRequiredMiddleware",
     "apps.core.middleware.RoleBasedAccessMiddleware",
 ]
 
@@ -118,17 +143,52 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# Django-Q2
+# ============================================
+# Redis Configuration (optional)
+# ============================================
+REDIS_URL = env("REDIS_URL", default=None)
+
+if REDIS_URL:
+    # Use django-redis for caching (provides more features than Django's built-in)
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        }
+    }
+    # Use Redis for sessions (faster than database)
+    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_CACHE_ALIAS = "default"
+else:
+    # Default to database cache when Redis not available
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "django_cache",
+        }
+    }
+
+# ============================================
+# Django-Q2 Task Queue
+# ============================================
 Q_CLUSTER = {
     "name": "propmanager",
-    "workers": 2,
+    "workers": env.int("Q_WORKERS", default=2),
     "recycle": 500,
     "timeout": 120,
     "retry": 180,
     "queue_limit": 50,
     "bulk": 10,
-    "orm": "default",
 }
+
+# Use Redis broker when available, otherwise fall back to ORM
+if REDIS_URL:
+    Q_CLUSTER["redis"] = REDIS_URL
+else:
+    Q_CLUSTER["orm"] = "default"
 
 # Email
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")

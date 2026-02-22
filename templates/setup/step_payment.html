@@ -1,0 +1,189 @@
+{% extends "setup/base_wizard.html" %}
+
+{% block step_content %}
+<div class="mb-4">
+    <p class="text-muted">
+        Configure a payment gateway to accept online rent payments from tenants.
+        You can add additional gateways later from Settings.
+    </p>
+</div>
+
+{% if existing_gateways %}
+<div class="alert alert-info mb-4">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>{{ existing_gateways.count }} payment gateway(s) already configured.</strong>
+    You can continue or add another.
+</div>
+{% endif %}
+
+<form id="stepForm" method="post">
+    {% csrf_token %}
+
+    <div class="row g-3 mb-4">
+        <!-- Stripe -->
+        <div class="col-md-4">
+            <div class="card provider-option h-100" onclick="selectProvider('stripe')">
+                <div class="card-body text-center">
+                    <i class="bi bi-stripe fs-1 text-primary mb-2"></i>
+                    <h6>Stripe</h6>
+                    <small class="text-muted">Cards, ACH, Apple Pay</small>
+                    <div class="form-check mt-2 d-flex justify-content-center">
+                        <input class="form-check-input" type="radio" name="provider"
+                               value="stripe" id="provider_stripe">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PayPal -->
+        <div class="col-md-4">
+            <div class="card provider-option h-100" onclick="selectProvider('paypal')">
+                <div class="card-body text-center">
+                    <i class="bi bi-paypal fs-1 text-primary mb-2"></i>
+                    <h6>PayPal</h6>
+                    <small class="text-muted">PayPal, Cards, Venmo</small>
+                    <div class="form-check mt-2 d-flex justify-content-center">
+                        <input class="form-check-input" type="radio" name="provider"
+                               value="paypal" id="provider_paypal">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Square -->
+        <div class="col-md-4">
+            <div class="card provider-option h-100" onclick="selectProvider('square')">
+                <div class="card-body text-center">
+                    <i class="bi bi-square fs-1 text-dark mb-2"></i>
+                    <h6>Square</h6>
+                    <small class="text-muted">Cards, Cash App</small>
+                    <div class="form-check mt-2 d-flex justify-content-center">
+                        <input class="form-check-input" type="radio" name="provider"
+                               value="square" id="provider_square">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Provider-specific configuration forms -->
+    <div id="provider-config" style="display: none;">
+        <hr class="my-4">
+
+        <!-- Stripe Config -->
+        <div id="stripe-config" class="provider-config" style="display: none;">
+            <h6 class="mb-3"><i class="bi bi-stripe me-2"></i>Stripe Configuration</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Publishable Key</label>
+                    <input type="text" class="form-control" name="stripe_publishable_key"
+                           placeholder="pk_test_...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Secret Key</label>
+                    <input type="password" class="form-control" name="stripe_secret_key"
+                           placeholder="sk_test_...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Webhook Secret (optional)</label>
+                    <input type="password" class="form-control" name="stripe_webhook_secret"
+                           placeholder="whsec_...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Display Name</label>
+                    <input type="text" class="form-control" name="display_name"
+                           placeholder="Pay with Card" value="Pay with Card">
+                </div>
+            </div>
+        </div>
+
+        <!-- PayPal Config -->
+        <div id="paypal-config" class="provider-config" style="display: none;">
+            <h6 class="mb-3"><i class="bi bi-paypal me-2"></i>PayPal Configuration</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Client ID</label>
+                    <input type="text" class="form-control" name="paypal_client_id">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Client Secret</label>
+                    <input type="password" class="form-control" name="paypal_client_secret">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Mode</label>
+                    <select class="form-select" name="paypal_mode">
+                        <option value="sandbox">Sandbox (Testing)</option>
+                        <option value="live">Live (Production)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Display Name</label>
+                    <input type="text" class="form-control" name="display_name"
+                           placeholder="Pay with PayPal" value="Pay with PayPal">
+                </div>
+            </div>
+        </div>
+
+        <!-- Square Config -->
+        <div id="square-config" class="provider-config" style="display: none;">
+            <h6 class="mb-3"><i class="bi bi-square me-2"></i>Square Configuration</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Application ID</label>
+                    <input type="text" class="form-control" name="square_application_id">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Access Token</label>
+                    <input type="password" class="form-control" name="square_access_token">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Location ID</label>
+                    <input type="text" class="form-control" name="square_location_id">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Environment</label>
+                    <select class="form-select" name="square_environment">
+                        <option value="sandbox">Sandbox (Testing)</option>
+                        <option value="production">Production</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+function selectProvider(provider) {
+    // Update radio selection
+    document.querySelectorAll('input[name="provider"]').forEach(radio => {
+        radio.checked = radio.value === provider;
+    });
+
+    // Update visual selection
+    document.querySelectorAll('.provider-option').forEach(card => {
+        card.classList.remove('selected');
+    });
+    event.currentTarget.classList.add('selected');
+
+    // Show provider config
+    document.getElementById('provider-config').style.display = 'block';
+    document.querySelectorAll('.provider-config').forEach(config => {
+        config.style.display = 'none';
+    });
+    const configDiv = document.getElementById(provider + '-config');
+    if (configDiv) {
+        configDiv.style.display = 'block';
+    }
+}
+
+// Handle click on radio buttons directly
+document.querySelectorAll('input[name="provider"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        selectProvider(this.value);
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

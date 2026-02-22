@@ -1,0 +1,173 @@
+{% extends "setup/base_wizard.html" %}
+
+{% block step_content %}
+<div class="mb-4">
+    <p class="text-muted">
+        Import your existing property data, load demo data for testing, or skip to add data manually later.
+    </p>
+</div>
+
+<form id="stepForm" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Import Choice -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 import-option" onclick="selectImportChoice('skip')">
+                <div class="card-body text-center">
+                    <i class="bi bi-arrow-right-circle fs-1 text-secondary mb-3"></i>
+                    <h6>Skip For Now</h6>
+                    <p class="text-muted small mb-0">Add properties and tenants manually later</p>
+                    <div class="form-check mt-3 d-flex justify-content-center">
+                        <input class="form-check-input" type="radio" name="import_choice"
+                               value="skip" id="choice_skip" checked>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 import-option" onclick="selectImportChoice('demo')">
+                <div class="card-body text-center">
+                    <i class="bi bi-box-seam fs-1 text-info mb-3"></i>
+                    <h6>Load Demo Data</h6>
+                    <p class="text-muted small mb-0">Sample properties, units, and tenants for testing</p>
+                    <div class="form-check mt-3 d-flex justify-content-center">
+                        <input class="form-check-input" type="radio" name="import_choice"
+                               value="demo" id="choice_demo">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 import-option" onclick="selectImportChoice('import')">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-earmark-arrow-up fs-1 text-primary mb-3"></i>
+                    <h6>Import from CSV</h6>
+                    <p class="text-muted small mb-0">Upload your existing property data</p>
+                    <div class="form-check mt-3 d-flex justify-content-center">
+                        <input class="form-check-input" type="radio" name="import_choice"
+                               value="import" id="choice_import">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Import Section (hidden by default) -->
+    <div id="csv-import-section" style="display: none;">
+        <hr class="my-4">
+        <h6 class="mb-3"><i class="bi bi-file-earmark-csv me-2"></i>Upload CSV Files</h6>
+        <p class="text-muted small">
+            Import data in order: Properties first, then Units, then Tenants.
+            Download sample templates to see the expected format.
+        </p>
+
+        <!-- Properties CSV -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <span><i class="bi bi-building me-2"></i>Properties</span>
+                <a href="{% url 'setup:download_sample_csv' 'properties' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-download me-1"></i> Sample
+                </a>
+            </div>
+            <div class="card-body py-3">
+                <input type="file" class="form-control form-control-sm" name="properties_csv" accept=".csv">
+                <div class="form-text">
+                    Required columns: {{ sample_formats.properties.headers|join:", " }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Units CSV -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <span><i class="bi bi-door-open me-2"></i>Units</span>
+                <a href="{% url 'setup:download_sample_csv' 'units' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-download me-1"></i> Sample
+                </a>
+            </div>
+            <div class="card-body py-3">
+                <input type="file" class="form-control form-control-sm" name="units_csv" accept=".csv">
+                <div class="form-text">
+                    Required columns: {{ sample_formats.units.headers|join:", " }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tenants CSV -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <span><i class="bi bi-people me-2"></i>Tenants</span>
+                <a href="{% url 'setup:download_sample_csv' 'tenants' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-download me-1"></i> Sample
+                </a>
+            </div>
+            <div class="card-body py-3">
+                <input type="file" class="form-control form-control-sm" name="tenants_csv" accept=".csv">
+                <div class="form-text">
+                    Required columns: {{ sample_formats.tenants.headers|join:", " }}
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info small">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Tips:</strong>
+            <ul class="mb-0 mt-2">
+                <li>Property names must match exactly when importing units</li>
+                <li>Tenants with unit info will automatically get a lease created</li>
+                <li>Existing records with the same identifiers will be updated</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Demo Data Warning -->
+    <div id="demo-warning" style="display: none;">
+        <hr class="my-4">
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Demo Data Notice</strong>
+            <p class="mb-0 mt-2">
+                This will create sample properties, units, and tenants with test data.
+                Suitable for evaluation and testing purposes only.
+            </p>
+        </div>
+    </div>
+</form>
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+function selectImportChoice(choice) {
+    // Update radio
+    document.querySelectorAll('input[name="import_choice"]').forEach(radio => {
+        radio.checked = radio.value === choice;
+    });
+
+    // Update visual
+    document.querySelectorAll('.import-option').forEach(card => {
+        card.classList.remove('selected');
+        card.style.borderColor = '';
+    });
+    event.currentTarget.classList.add('selected');
+    event.currentTarget.style.borderColor = '#0d6efd';
+
+    // Show/hide sections
+    document.getElementById('csv-import-section').style.display =
+        choice === 'import' ? 'block' : 'none';
+    document.getElementById('demo-warning').style.display =
+        choice === 'demo' ? 'block' : 'none';
+}
+
+// Handle direct radio clicks
+document.querySelectorAll('input[name="import_choice"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const card = this.closest('.import-option');
+        if (card) {
+            selectImportChoice(this.value);
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

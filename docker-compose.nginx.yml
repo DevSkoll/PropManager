@@ -1,0 +1,73 @@
+# ============================================
+# PropManager Nginx Overlay
+# Optional reverse proxy with SSL termination
+# ============================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.nginx.yml up -d
+#
+# SSL Setup:
+#   Place certificates in docker/nginx/ssl/:
+#   - fullchain.pem (certificate chain)
+#   - privkey.pem (private key)
+#
+# For Let's Encrypt, use certbot:
+#   certbot certonly --webroot -w ./docker/nginx/webroot -d yourdomain.com
+# ============================================
+
+services:
+  # ============================================
+  # Web - Internal only when using Nginx
+  # ============================================
+  web:
+    ports: []  # Remove direct port exposure
+    expose:
+      - "8000"  # Internal access only
+
+  # ============================================
+  # Nginx Reverse Proxy
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: propmanager-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/media:ro
+      # For Let's Encrypt webroot authentication
+      - ./docker/nginx/webroot:/var/www/certbot:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - propmanager-network
+
+  # ============================================
+  # Certbot for Let's Encrypt (optional)
+  # ============================================
+  # Uncomment to enable automatic SSL renewal
+  # certbot:
+  #   image: certbot/certbot
+  #   container_name: propmanager-certbot
+  #   volumes:
+  #     - ./docker/nginx/ssl:/etc/letsencrypt
+  #     - ./docker/nginx/webroot:/var/www/certbot
+  #   entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+  #   networks:
+  #     - propmanager-network
+
+volumes:
+  static_volume:
+  media_volume:
+
+networks:
+  propmanager-network:

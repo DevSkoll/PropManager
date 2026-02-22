@@ -20,17 +20,30 @@ If you have any questions, want to contribute, or just want to talk shop about r
 
 ## Features
 
+### Property & Tenant Management
 - **Multi-Portal Architecture** — Dedicated portals for admins, tenants, and contractors, each with purpose-built UIs
 - **Passwordless Tenant Login** — Email/SMS OTP authentication so tenants never deal with passwords
 - **Admin 2FA** — Optional two-factor authentication to keep admin accounts locked down
+- **Tenant Management** — Complete tenant lifecycle with archive/restore, click-to-view detail modal, and safe deletion with blockers
+- **Tenant Onboarding** — 15-step self-service wizard with email verification, insurance upload, ID verification, eDocument signing, and automated move-in invoicing
+- **Onboarding Templates** — 15 pre-built templates (Standard, Premium, Luxury, Student, Military, etc.) with customizable steps and fee structures
+
+### Lease & Document Management
+- **Lease Management** — Complete lease lifecycle with electronic signatures, terms, occupants, pets, and month-to-month or fixed-term leases
+- **Document Management** — Upload, categorize, and selectively share documents with tenants; automatic linking of onboarding documents (insurance, IDs, signed eDocuments)
+- **Lease-Document Linking** — Associate documents and eDocuments with leases; upload directly from lease page or link existing documents
+- **eDocument System** — Markdown-based templates with signature blocks, auto-PDF generation, and lease auto-linking
+
+### Billing & Payments
 - **Billing & Invoicing** — Automated invoice generation with late fees, interest, utility billing, recurring charges, and prepayment credits
 - **7 Payment Gateways** — Stripe, PayPal, Square, Authorize.Net, Braintree, Plaid ACH, and Bitcoin — all configurable from the admin UI with guided setup forms, webhook signature verification, and connection testing
 - **Bitcoin Payments** — Accept BTC with a locally managed HD wallet, real-time USD conversion via CoinGecko, mempool.space monitoring, and admin transfer controls
 - **Tenant Rewards Program** — On-time payment streaks and prepayment bonuses to incentivize great tenants (legally distinct from credits — these are promotional, not real money)
+
+### Maintenance & Communications
 - **Work Order Management** — Full lifecycle from tenant submission through contractor completion with photo uploads, internal notes, and status tracking
 - **Contractor Token Access** — Secure, expiring links for contractors with zero account setup required
 - **Communications** — Threaded messaging, push notifications, SMS, and property-wide announcements
-- **Document Management** — Upload, categorize, and selectively share documents with tenants
 - **Weather Monitoring** — OpenWeatherMap integration with configurable thresholds and automatic tenant alerts for snow, wind, and extreme temperatures
 - **Marketing Campaigns** — Email campaigns with tenant segmentation, scheduling, open/click tracking, and analytics
 - **Reports & CSV Export** — Rent roll, aging receivables, payment history, and work order summaries
@@ -148,13 +161,14 @@ propmanager/
     config/              # Django settings (base/development/production), URLs
     apps/
         core/            # Abstract models, services, decorators, middleware, reports
-        accounts/        # Users, auth, OTP, profiles, contractor tokens
+        accounts/        # Users, auth, OTP, profiles, contractor tokens, tenant management
         properties/      # Properties, units, amenities
-        leases/          # Leases, terms, terminations
+        leases/          # Leases, terms, terminations, document linking
         billing/         # Invoices, payments, 7 payment gateways, Bitcoin wallet
         workorders/      # Work orders, contractor assignments, notes, images
         communications/  # Messages, notifications, announcements
-        documents/       # File uploads, categories
+        documents/       # File uploads, categories, eDocuments, templates
+        tenant_lifecycle/ # Onboarding system, templates, presets, document service
         weather/         # Weather monitoring, alerts
         marketing/       # Email campaigns, segmentation, tracking
         rewards/         # Tenant rewards, streak tracking, prepayment bonuses

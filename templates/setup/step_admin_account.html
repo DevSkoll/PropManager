@@ -1,0 +1,108 @@
+{% extends "setup/base_wizard.html" %}
+
+{% block step_content %}
+{% if admin_exists %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Existing admin account found.</strong>
+    You can use your existing admin account or create a new one.
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100 border-primary">
+            <div class="card-body text-center">
+                <i class="bi bi-person-check fs-1 text-primary mb-3"></i>
+                <h5>Use Existing Admin</h5>
+                <p class="text-muted small">Continue with your existing administrator account</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="use_existing">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-right me-1"></i> Continue
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-plus fs-1 text-secondary mb-3"></i>
+                <h5>Create New Admin</h5>
+                <p class="text-muted small">Create an additional administrator account</p>
+                <button type="button" class="btn btn-outline-secondary"
+                        onclick="document.getElementById('newAdminForm').style.display='block'; this.parentElement.parentElement.parentElement.style.display='none';">
+                    <i class="bi bi-plus me-1"></i> Create New
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="newAdminForm" style="display: none;">
+{% endif %}
+
+<form id="stepForm" method="post" class="needs-validation" novalidate>
+    {% csrf_token %}
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label for="id_first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}
+            <div class="invalid-feedback d-block">{{ form.first_name.errors.0 }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <label for="id_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}
+            <div class="invalid-feedback d-block">{{ form.last_name.errors.0 }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <label for="id_username" class="form-label">Username <span class="text-danger">*</span></label>
+            {{ form.username }}
+            {% if form.username.errors %}
+            <div class="invalid-feedback d-block">{{ form.username.errors.0 }}</div>
+            {% endif %}
+            <div class="form-text">Letters, digits, and @/./+/-/_ only.</div>
+        </div>
+        <div class="col-md-6">
+            <label for="id_email" class="form-label">Email Address <span class="text-danger">*</span></label>
+            {{ form.email }}
+            {% if form.email.errors %}
+            <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <label for="id_password1" class="form-label">Password <span class="text-danger">*</span></label>
+            {{ form.password1 }}
+            {% if form.password1.errors %}
+            <div class="invalid-feedback d-block">{{ form.password1.errors.0 }}</div>
+            {% endif %}
+            <div class="form-text">At least 8 characters with letters and numbers.</div>
+        </div>
+        <div class="col-md-6">
+            <label for="id_password2" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+            {{ form.password2 }}
+            {% if form.password2.errors %}
+            <div class="invalid-feedback d-block">{{ form.password2.errors.0 }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger mt-3">
+        {% for error in form.non_field_errors %}
+        <p class="mb-0">{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</form>
+
+{% if admin_exists %}
+</div>
+{% endif %}
+{% endblock %}

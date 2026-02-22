@@ -1,0 +1,149 @@
+{% extends "setup/base_wizard.html" %}
+
+{% block step_content %}
+<div class="mb-4">
+    <p class="text-muted">
+        Configure optional integrations to enhance your property management experience.
+        These can all be set up later from Settings.
+    </p>
+</div>
+
+<form id="stepForm" method="post">
+    {% csrf_token %}
+
+    <!-- AI Integration -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-robot me-2"></i>
+                <strong>AI Assistant</strong>
+            </div>
+            <div class="form-check form-switch mb-0">
+                {{ form.enable_ai }}
+                <label class="form-check-label" for="id_enable_ai">Enable</label>
+            </div>
+        </div>
+        <div class="card-body" id="ai-config">
+            <p class="text-muted small mb-3">
+                Use AI to help draft communications, analyze leases, and answer questions.
+            </p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">AI Provider</label>
+                    {{ form.ai_provider }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">API Key</label>
+                    {{ form.ai_api_key }}
+                </div>
+            </div>
+            {% if form.ai_provider.errors %}
+            <div class="text-danger small mt-1">{{ form.ai_provider.errors.0 }}</div>
+            {% endif %}
+            {% if form.ai_api_key.errors %}
+            <div class="text-danger small mt-1">{{ form.ai_api_key.errors.0 }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Weather Integration -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-cloud-sun me-2"></i>
+                <strong>Weather Alerts</strong>
+            </div>
+            <div class="form-check form-switch mb-0">
+                {{ form.enable_weather }}
+                <label class="form-check-label" for="id_enable_weather">Enable</label>
+            </div>
+        </div>
+        <div class="card-body" id="weather-config">
+            <p class="text-muted small mb-3">
+                Send automatic weather alerts to tenants for severe conditions in their area.
+            </p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">OpenWeatherMap API Key</label>
+                    {{ form.weather_api_key }}
+                    <div class="form-text">
+                        <a href="https://openweathermap.org/api" target="_blank" rel="noopener">
+                            Get a free API key <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% if form.weather_api_key.errors %}
+            <div class="text-danger small mt-1">{{ form.weather_api_key.errors.0 }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Rewards Integration -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-gift me-2"></i>
+                <strong>Tenant Rewards</strong>
+            </div>
+            <div class="form-check form-switch mb-0">
+                {{ form.enable_rewards }}
+                <label class="form-check-label" for="id_enable_rewards">Enable</label>
+            </div>
+        </div>
+        <div class="card-body" id="rewards-config">
+            <p class="text-muted small mb-0">
+                Reward tenants with points for on-time payments, lease renewals, and referrals.
+                Points can be redeemed for rent credits or other perks. No additional configuration required.
+            </p>
+        </div>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {% for error in form.non_field_errors %}
+        <p class="mb-0">{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</form>
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+// Toggle config visibility based on checkbox state
+function toggleConfig(checkboxId, configId) {
+    const checkbox = document.getElementById(checkboxId);
+    const config = document.getElementById(configId);
+    if (checkbox && config) {
+        const inputs = config.querySelectorAll('input, select');
+        if (checkbox.checked) {
+            config.style.opacity = '1';
+            inputs.forEach(i => i.disabled = false);
+        } else {
+            config.style.opacity = '0.5';
+            inputs.forEach(i => i.disabled = true);
+        }
+    }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleConfig('id_enable_ai', 'ai-config');
+    toggleConfig('id_enable_weather', 'weather-config');
+    toggleConfig('id_enable_rewards', 'rewards-config');
+
+    // Add event listeners
+    document.getElementById('id_enable_ai').addEventListener('change', function() {
+        toggleConfig('id_enable_ai', 'ai-config');
+    });
+    document.getElementById('id_enable_weather').addEventListener('change', function() {
+        toggleConfig('id_enable_weather', 'weather-config');
+    });
+    document.getElementById('id_enable_rewards').addEventListener('change', function() {
+        toggleConfig('id_enable_rewards', 'rewards-config');
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

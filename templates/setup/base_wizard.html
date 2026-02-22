@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Setup - PropManager{% endblock %}
+
+{% block body_class %}setup-wizard bg-light{% endblock %}
+
+{% block extra_css %}
+<style>
+    .setup-wizard {
+        min-height: 100vh;
+    }
+    .step-indicator {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.75rem;
+        color: #6c757d;
+        flex: 1;
+        text-align: center;
+        padding: 0.25rem;
+    }
+    .step-indicator i {
+        font-size: 1.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .step-indicator.active {
+        color: #0d6efd;
+        font-weight: 600;
+    }
+    .step-indicator.completed {
+        color: #198754;
+    }
+    .step-indicator.completed i::after {
+        content: "\2713";
+        font-size: 0.6rem;
+        position: relative;
+        top: -0.5rem;
+        left: -0.25rem;
+    }
+    .wizard-card {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .provider-option {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .provider-option:hover {
+        border-color: #0d6efd !important;
+    }
+    .provider-option.selected {
+        border-color: #0d6efd !important;
+        background-color: #e7f1ff;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container py-4 py-md-5">
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h1 class="h3">
+            <i class="bi bi-building-gear me-2 text-primary"></i>PropManager Setup
+        </h1>
+        <p class="text-muted mb-0">Configure your property management system</p>
+    </div>
+
+    <!-- Progress Card -->
+    <div class="wizard-card">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <small class="text-muted">Step {{ step_index }} of {{ total_steps }}</small>
+                    <small class="text-muted">{{ progress_percent }}% complete</small>
+                </div>
+                <div class="progress mb-3" style="height: 6px;">
+                    <div class="progress-bar bg-primary" role="progressbar"
+                         style="width: {{ progress_percent }}%"
+                         aria-valuenow="{{ progress_percent }}"
+                         aria-valuemin="0"
+                         aria-valuemax="100"></div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    {% for step in all_steps %}
+                    <div class="step-indicator
+                        {% if step.key == current_step.key %}active{% endif %}
+                        {% if step.key in steps_completed %}completed{% endif %}">
+                        <i class="bi {{ step.icon }}"></i>
+                        <span class="d-none d-md-inline">{{ step.title }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- Main Step Card -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white py-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi {{ current_step.icon }} fs-4 me-3"></i>
+                    <div>
+                        <h5 class="mb-0">{{ current_step.title }}</h5>
+                        <small class="opacity-75">{{ current_step.description }}</small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                {% if error %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+                </div>
+                {% endif %}
+
+                {% if step_auto_completed %}
+                <div class="alert alert-info">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Already configured!</strong>
+                    This step was auto-completed based on existing configuration.
+                    You can review the settings below or continue to the next step.
+                    {% if step_status.warnings %}
+                    <ul class="mb-0 mt-2">
+                        {% for warning in step_status.warnings %}
+                        <li>{{ warning }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% block step_content %}{% endblock %}
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+                {% block step_navigation %}
+                {% if previous_step %}
+                <a href="{% url 'setup:'|add:previous_step.key %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Previous
+                </a>
+                {% else %}
+                <span></span>
+                {% endif %}
+
+                <div class="d-flex gap-2">
+                    {% if current_step.skip_allowed %}
+                    <button type="button" class="btn btn-outline-warning"
+                            data-bs-toggle="modal" data-bs-target="#skipModal">
+                        Skip <i class="bi bi-skip-forward ms-1"></i>
+                    </button>
+                    {% endif %}
+
+                    <button type="submit" form="stepForm" class="btn btn-primary">
+                        {% if next_step %}
+                        Continue <i class="bi bi-arrow-right ms-1"></i>
+                        {% else %}
+                        Complete Setup <i class="bi bi-check-lg ms-1"></i>
+                        {% endif %}
+                    </button>
+                </div>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Skip Warning Modal -->
+{% if current_step.skip_allowed %}
+<div class="modal fade" id="skipModal" tabindex="-1" aria-labelledby="skipModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="skipModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Skip This Step?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>{{ current_step.skip_warning }}</p>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    You can configure this later from the Settings menu.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Go Back
+                </button>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="skip">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-skip-forward me-1"></i> Skip This Step
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

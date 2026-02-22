@@ -1,0 +1,93 @@
+{% extends "setup/base_wizard.html" %}
+
+{% block step_content %}
+<div class="text-center py-4">
+    <div class="mb-4">
+        <i class="bi bi-house-door-fill display-1 text-primary"></i>
+    </div>
+    <h2 class="h4 mb-3">Welcome to PropManager!</h2>
+    <p class="lead text-muted mb-4">
+        Let's get your property management system configured and ready to use.
+    </p>
+
+    <div class="row g-4 mt-4 mb-5">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-shield-check text-success fs-1 mb-3"></i>
+                    <h6>Secure</h6>
+                    <p class="text-muted small mb-0">Your data is encrypted and protected with industry-standard security</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-lightning-charge text-warning fs-1 mb-3"></i>
+                    <h6>Quick Setup</h6>
+                    <p class="text-muted small mb-0">Get started with just a few configuration steps</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-gear text-info fs-1 mb-3"></i>
+                    <h6>Flexible</h6>
+                    <p class="text-muted small mb-0">Skip optional steps and configure them later as needed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-light rounded p-4 mb-4">
+        <h6 class="mb-3">What we'll configure:</h6>
+        <div class="row text-start">
+            <div class="col-md-6">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="bi bi-check2-circle text-success me-2"></i>
+                        Administrator account
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2-circle text-success me-2"></i>
+                        Database verification
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2-circle text-success me-2"></i>
+                        Email & SMS notifications
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2-circle text-success me-2"></i>
+                        Payment processing
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="bi bi-check2-circle text-success me-2"></i>
+                        AI assistant (optional)
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2-circle text-success me-2"></i>
+                        Weather alerts (optional)
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2-circle text-success me-2"></i>
+                        Tenant rewards (optional)
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2-circle text-success me-2"></i>
+                        Data import or demo data
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="stepForm" method="post">
+    {% csrf_token %}
+</form>
+{% endblock %}

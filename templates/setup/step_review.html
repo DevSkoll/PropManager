@@ -1,0 +1,183 @@
+{% extends "setup/base_wizard.html" %}
+{% load core_tags %}
+
+{% block step_content %}
+<div class="mb-4">
+    <p class="text-muted">
+        Review your configuration before completing setup. You can always change these settings later.
+    </p>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-4 mb-4">
+    <!-- Users Summary -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>Users
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Administrators</span>
+                    <span class="badge bg-primary">{{ summary.admin_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Staff Members</span>
+                    <span class="badge bg-secondary">{{ summary.staff_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Tenants</span>
+                    <span class="badge bg-info">{{ summary.tenant_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Properties Summary -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-building me-2"></i>Properties
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Properties</span>
+                    <span class="badge bg-primary">{{ summary.property_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Units</span>
+                    <span class="badge bg-secondary">{{ summary.unit_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Communications Summary -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-envelope me-2"></i>Communications
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Email</span>
+                    {% if summary.email_configured %}
+                    <span class="badge bg-success"><i class="bi bi-check me-1"></i>Configured</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Not Configured</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>SMS</span>
+                    {% if summary.sms_configured %}
+                    <span class="badge bg-success"><i class="bi bi-check me-1"></i>Configured</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Not Configured</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integrations Summary -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-puzzle me-2"></i>Integrations
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Payment Gateways</span>
+                    <span class="badge {% if summary.payment_gateways > 0 %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                        {{ summary.payment_gateways }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>AI Providers</span>
+                    <span class="badge {% if summary.ai_providers > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ summary.ai_providers }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Weather Alerts</span>
+                    {% if summary.weather_configured %}
+                    <span class="badge bg-success"><i class="bi bi-check me-1"></i>Enabled</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Disabled</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Warnings Summary -->
+{% if warnings_count > 0 or skipped_count > 0 %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong>Setup Notes:</strong>
+    <ul class="mb-0 mt-2">
+        {% if skipped_count > 0 %}
+        <li>{{ skipped_count }} step(s) were skipped and can be configured later</li>
+        {% endif %}
+        {% if warnings_count > 0 %}
+        <li>{{ warnings_count }} warning(s) noted during configuration</li>
+        {% endif %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- Step Status -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-list-check me-2"></i>Setup Steps
+    </div>
+    <div class="list-group list-group-flush">
+        {% for step in all_steps %}
+        {% if step.key != 'review' %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi {{ step.icon }} me-2"></i>
+                {{ step.title }}
+            </div>
+            {% with status=steps_completed|default_if_none:''  %}
+            {% if step.key in steps_completed %}
+                {% if steps_completed|get_item:step.key|get_item:'skipped' %}
+                <span class="badge bg-warning text-dark">
+                    <i class="bi bi-skip-forward me-1"></i>Skipped
+                </span>
+                {% else %}
+                <span class="badge bg-success">
+                    <i class="bi bi-check me-1"></i>Complete
+                </span>
+                {% endif %}
+            {% else %}
+            <span class="badge bg-secondary">Pending</span>
+            {% endif %}
+            {% endwith %}
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<div class="alert alert-success">
+    <i class="bi bi-check-circle me-2"></i>
+    <strong>Ready to go!</strong>
+    Click "Complete Setup" to finish and start using PropManager.
+</div>
+
+<form id="stepForm" method="post">
+    {% csrf_token %}
+</form>
+
+{% block step_navigation %}
+<a href="{% url 'setup:import' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Previous
+</a>
+
+<button type="submit" form="stepForm" class="btn btn-success btn-lg">
+    <i class="bi bi-check-lg me-1"></i> Complete Setup
+</button>
+{% endblock %}
+{% endblock %}

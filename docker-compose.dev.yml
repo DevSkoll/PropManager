@@ -1,0 +1,92 @@
+# ============================================
+# PropManager Development Docker Compose Override
+# Hot reload, exposed ports, mounted code
+# ============================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# ============================================
+
+services:
+  # ============================================
+  # PostgreSQL - Expose port for local tools
+  # ============================================
+  db:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: devpassword
+
+  # ============================================
+  # Redis - Expose port for local tools
+  # ============================================
+  redis:
+    ports:
+      - "6379:6379"
+
+  # ============================================
+  # Django Development Server with Hot Reload
+  # ============================================
+  web:
+    build:
+      target: development
+    container_name: propmanager-web-dev
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+      # Exclude directories that should not be mounted
+      - /app/__pycache__
+      - /app/.git
+      - /app/staticfiles
+      - /app/node_modules
+      # Use named volume for static files
+      - dev_static:/app/staticfiles
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgres://propmanager:devpassword@db:5432/propmanager
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=True
+      - DEV_OTP_CODE=123456
+      - SECRET_KEY=dev-secret-key-not-for-production-use-only
+    env_file: []  # Don't require .env.docker in development
+    ports:
+      - "8000:8000"
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    # Disable health check in dev for faster startup
+    healthcheck:
+      disable: true
+    # Run as root in dev to avoid permission issues with mounted volumes
+    user: root
+
+  # ============================================
+  # Django-Q2 Worker (Development)
+  # ============================================
+  worker:
+    build:
+      target: development
+    container_name: propmanager-worker-dev
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - /app/.git
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgres://propmanager:devpassword@db:5432/propmanager
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-not-for-production-use-only
+    env_file: []
+    command: ["python", "manage.py", "qcluster"]
+    user: root
+    # Override depends_on - don't wait for web health check in dev
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+# ============================================
+# Development Volumes
+# ============================================
+volumes:
+  dev_static:
+    name: propmanager-dev-static

@@ -1,0 +1,67 @@
+{% extends "setup/base_wizard.html" %}
+
+{% block step_content %}
+<div class="mb-4">
+    <p class="text-muted">
+        Verifying database connectivity and required tables. All checks must pass to continue.
+    </p>
+</div>
+
+<div class="list-group mb-4">
+    {% for check in checks %}
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi {% if check.passed %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %} me-2"></i>
+            <strong>{{ check.name }}</strong>
+        </div>
+        <span class="{% if check.passed %}text-success{% else %}text-danger{% endif %}">
+            {{ check.message }}
+        </span>
+    </div>
+    {% endfor %}
+</div>
+
+{% if all_passed %}
+<div class="alert alert-success">
+    <i class="bi bi-check-circle-fill me-2"></i>
+    <strong>All checks passed!</strong> Your database is configured correctly.
+</div>
+{% else %}
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong>Some checks failed.</strong> Please resolve the issues above before continuing.
+    <hr>
+    <p class="mb-0 small">
+        Common solutions:
+        <ul class="mb-0 mt-2">
+            <li>Ensure database migrations have been run: <code>python manage.py migrate</code></li>
+            <li>Check your DATABASE_URL environment variable</li>
+            <li>Verify the database server is running and accessible</li>
+        </ul>
+    </p>
+</div>
+{% endif %}
+
+<form id="stepForm" method="post">
+    {% csrf_token %}
+</form>
+
+{% block step_navigation %}
+{% if previous_step %}
+<a href="{% url 'setup:'|add:previous_step.key %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Previous
+</a>
+{% else %}
+<span></span>
+{% endif %}
+
+<div class="d-flex gap-2">
+    <a href="{% url 'setup:database' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-clockwise me-1"></i> Re-check
+    </a>
+    <button type="submit" form="stepForm" class="btn btn-primary" {% if not all_passed %}disabled{% endif %}>
+        Continue <i class="bi bi-arrow-right ms-1"></i>
+    </button>
+</div>
+{% endblock %}
+{% endblock %}
