@@ -17,5 +17,543 @@
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script src="{% static 'js/app.js' %}"></script>
     {% block extra_js %}{% endblock %}
+
+    {% if debug %}
+    {# ============================================================ #}
+    {# DEV/DEMO HELPER WIDGET — Only visible when DEBUG=True         #}
+    {# ============================================================ #}
+    <style>
+        /* Pinned trigger tab */
+        #devHelperTab {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1055;
+            background: #f59e0b;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 0 6px 6px 0;
+            padding: 10px 6px;
+            cursor: pointer;
+            box-shadow: 2px 0 8px rgba(0,0,0,.25);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            letter-spacing: .5px;
+            transition: background .15s;
+        }
+        #devHelperTab:hover { background: #fbbf24; }
+        #devHelperTab i { writing-mode: horizontal-tb; font-size: 16px; }
+
+        /* Offcanvas overrides */
+        #devHelperOffcanvas {
+            width: 380px !important;
+            max-width: 95vw;
+        }
+        #devHelperOffcanvas .offcanvas-header {
+            background: #1c1917;
+            color: #fbbf24;
+            border-bottom: 2px solid #f59e0b;
+        }
+        #devHelperOffcanvas .offcanvas-header .btn-close {
+            filter: invert(1) sepia(1) saturate(5) hue-rotate(355deg);
+        }
+        .dev-badge {
+            background: #f59e0b;
+            color: #1a1a1a;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 20px;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            vertical-align: middle;
+        }
+
+        /* Account cards */
+        .demo-account-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .demo-account-card:hover { background: #f1f5f9; }
+        .demo-account-card .account-role {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: #64748b;
+        }
+        .demo-account-card .account-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1e293b;
+        }
+        .demo-account-card .creds {
+            font-family: monospace;
+            font-size: 12px;
+            color: #475569;
+        }
+        .copy-btn {
+            padding: 1px 7px;
+            font-size: 11px;
+            border-radius: 4px;
+        }
+
+        /* Section headers */
+        .demo-section-header {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            color: #94a3b8;
+            padding: 8px 0 4px;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        /* Feature list */
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .feature-item:last-child { border-bottom: none; }
+        .feature-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 16px;
+        }
+        .feature-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #1e293b;
+            line-height: 1.3;
+        }
+        .feature-desc {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+
+        /* Tab styling */
+        #devHelperTabs .nav-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+        }
+        #devHelperTabs .nav-link.active {
+            color: #1e293b;
+            border-bottom: 2px solid #f59e0b;
+            background: transparent;
+        }
+    </style>
+
+    <!-- Pinned trigger button -->
+    <button id="devHelperTab"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#devHelperOffcanvas"
+            aria-controls="devHelperOffcanvas"
+            title="Dev Mode — Demo Accounts &amp; Features">
+        <i class="bi bi-bug-fill"></i>
+        DEV
+    </button>
+
+    <!-- Offcanvas panel -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="devHelperOffcanvas" aria-labelledby="devHelperOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title mb-0" id="devHelperOffcanvasLabel">
+                <i class="bi bi-bug-fill me-2"></i>
+                Dev Mode Helper
+                <span class="dev-badge ms-2">DEBUG</span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+
+        <div class="offcanvas-body p-0">
+            <!-- Tabs -->
+            <ul class="nav nav-tabs px-3 pt-2" id="devHelperTabs">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#devTabAccounts">
+                        <i class="bi bi-people me-1"></i>Accounts
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#devTabFeatures">
+                        <i class="bi bi-stars me-1"></i>Features
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#devTabInfo">
+                        <i class="bi bi-info-circle me-1"></i>Info
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content px-3 py-2" style="overflow-y:auto; max-height: calc(100vh - 140px);">
+
+                {# ---- ACCOUNTS TAB ---- #}
+                <div class="tab-pane fade show active" id="devTabAccounts">
+                    <p class="text-muted small mt-2 mb-3">
+                        Demo accounts created by <code>seed_dev_data</code>.
+                        Click credentials to copy.
+                    </p>
+
+                    <!-- Admin Portal -->
+                    <div class="demo-section-header">
+                        <i class="bi bi-shield-lock me-1"></i>Admin Portal
+                        <a href="/admin-portal/login/" class="float-end text-primary" style="font-size:11px; font-weight:600; text-transform:none; letter-spacing:0;">Open →</a>
+                    </div>
+
+                    <div class="demo-account-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="account-role">
+                                    <span class="badge bg-danger">Superuser</span>
+                                    Full Admin
+                                </div>
+                                <div class="account-name">admin</div>
+                                <div class="creds">
+                                    <span class="text-secondary">user:</span> <strong>admin</strong>
+                                    &nbsp; <span class="text-secondary">pass:</span> <strong>admin123</strong>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column gap-1">
+                                <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('admin', this)" title="Copy username">
+                                    <i class="bi bi-person"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('admin123', this)" title="Copy password">
+                                    <i class="bi bi-key"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="demo-account-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="account-role">
+                                    <span class="badge bg-secondary">Staff</span>
+                                    Staff Member
+                                </div>
+                                <div class="account-name">staff</div>
+                                <div class="creds">
+                                    <span class="text-secondary">user:</span> <strong>staff</strong>
+                                    &nbsp; <span class="text-secondary">pass:</span> <strong>staff123</strong>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column gap-1">
+                                <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('staff', this)" title="Copy username">
+                                    <i class="bi bi-person"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('staff123', this)" title="Copy password">
+                                    <i class="bi bi-key"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tenant Portal -->
+                    <div class="demo-section-header mt-3">
+                        <i class="bi bi-house-door me-1"></i>Tenant Portal
+                        <a href="/tenant/login/" class="float-end text-primary" style="font-size:11px; font-weight:600; text-transform:none; letter-spacing:0;">Open →</a>
+                    </div>
+                    <p class="text-muted" style="font-size:11px;">All tenants use password: <code>tenant123</code> &nbsp; OTP code: <code>123456</code></p>
+
+                    {% for acct in demo_tenant_accounts %}
+                    <div class="demo-account-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="account-role">
+                                    <span class="badge bg-{{ acct.badge }}">{{ acct.label }}</span>
+                                </div>
+                                <div class="account-name">{{ acct.username }}</div>
+                                <div class="creds">
+                                    <small class="text-muted">{{ acct.description }}</small>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('{{ acct.username }}', this)" title="Copy username">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    {# Fallback hardcoded accounts when context not provided #}
+                    <div class="demo-account-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="account-role"><span class="badge bg-primary">Perfect Payer</span></div>
+                                <div class="account-name">perfect_payer</div>
+                                <div class="creds"><small class="text-muted">Patricia Perfect — 12 months on-time</small></div>
+                            </div>
+                            <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('perfect_payer', this)" title="Copy username">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="demo-account-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="account-role"><span class="badge bg-danger">Late Payer</span></div>
+                                <div class="account-name">chronic_charlie</div>
+                                <div class="creds"><small class="text-muted">Charlie Chronic — always 10-20 days late</small></div>
+                            </div>
+                            <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('chronic_charlie', this)" title="Copy username">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="demo-account-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="account-role"><span class="badge bg-danger">Overdue</span></div>
+                                <div class="account-name">overdue_olivia</div>
+                                <div class="creds"><small class="text-muted">Olivia Overdue — 2 months behind</small></div>
+                            </div>
+                            <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('overdue_olivia', this)" title="Copy username">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="demo-account-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="account-role"><span class="badge bg-success">Prepays</span></div>
+                                <div class="account-name">prepay_paula</div>
+                                <div class="creds"><small class="text-muted">Paula Prepay — pays months in advance</small></div>
+                            </div>
+                            <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('prepay_paula', this)" title="Copy username">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="demo-account-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="account-role"><span class="badge bg-info text-dark">New Tenant</span></div>
+                                <div class="account-name">newbie_nick</div>
+                                <div class="creds"><small class="text-muted">Nicholas Newbie — just moved in</small></div>
+                            </div>
+                            <button class="btn btn-outline-secondary copy-btn" onclick="devCopy('newbie_nick', this)" title="Copy username">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <p class="text-muted mt-3" style="font-size:11px;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        15 total tenant accounts available. Run
+                        <code>manage.py seed_dev_data</code> to regenerate.
+                    </p>
+                </div>
+
+                {# ---- FEATURES TAB ---- #}
+                <div class="tab-pane fade" id="devTabFeatures">
+                    <p class="text-muted small mt-2 mb-3">
+                        What PropManager can do for you as a property manager.
+                    </p>
+
+                    <div class="demo-section-header"><i class="bi bi-building me-1"></i>Property &amp; Lease Management</div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-building"></i></div>
+                        <div>
+                            <div class="feature-title">Multi-Property Dashboard</div>
+                            <div class="feature-desc">Manage unlimited properties and units from one place. Track occupancy, vacancies, and rent rolls in real-time.</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-success bg-opacity-10 text-success"><i class="bi bi-file-earmark-text"></i></div>
+                        <div>
+                            <div class="feature-title">Lease Lifecycle</div>
+                            <div class="feature-desc">Create, sign, and manage leases electronically. Auto-reminders for renewals, move-ins, and move-outs.</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-info bg-opacity-10 text-info"><i class="bi bi-pen"></i></div>
+                        <div>
+                            <div class="feature-title">eDocuments &amp; Signatures</div>
+                            <div class="feature-desc">Template-based document signing with variable substitution. Tenants sign from their portal — no printer needed.</div>
+                        </div>
+                    </div>
+
+                    <div class="demo-section-header mt-3"><i class="bi bi-cash-coin me-1"></i>Billing &amp; Payments</div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-success bg-opacity-10 text-success"><i class="bi bi-receipt"></i></div>
+                        <div>
+                            <div class="feature-title">Automated Invoicing</div>
+                            <div class="feature-desc">Auto-generate rent invoices monthly. Configure late fees, grace periods, and partial payment rules per property.</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-credit-card"></i></div>
+                        <div>
+                            <div class="feature-title">7 Payment Gateways</div>
+                            <div class="feature-desc">Stripe, PayPal, Square, Authorize.Net, Braintree, Plaid ACH (bank transfer), and Bitcoin. Tenants choose their method.</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-gift"></i></div>
+                        <div>
+                            <div class="feature-title">Rewards Program</div>
+                            <div class="feature-desc">Streak bonuses and prepayment incentives keep tenants paying on time. Configurable tiers per property.</div>
+                        </div>
+                    </div>
+
+                    <div class="demo-section-header mt-3"><i class="bi bi-people me-1"></i>Tenant Experience</div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-info bg-opacity-10 text-info"><i class="bi bi-person-check"></i></div>
+                        <div>
+                            <div class="feature-title">Self-Service Portal</div>
+                            <div class="feature-desc">Tenants pay rent, submit maintenance requests, sign documents, and message management — all in one portal.</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-success bg-opacity-10 text-success"><i class="bi bi-person-plus"></i></div>
+                        <div>
+                            <div class="feature-title">Automated Onboarding</div>
+                            <div class="feature-desc">15 configurable onboarding presets (standard, corporate, military, student). Wizard guides tenants from invite to move-in.</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-phone"></i></div>
+                        <div>
+                            <div class="feature-title">OTP Authentication</div>
+                            <div class="feature-desc">Passwordless login for tenants via SMS or email OTP — no passwords for tenants to forget.</div>
+                        </div>
+                    </div>
+
+                    <div class="demo-section-header mt-3"><i class="bi bi-tools me-1"></i>Operations</div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-tools"></i></div>
+                        <div>
+                            <div class="feature-title">Work Order System</div>
+                            <div class="feature-desc">Tenants submit maintenance requests. Assign to contractors via token-based access — no contractor login needed.</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-cloud-rain"></i></div>
+                        <div>
+                            <div class="feature-title">Weather Alerts</div>
+                            <div class="feature-desc">Automated severe weather notifications to all tenants at affected properties. Powered by OpenWeatherMap.</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-search"></i></div>
+                        <div>
+                            <div class="feature-title">Global Search</div>
+                            <div class="feature-desc">Search across all apps, tenants, properties, documents, and more. Press Ctrl+K in the admin portal.</div>
+                        </div>
+                    </div>
+                </div>
+
+                {# ---- INFO TAB ---- #}
+                <div class="tab-pane fade" id="devTabInfo">
+                    <p class="text-muted small mt-2 mb-3">
+                        Development environment quick reference.
+                    </p>
+
+                    <div class="demo-section-header"><i class="bi bi-terminal me-1"></i>Useful Commands</div>
+                    <div class="bg-dark text-success p-3 rounded" style="font-family: monospace; font-size: 12px;">
+                        <div class="mb-2">
+                            <span class="text-warning"># Seed demo data</span><br>
+                            python manage.py seed_dev_data
+                        </div>
+                        <div class="mb-2">
+                            <span class="text-warning"># Reset &amp; reseed</span><br>
+                            python manage.py seed_dev_data --reset
+                        </div>
+                        <div class="mb-2">
+                            <span class="text-warning"># Background tasks</span><br>
+                            python manage.py qcluster
+                        </div>
+                        <div>
+                            <span class="text-warning"># Check task queue</span><br>
+                            python manage.py qinfo
+                        </div>
+                    </div>
+
+                    <div class="demo-section-header mt-3"><i class="bi bi-link-45deg me-1"></i>Quick Links</div>
+                    <div class="list-group list-group-flush">
+                        <a href="/admin-portal/" class="list-group-item list-group-item-action py-2 px-0" style="font-size:13px;">
+                            <i class="bi bi-shield-lock me-2 text-primary"></i>Admin Portal
+                        </a>
+                        <a href="/tenant/" class="list-group-item list-group-item-action py-2 px-0" style="font-size:13px;">
+                            <i class="bi bi-house-door me-2 text-success"></i>Tenant Portal
+                        </a>
+                        <a href="/django-admin/" class="list-group-item list-group-item-action py-2 px-0" style="font-size:13px;">
+                            <i class="bi bi-gear me-2 text-secondary"></i>Django Admin
+                        </a>
+                        <a href="/setup/" class="list-group-item list-group-item-action py-2 px-0" style="font-size:13px;">
+                            <i class="bi bi-magic me-2 text-warning"></i>Setup Wizard
+                        </a>
+                    </div>
+
+                    <div class="demo-section-header mt-3"><i class="bi bi-stack me-1"></i>Tech Stack</div>
+                    <table class="table table-sm table-borderless" style="font-size:12px;">
+                        <tr><td class="text-muted pe-2">Framework</td><td><strong>Django 5.x</strong></td></tr>
+                        <tr><td class="text-muted pe-2">Database</td><td><strong>SQLite (dev) / PostgreSQL (prod)</strong></td></tr>
+                        <tr><td class="text-muted pe-2">Cache/Queue</td><td><strong>ORM broker (dev) / Redis (prod)</strong></td></tr>
+                        <tr><td class="text-muted pe-2">Frontend</td><td><strong>Bootstrap 5 + HTMX</strong></td></tr>
+                        <tr><td class="text-muted pe-2">Task Queue</td><td><strong>Django-Q2</strong></td></tr>
+                        <tr><td class="text-muted pe-2">OTP (dev)</td><td><strong>123456 (bypass code)</strong></td></tr>
+                    </table>
+
+                    <div class="alert alert-warning mt-2 p-2" style="font-size:12px;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <strong>This widget is hidden in production.</strong>
+                        It only renders when <code>DEBUG=True</code>.
+                    </div>
+                </div>
+
+            </div>{# end tab-content #}
+        </div>{# end offcanvas-body #}
+    </div>{# end offcanvas #}
+
+    <script>
+        function devCopy(text, btn) {
+            navigator.clipboard.writeText(text).then(function() {
+                var icon = btn.querySelector('i');
+                var origClass = icon.className;
+                icon.className = 'bi bi-check-lg text-success';
+                btn.classList.add('btn-success');
+                btn.classList.remove('btn-outline-secondary');
+                setTimeout(function() {
+                    icon.className = origClass;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 1500);
+            }).catch(function() {
+                /* Fallback: select text visually */
+                var el = document.createElement('input');
+                el.value = text;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+            });
+        }
+    </script>
+    {# ============================================================ #}
+    {# END DEV/DEMO HELPER WIDGET                                    #}
+    {# ============================================================ #}
+    {% endif %}
+
 </body>
 </html>
